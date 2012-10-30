@@ -1,5 +1,5 @@
 #-*-perl-*-
-#$Id: 005_db.t 17653 2012-09-05 04:54:27Z jensenma $
+#$Id$
 use Test::More tests => 34;
 use Test::Exception;
 use Module::Build;

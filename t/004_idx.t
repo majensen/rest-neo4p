@@ -1,5 +1,5 @@
 #-*- perl -*-
-#$Id: 004_idx.t 17684 2012-09-23 01:12:42Z jensenma $
+#$Id$
 
 use Test::More tests => 64;
 use Module::Build;

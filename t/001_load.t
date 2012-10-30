@@ -1,5 +1,5 @@
 # -*- perl -*-
-#$Id: 001_load.t 17590 2012-08-27 03:47:45Z jensenma $
+#$Id$
 
 
 # t/001_load.t - check module loading and create testing directory

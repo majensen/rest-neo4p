@@ -1,4 +1,4 @@
-#$Id: Query.pm 17684 2012-09-23 01:12:42Z jensenma $
+#$Id$
 package REST::Neo4p::Query;
 use REST::Neo4p::Path;
 use REST::Neo4p::Exceptions;
@@ -8,7 +8,7 @@ use Carp qw(croak carp);
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Query::VERSION = '0.1283';
+  $REST::Neo4p::Query::VERSION = '0.1284';
 }
 
 my $BUFSIZE = 4096;
@@ -57,8 +57,8 @@ sub execute {
     $e->rethrow if ($self->{RaiseError});
     return;
   }
-  elsif ($@) {
-    ref $@ ? $@->rethrow : die $e;
+  elsif ($e = Exception::Class->caught()) {
+    ref $e ? $e->rethrow : die $e;
   }
 
   # set up iterator
