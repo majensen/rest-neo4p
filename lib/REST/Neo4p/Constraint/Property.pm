@@ -21,7 +21,7 @@ sub new_from_constraint_hash {
   die "constraint hash not defined or not a hashref" unless defined $constraints && (ref $constraints eq 'HASH');
   if (my $cond = $constraints->{_condition}) {
     unless (grep(/^$cond$/,qw( all only none ))) {
-      die "Relationship type constraint condition must be all|only|none";
+      die "Property constraint condition must be all|only|none";
     }
     $self->{_condition} = delete $constraints->{_condition};
   }
@@ -55,9 +55,112 @@ sub set_condition {
   my $self = shift;
   my ($condition) = @_;
   unless ($condition =~ /^(all|only|none)$/) {
-    REST::Neo4p::LocalException->throw("Property constraint condition must be one of all, only, none\n");
+    REST::Neo4p::LocalException->throw("Property constraint condition must be all|only|none\n");
   }
   return $self->{_condition} = $condition;
+}
+
+# validate the input property hash or Entity with respect to the 
+# constraint represented by this object
+
+sub validate {
+  my $self = shift;
+  my ($prop_hash) = @_;
+  if (ref($prop_hash) =~ /^REST::Neo4p/) {
+    $prop_hash = $prop_hash->get_properties();
+  }
+  # otherwise, $prop_hash is hashref as validated in the calling subclass
+  my $is_valid = 1;
+  my $condition = $self->condition;
+ FORWARDCHECK:
+  while (my ($prop,$val) = each %$prop_hash ) {
+    my $value_spec = $self->constraints->{$prop};
+    if (defined $value_spec) {
+      unless (_validate_value($prop,$val,$value_spec,$condition)) {
+	$is_valid = 0;
+	last FORWARDCHECK;
+      }
+    }
+    else {
+      if ($condition eq 'only') {
+	$is_valid = 0;
+	last FORWARDCHECK;
+      }
+    }
+  }
+ BACKWARDCHECK:
+  while ( my ($prop, $value_spec) = each %{$self->constraints} ) {
+    my $val = $prop_hash->{$prop};
+    if (!defined $val && ($condition eq 'none')) {
+      next;
+    }
+    unless (_validate_value($prop,$val,$value_spec,$condition)) {
+      $is_valid = 0;
+      last BACKWARDCHECK;
+      }
+  }
+  return $is_valid;
+}
+
+sub _validate_value {
+  my ($prop,$value,$value_spec,$condition) = @_;
+  die "arg1(prop), arg3(value_spec), and arg4(condition) must all be defined" unless defined $prop && defined $value_spec && defined $condition;
+  my $is_valid = 1;
+  for ($value_spec) {
+    ref eq 'ARRAY' && do {
+      if (!@$value_spec) { #empty array
+	1; # don't care
+      }
+      else {
+	die "single value in arrayref must be scalar" unless ref($value_spec->[0]) =~ /^|Regexp$/;
+	die "single value in arrayref cannot be empty string" unless length $value_spec->[0];
+	if (defined $value) {
+	  $is_valid = _validate_value($prop,$value,$value_spec->[0],$condition);
+	} # otherwise don't care
+      }
+      last;
+    };
+    ($_ eq '') && do { # empty string
+      if ($condition eq 'none') {
+	$is_valid = 0;
+      }
+      if ( ($condition eq 'all') && !defined $value ) {
+	$is_valid = 0;
+      }
+      last;
+    };
+    ref eq 'Regexp' && do {
+      if ($condition =~ /all|only/) {
+	unless ($value =~ /$value_spec/) {
+	  $is_valid = 0;
+	}
+      }
+      else { # $condition eq 'none'
+	unless (!defined $value || ($value !~ /$value_spec/)) {
+	  $is_valid = 0;
+	}
+      }
+      last;
+    };
+    (ref eq '') && do {
+      if ($condition =~ /all|only/) {
+	unless (defined $value && ($value eq $value_spec)) {
+	  $is_valid = 0;
+	}
+      }
+      else { # $condition eq 'none'
+	unless (!defined $value || ($value ne $value_spec)) {
+	  $is_valid = 0;
+	}
+      }
+      last;
+    };
+    # fallthru
+    do {
+      REST::Neo4p::LocalException->throw("Invalid constraint value spec for property '$prop'\n");
+    };
+  }
+  return $is_valid;
 }
 
 1;
@@ -74,6 +177,15 @@ sub new {
   return $self;
 }
 
+sub validate {
+  my $self = shift;
+  my ($item) = (@_);
+  return unless defined $item;
+  unless ( ref($item) =~ /Node|HASH$/ ) {
+    REST::Neo4p::LocalException->throw("validate() requires a single hashref or Node object\n");
+  }
+  $self->SUPER::validate(@_);
+}
 1;
 
 package REST::Neo4p::Constraint::RelationshipProperty;
@@ -86,6 +198,16 @@ sub new {
   my $self = $class->SUPER::new(@_);
   $self->{_type} = 'relationship_property';
   return $self;
+}
+
+sub validate {
+  my $self = shift;
+  my ($item) = (@_);
+  return unless defined $item;
+  unless ( ref($item) =~ /Neo4p::Relationship|HASH$/ ) {
+    REST::Neo4p::LocalException->throw("validate() requires a single hashref or Relationship object\n");
+  }
+  $self->SUPER::validate(@_);
 }
 
 1;

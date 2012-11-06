@@ -105,7 +105,7 @@ sub validate_properties {
   if (ref($properties) =~ /Node|Relationship$/) {
     $properties = $properties->get_properties;
   }
-  elsif (ref($properties) neq 'HASH') {
+  elsif (ref($properties) ne 'HASH') {
     REST::Neo4p::LocalException->throw("Arg to validate_properties() must be a hashref, a Node object, or a Relationship object");
   }
   my @prop_constraints = grep { $_->type =~ /property$/ } values %$CONSTRAINT_TABLE;
@@ -117,7 +117,7 @@ sub validate_properties {
       last;
     }
   }
-  return ret;
+  return $ret;
 }
 
 =head1 NAME
@@ -180,11 +180,14 @@ property set tags
   constraints =>
   { 
     _condition => constraint_conditions, # ('all'|'only'|'none')
-    prop_1 => '?', # may have
-    prop_2 => '+', # must have
-    prop_3 => 'value', # value must eq 'value'
-    prop_4 => qr/.alue/, # value must match qr/.alue/
-    prop_5 => ['value', qr/.alue/, 'anothervalue'] # value must match enumeration
+    prop_0 => [] # may have, no constraint
+    prop_1 => [<string|regexp>] # may have, if present must meet 
+    prop_2 => '' # must have, no constraint
+    prop_3 => 'value', # must have, value must eq 'value'
+    prop_4 => qr/.alue/, # must have, value must match qr/.alue/,
+    prop_5 => qr/^value1|value2|value3$/
+      (use regexps for enumerations)
+
   }
 }
 
@@ -274,7 +277,9 @@ clear constraints
 
 =head1 SEE ALSO
 
-L<REST::Neo4p>, L<REST::Neo4p::Node>, L<REST::Neo4p::Relationship>, L<REST::Neo4p::Index>.
+L<REST::Neo4p>, L<REST::Neo4p::Node>, L<REST::Neo4p::Relationship>,
+L<REST::Neo4p::Constraint::Property>, L<REST::Neo4p::Constraint::Relationship>,
+L<REST::Neo4p::Constraint::RelationshipType>.
 
 =head1 AUTHOR
 

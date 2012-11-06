@@ -79,7 +79,7 @@ sub validate {
 	  (ref($from) =~ /Node|HASH$/)) {
     REST::Neo4p::LocalException->throw("validate() requires a pair of Node objects, a pair of hashrefs, or a single Relationship object\n");
   }
-
+  my $item;
   for (ref $item) {
     /HASH/ && do {
       last;
