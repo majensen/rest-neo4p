@@ -1,6 +1,6 @@
 #-*-perl-*-
 #$Id$
-use Test::More qw(no_plan);
+use Test::More tests => 48;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
@@ -13,17 +13,6 @@ my $build;
 eval {
     $build = Module::Build->current;
 };
-my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
-my $num_live_tests = 1;
-
-my $not_connected;
-eval {
-  REST::Neo4p->connect($TEST_SERVER);
-};
-if ( my $e = REST::Neo4p::CommException->caught() ) {
-  $not_connected = 1;
-  diag "Test server unavailable : ".$e->message;
-}
 
 use_ok ('REST::Neo4p::Constraint');
 
@@ -100,115 +89,3 @@ throws_ok { $person_pc->get_constraint('pet') } 'REST::Neo4p::ClassOnlyException
 isa_ok(REST::Neo4p::Constraint->get_constraint('pet'), 'REST::Neo4p::Constraint');
 is(REST::Neo4p::Constraint->get_constraint('pet')->tag, 'pet', 'got pet constraint');
 
-# test validation - property constraints
-
-my $c1 = REST::Neo4p::Constraint::NodeProperty->new(
-  'c1',
-  {
-    name => '',
-    rank => [],
-    serial_number => qr/^[0-9]+$/,
-    army_of => 'one',
-    options => [qr/[abc]/]
-    
-   }
- );
-
-my @propset;
-# 1
-# valid for all, only
-# invalid for none
-push @propset, 
-  [
-    {
-      name => 'Jones',
-      rank => 'Corporal',
-      serial_number => '147800934',
-      army_of => 'one'
-     },[1, 1, 0]
-    ];
-# 2
-# valid for all, only
-# invalid for none
-push @propset, [
-  {
-    name => 'Jones',
-    serial_number => '147800934',
-    army_of => 'one'
-   }, [1,1,0] 
-];
-
-# 3
-# valid for all
-# invalid for only, none
-push @propset, [
-  {
-    name => 'Jones',
-    serial_number => '147800934',
-    army_of => 'one',
-    extra => 'value'
-   }, [1,0,0]
-];
-
-# 4
-# invalid for all, only
-# invalid for none
-push @propset, [
-  {
-    name => 'Jones',
-    rank => 'Corporal',
-    serial_number => 'THX1138',
-    army_of => 'one'
-   }, [0,0,0]
-];
-
-# 5
-# invalid for all, only
-# valid for none
-push @propset, [
-  {
-    different => 'altogether'
-  }, [0,0,1]
-];
-
-# 6
-# valid for all, only
-# invalid for none
-push @propset, [
-   {
-     name => 'Jones',
-     rank => 'Corporal',
-     serial_number => '147800934',
-     army_of => 'one',
-     options => 'a'
-    }, [1,1,0]
-];
-
-# 7
-# invalid for all, only, none
-push @propset, [
-  {
-    name => 'Jones',
-    rank => 'Corporal',
-    serial_number => '147800934',
-    options => 'e'
-   }, [0,0,0]
-];
-$DB::single=1;
-my $ctr=0;
-foreach (@propset) {
-  my $propset = $_->[0];
-  my $expected = $_->[1];
-  $ctr++;
-  $c1->set_condition('all');
-  is $c1->validate($propset), $expected->[0], "propset $ctr : all";
-  $c1->set_condition('only');
-  is $c1->validate($propset), $expected->[1], "propset $ctr : only";
-  $c1->set_condition('none');
-  is $c1->validate($propset), $expected->[2], "propset $ctr : none";
-}
-
-SKIP : {
-  skip 'no local connection to neo4j', $num_live_tests if $not_connected;
-
-}

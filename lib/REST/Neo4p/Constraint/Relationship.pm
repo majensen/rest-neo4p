@@ -21,6 +21,15 @@ sub new_from_constraint_hash {
   my ($constraints) = @_;
   die "tag not defined" unless $self->tag;
   die "constraint hash not defined or not a hashref" unless defined $constraints && (ref $constraints eq 'HASH');
+  if (my $cond = $constraints->{_condition}) {
+    unless (grep(/^$cond$/,qw( only none ))) {
+      die "Property constraint condition must be only|none";
+    }
+    $self->{_condition} = delete $constraints->{_condition};
+  }
+  else {
+    $self->{_condition} = 'only';
+  }
   while ( my ($rel_type,$rel_array) = each %$constraints) {
     unless (ref $rel_array eq 'ARRAY') {
       die "relationship constraint for type '$rel_type' must be array of hashrefs";
@@ -68,25 +77,51 @@ sub set_condition {
 
 sub validate {
   my $self = shift;
-  my ($to, $from) = @_;
+  my ($from, $to, $reln_type) = @_;
   my ($reln) = @_;
-  return unless defined $to;
-  if (ref($reln) =~ /Relationship$/) {
-    $to = $reln->start_node;
-    $from = $reln->end_node;
+  return unless defined $from;
+  if (ref($reln) =~ /Neo4p::Relationship$/) {
+    $from = $reln->start_node->get_properties;
+    $to = $reln->end_node->get_properties;
+    $reln_type = $reln->type;
   }
-  unless ((ref($to) =~ /Node|HASH$/) &&
-	  (ref($from) =~ /Node|HASH$/)) {
+  REST::Neo4p::LocalException->throw("Relationship type (arg3) must be provided to validate") unless defined $reln_type;
+  # first check if relationship type is defined and
+  # is represented in this constraint
+  # if validation is strict, fail if type undefined or not found
+  # if validation is lax, continue
+
+  unless ((ref($from) =~ /Neo4p::Node|HASH$/) &&
+	  (ref($to) =~ /Neo4p::Node|HASH$/)) {
     REST::Neo4p::LocalException->throw("validate() requires a pair of Node objects, a pair of hashrefs, or a single Relationship object\n");
   }
-  my $item;
-  for (ref $item) {
-    /HASH/ && do {
-      last;
-    };
-    /REST::Neo4p::Relationship/ && do {
-      last;
-    };
+
+  return 1 if ( ($self->condition eq 'none') && !defined $self->constraints->{$reln_type} ); 
+
+  my @conditions = @{$self->constraints->{$reln_type}};
+  $from = $_->get_properties if ref($from) =~ /Neo4p::Node$/;
+  $to = $_->get_properties if ref($to) =~ /Neo4p::Node$/;
+  # $to, $from now normalized to property hashrefs
+
+  my $from_constraint = REST::Neo4p::Constraint->validate_properties($from);
+  my $to_constraint = REST::Neo4p::Constraint->validate_properties($to);
+
+  $from_constraint = $from_constraint && $from_constraint->tag;
+  $to_constraint = $to_constraint && $to_constraint->tag;
+  # $to_constraint, $from_constraint contain undef or the matching 
+  # constraint tag
+
+  # filter @conditions based on $from_constraint tag
+  $to_constraint ||= '*';
+  $from_constraint ||= '*';
+  @conditions = grep { defined $_->{ $from_constraint } } @conditions;
+
+  if (@conditions) {
+    my $found = grep /^$to_constraint$/, map {$_->{$from_constraint}} @conditions;
+    return ($self->condition eq 'only') ? $found : !$found;
+  }
+  else {
+    return ($self->condition eq 'only') ? 0 : 1;
   }
 }
 

@@ -196,7 +196,7 @@ property set tags
 {relationship_type_constraint_tag => 
  {
   constraint_type => "relationship_type",
-  constraint =>
+  constraints =>
   {
    _condition => constraint_conditions, # ('only'|'none')
     type_list => [ 'type_name_1', 'type_name_2', ...]
@@ -209,8 +209,9 @@ property set tags
 { relationship_constraint_tag =>
  {
   constraint_type => "relationship",
-  constraint =>
-  { relationship_type => 
+  constraints =>
+  { _condition => (only|none)
+    relationship_type => 
     [{ constraint_tag => constraint_tag },...] }
  }
 }
