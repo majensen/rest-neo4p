@@ -155,7 +155,7 @@ REST::Neo4p::Constraint::NodeProperty->new
   _condition => 'all',
   entity => 'variable',
   name => qr/[a-z0-9_]+/i,
-  sigil => qr/[$@%]/,
+  sigil => qr/[\$\@\%]/,
  }
 );
 
@@ -246,7 +246,7 @@ is $allowed_relns->validate( $module => $bizzity_bomb, 'has'), 1,  'module can h
 is $allowed_relns->validate( $module => $teh_shizznit, 'contains' ), 1, 'module can also contain a method';
 is $allowed_relns->validate( $teh_shizznit => $variable, 'contains'), 1, 'method can contain a variable';
 is $allowed_relns->validate( $bizzity_bomb => $parameter, 'contains'),0, 'method cannot contain a parameter';
-is $allowed_relns->validate( $bizzity_bomb => $variable, 'has'), 1, 'method can have a variable';
+is $allowed_relns->validate( $bizzity_bomb => $variable, 'has'), 0, 'method cannot "have" a variable';
 is $allowed_relns->validate( $variable => $bizzity_bomb, 'has'), 0, 'variable cannot contain a method';
 
 

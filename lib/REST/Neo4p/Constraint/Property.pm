@@ -88,17 +88,16 @@ sub validate {
       }
     }
   }
+  keys %$prop_hash;
  BACKWARDCHECK:
   while ( $is_valid && (my ($prop, $value_spec) = each %{$self->constraints}) ) {
     my $val = $prop_hash->{$prop};
-    if (!defined $val && ($condition eq 'none')) {
-      next;
-    }
     unless (_validate_value($prop,$val,$value_spec,$condition)) {
       $is_valid = 0;
       last BACKWARDCHECK;
       }
   }
+  keys %{$self->constraints};
   return $is_valid;
 }
 
@@ -122,37 +121,38 @@ sub _validate_value {
     };
     ref eq 'Regexp' && do {
       if ($condition =~ /all|only/) {
-	unless (defined $value && ($value =~ /$value_spec/)) {
+	if (!defined $value) {
 	  $is_valid = 0;
+	}
+	else {
+	  $is_valid = 0 unless ($value =~ /$value_spec/);
 	}
       }
       else { # $condition eq 'none'
-	unless (!defined $value || ($value !~ /$value_spec/)) {
-	  $is_valid = 0;
+	if (defined $value) {
+	  $is_valid = 0 unless ($value !~ /$value_spec/);
 	}
       }
       last;
     };
     (ref eq '') && do { # simple string
-      if ($_ eq '') {
-	if ($condition eq 'none') {
-	  $is_valid = 0;
-	}
-	if ( !defined $value && ($condition =~ /^all|only$/)) {
-	  $is_valid = 0;
-	}
-      }
-      else {
+      if (length) {
 	if ($condition =~ /all|only/) {
-	  unless (defined $value && ($value eq $value_spec)) {
+	  if (!defined $value) {
 	    $is_valid = 0;
+	  }
+	  else {
+	    $is_valid = 0 unless ($value eq $value_spec);
 	  }
 	}
 	else { # $condition eq 'none'
-	  unless (!defined $value || ($value ne $value_spec)) {
-	    $is_valid = 0;
+	  if (defined $value) {
+	    $is_valid = 0 unless ($value ne $value_spec);
 	  }
 	}
+      }
+      else { # empty string
+	1; # stub
       }
       last;
     };

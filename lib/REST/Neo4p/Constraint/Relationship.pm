@@ -117,7 +117,7 @@ sub validate {
   @conditions = grep { defined $_->{ $from_constraint } } @conditions;
 
   if (@conditions) {
-    my $found = grep /^$to_constraint$/, map {$_->{$from_constraint}} @conditions;
+    my $found = grep /^\Q$to_constraint\E$/, map {$_->{$from_constraint}} @conditions;
     return ($self->condition eq 'only') ? $found : !$found;
   }
   else {
