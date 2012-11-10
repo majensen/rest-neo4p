@@ -260,6 +260,16 @@ is $allowed_has_relns->validate( $variable => $bizzity_bomb, 'has'), 0, 'variabl
 
 # test validation : relationship type constraints
 
+ok my $allowed_reln_types = REST::Neo4p::Constraint::RelationshipType->new( 
+  'allowed_reln_types',
+  { _condition => 'only', 
+    _type_list => [qw(contains has)] }
+), 'relationship type constraint';
+
+is $allowed_reln_types->validate('contains'), 1, 'contains is a valid type';
+is $allowed_reln_types->validate('has'), 1, 'has is a valid type';
+is $allowed_reln_types->validate('blarfs'), 0, 'blarfs is not a valid type';
+
 
 SKIP : {
   skip 'no local connection to neo4j, live tests not performed', $num_live_tests if $not_connected;
@@ -295,6 +305,7 @@ SKIP : {
   push @cleanup, my $r5 = $bizzity_bomb_node->relate_to($parameter_node,'contains');
   push @cleanup, my $r6 = $bizzity_bomb_node->relate_to($variable_node,'has');
   push @cleanup, my $r7 = $variable_node->relate_to($bizzity_bomb_node,'has');
+  push @cleanup, my $r8 = $variable_node->relate_to($bizzity_bomb_node,'frelb');
 
   is $allowed_has_relns->validate( $r1 ), 1, 'module can have method (1)';
   is $allowed_has_relns->validate( $r2 ), 1,  'module can have method (2)';
@@ -303,7 +314,8 @@ SKIP : {
   is $allowed_contains_relns->validate( $r5 ),0, 'method cannot contain a parameter';
   is $allowed_has_relns->validate( $r6 ), 0, 'method cannot "have" a variable';
   is $allowed_has_relns->validate( $r7 ), 0, 'variable cannot contain a method';
-
+  is $allowed_reln_types->validate($r7), 1, 'relationship r7 type is allowed';
+  is $allowed_reln_types->validate($r8), 0, 'relationship r7 type is not allowed';
   CLEANUP : {
     for (reverse @cleanup) {
       ok $_->remove, 'entity removed from db';

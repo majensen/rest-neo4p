@@ -92,7 +92,8 @@ sub validate {
   my $self = shift;
   my ($type) = (@_);
   return unless defined $type;
-  $type = $type->type if (ref $type =~ /Neo4p::Relationship$/);
+  $type = $type->type if (ref($type) =~ /Neo4p::Relationship$/);
+  return grep(/^$type$/,$self->type_list) ? 1 : 0;
 }
 =head1 NAME
 
