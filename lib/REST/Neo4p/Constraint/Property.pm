@@ -5,7 +5,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Constraint::Property::VERSION = 0.129;
+  $REST::Neo4p::Constraint::Property::VERSION = '0.13';
 }
 
 
@@ -201,6 +201,14 @@ sub new {
   return $self;
 }
 
+sub new_from_constraint_hash {
+  my $self = shift;
+  $self->SUPER::new_from_constraint_hash(@_);
+  $self->{_relationship_type} = (delete $self->constraints->{_relationship_type}) || '*';
+  return $self;
+}
+
+sub rtype { shift->{_relationship_type} }
 sub validate {
   my $self = shift;
   my ($item) = (@_);
@@ -210,5 +218,96 @@ sub validate {
   }
   $self->SUPER::validate(@_);
 }
+
+1;
+
+=head1 NAME
+
+REST::Neo4p::Constraint::Property - Neo4j Property Constraints
+
+=head1 SYNOPSIS
+
+=head1 DESCRIPTION
+
+constrain property values
+
+property set tags
+
+"property constraint set"
+
+{ constraint_tag => 
+ {
+  constraint_type => 'node_property' | 'relationship_property',
+  constraints =>
+  { 
+    _condition => constraint_conditions, # ('all'|'only'|'none')
+    _relationship_type => <relationship type>,
+    prop_0 => [], # may have, no constraint
+    prop_1 => [<string|regexp>], # may have, if present must meet 
+    prop_2 => '', # must have, no constraint
+    prop_3 => 'value', # must have, value must eq 'value'
+    prop_4 => qr/.alue/, # must have, value must match qr/.alue/,
+    prop_5 => qr/^value1|value2|value3$/
+      (use regexps for enumerations)
+  }
+}
+
+must meet at least these conditions - checklist - all
+must meet only these conditions - whitelist - only (cannot possess 
+ properties not enumerated)
+must not meet any conditions - blacklist - none
+
+=head1 METHODS
+
+=over
+
+=item new()
+
+=item add_constraint()
+
+=item remove_constraint()
+
+=item tag()
+
+=item type()
+
+=item condition()
+
+=item constraints()
+
+=item priority()
+
+=item set_condition()
+
+ Set/get 'all', 'only', 'none' for a given constraint
+
+=item set_priority()
+
+ constraints with higher priority will be checked before constraints with 
+ lower priority
+
+=item validate()
+
+ true if the item meets the constraint, false if not
+
+=head1 SEE ALSO
+
+L<REST::Neo4p>, L<REST::Neo4p::Node>, L<REST::Neo4p::Relationship>,
+L<REST::Neo4p::Constraint>, L<REST::Neo4p::Constraint::Relationship>,
+L<REST::Neo4p::Constraint::RelationshipType>.
+
+=head1 AUTHOR
+
+    Mark A. Jensen
+    CPAN ID: MAJENSEN
+    majensen -at- cpan -dot- org
+
+=head1 LICENSE
+
+Copyright (c) 2012 Mark A. Jensen. This program is free software; you
+can redistribute it and/or modify it under the same terms as Perl
+itself.
+
+=cut
 
 1;

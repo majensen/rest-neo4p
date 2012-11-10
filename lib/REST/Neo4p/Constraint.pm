@@ -11,7 +11,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Constraint::VERSION = 1.29;
+  $REST::Neo4p::Constraint::VERSION = 1.3;
 }
 
 # valid constraint types
@@ -209,10 +209,11 @@ property set tags
 { relationship_constraint_tag =>
  {
   constraint_type => "relationship",
+ 
   constraints =>
-  { _condition => (only|none)
-    relationship_type => 
-    [{ constraint_tag => constraint_tag },...] }
+  { _condition => (only|none),
+    _relationship_type => <relationship_typename>,
+    _descriptors => [{ constraint_tag => constraint_tag },...] }
  }
 }
 
