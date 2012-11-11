@@ -98,21 +98,65 @@ sub set_condition {
 sub validate_properties {
   my $class = shift;
   my ($properties) = @_;
+  return unless defined $properties;
   if (ref $class) {
     REST::Neo4p::ClassOnlyException->throw("validate_properties() is a class-only method\n");
   }
 
-  if (ref($properties) =~ /Node|Relationship$/) {
-    $properties = $properties->get_properties;
-  }
-  elsif (ref($properties) ne 'HASH') {
+  unless ( (ref($properties) =~ /Neo4p::(Node|Relationship)$/) ||
+	     (ref($properties) eq 'HASH') ) {
     REST::Neo4p::LocalException->throw("Arg to validate_properties() must be a hashref, a Node object, or a Relationship object");
   }
-  my @prop_constraints = grep { $_->type =~ /property$/ } values %$CONSTRAINT_TABLE;
+  my $type = (ref($properties) =~ /Neo4p/) ? $properties->entity_type : '';
+  my @prop_constraints = grep { $_->type =~ /${type}_property$/ } values %$CONSTRAINT_TABLE;
   @prop_constraints = sort {$a->priority <=> $b->priority} @prop_constraints;
   my $ret;
   foreach (@prop_constraints) {
     if ($_->validate($properties)) {
+      $ret = $_;
+      last;
+    }
+  }
+  return $ret;
+}
+
+sub validate_relationship {
+  my $class = shift;
+  my ($from, $to, $reln_type) = @_;
+  my ($reln) = @_;
+  if (ref $class) {
+    REST::Neo4p::ClassOnlyException->throw("validate_relationship() is a class-only method\n");
+  }
+  return unless defined $from;
+  unless ( (ref($reln) =~ /Neo4p::Relationship$/) || 
+	   ( (ref($from) eq 'HASH') && (ref($to) eq 'HASH') &&
+	       defined $reln_type ) ) {
+    REST::Neo4p::LocalException->throw("validate_relationship() requires a Relationship object, or two property hashrefs followed by a relationship type\n");
+  }
+  my @reln_constraints = grep {$_->type eq 'relationship'} values %$CONSTRAINT_TABLE;
+  @reln_constraints = sort {$a->priority <=> $b->priority} @reln_constraints;
+  my $ret;
+  foreach (@reln_constraints) {
+    if ($_->validate($from => $to, $reln_type)) {
+      $ret = $_;
+      last;
+    }
+  }
+  return $ret;
+}
+
+sub validate_relationship_type {
+  my $class = shift;
+  my ($reln_type) = @_;
+  if (ref $class) {
+    REST::Neo4p::ClassOnlyException->throw("validate_relationhip_type() is a class-only method\n");
+  }
+  return unless defined $reln_type;
+  my @type_constraints = grep {$_->type eq 'relationship_type'} values %$CONSTRAINT_TABLE;
+  @type_constraints = sort {$a->priority <=> $b->priority} @type_constraints;
+  my $ret;
+  foreach (@type_constraints) {
+    if ($_->validate($reln_type)) {
       $ret = $_;
       last;
     }
@@ -273,9 +317,17 @@ clear constraints
  constraints with higher priority will be checked before constraints with 
  lower priority
 
-=item validate()
+=item validate_properties()
 
- true if the item meets the constraint, false if not
+=item validate_relationship()
+
+=item validate_relationship_type()
+
+Returns the registered constraint object with the highest priority that
+the argument satisfies, or false if none is satisfied.
+
+These are class-only methods. Constraint objects are registered when they
+are constructed.
 
 =head1 SEE ALSO
 

@@ -270,6 +270,22 @@ is $allowed_reln_types->validate('contains'), 1, 'contains is a valid type';
 is $allowed_reln_types->validate('has'), 1, 'has is a valid type';
 is $allowed_reln_types->validate('blarfs'), 0, 'blarfs is not a valid type';
 
+#class methods
+
+ok my $c = REST::Neo4p::Constraint->validate_properties($variable), 'validate_properties';
+isa_ok($c,'REST::Neo4p::Constraint::NodeProperty');
+is $c->tag, 'variable', 'correct constraint tag';
+ok !REST::Neo4p::Constraint->validate_properties({glarb => 'foo'}), 'unmatched property hash returns false';
+
+ok $c = REST::Neo4p::Constraint->validate_relationship($module => $bizzity_bomb,'contains');
+isa_ok($c, 'REST::Neo4p::Constraint::Relationship');
+is $c->tag, 'allowed_contains_relns', 'correct constraint tag';
+ok !REST::Neo4p::Constraint->validate_relationship($bizzity_bomb => $module, 'contains'), 'unallowed relationship returns false';
+
+ok $c = REST::Neo4p::Constraint->validate_relationship_type('has');
+isa_ok($c, 'REST::Neo4p::Constraint::RelationshipType');
+is $c->tag, 'allowed_reln_types', 'correct constraint tag';
+ok !REST::Neo4p::Constraint->validate_relationship_type('freb'), 'unallowed rtype returns false';
 
 SKIP : {
   skip 'no local connection to neo4j, live tests not performed', $num_live_tests if $not_connected;
@@ -291,7 +307,7 @@ SKIP : {
       $c1->set_condition('none');
       is $c1->validate($nodeset), $expected->[2], "nodeset $ctr : none";
   }
-
+  push @cleanup, my $bad_node_no_biscuit = REST::Neo4p::Node->new( { bad => 'node' } );
   push @cleanup, my $module_node = REST::Neo4p::Node->new($module);
   push @cleanup, my $teh_shizznit_node = REST::Neo4p::Node->new($teh_shizznit);
   push @cleanup, my $bizzity_bomb_node = REST::Neo4p::Node->new($bizzity_bomb);
@@ -306,6 +322,7 @@ SKIP : {
   push @cleanup, my $r6 = $bizzity_bomb_node->relate_to($variable_node,'has');
   push @cleanup, my $r7 = $variable_node->relate_to($bizzity_bomb_node,'has');
   push @cleanup, my $r8 = $variable_node->relate_to($bizzity_bomb_node,'frelb');
+  push @cleanup, my $r9 = $bizzity_bomb_node->relate_to($parameter_node,'has',{ position => 0});
 
   is $allowed_has_relns->validate( $r1 ), 1, 'module can have method (1)';
   is $allowed_has_relns->validate( $r2 ), 1,  'module can have method (2)';
@@ -315,7 +332,27 @@ SKIP : {
   is $allowed_has_relns->validate( $r6 ), 0, 'method cannot "have" a variable';
   is $allowed_has_relns->validate( $r7 ), 0, 'variable cannot contain a method';
   is $allowed_reln_types->validate($r7), 1, 'relationship r7 type is allowed';
-  is $allowed_reln_types->validate($r8), 0, 'relationship r7 type is not allowed';
+  is $allowed_reln_types->validate($r8), 0, 'relationship r8 type is not allowed';
+
+#class methods
+
+  ok my $c = REST::Neo4p::Constraint->validate_properties($variable_node), 'validate_properties';
+  isa_ok($c,'REST::Neo4p::Constraint::NodeProperty');
+  is $c->tag, 'variable', 'correct constraint tag';
+  ok !REST::Neo4p::Constraint->validate_properties($bad_node_no_biscuit), 
+    'unclassified node returns false';
+
+
+  ok $c = REST::Neo4p::Constraint->validate_properties($r9), 'validate relationship properties';
+  isa_ok($c, 'REST::Neo4p::Constraint::RelationshipProperty');
+  is $c->tag, 'position', 'correct constraint tag';
+  ok !REST::Neo4p::Constraint->validate_properties($r8), 'unclassified relationship properties return false';
+
+  ok $c = REST::Neo4p::Constraint->validate_relationship($r3);
+  isa_ok($c, 'REST::Neo4p::Constraint::Relationship');
+  is $c->tag, 'allowed_contains_relns', 'correct constraint tag';
+  ok !REST::Neo4p::Constraint->validate_relationship($r8), 'unallowed relationship returns false';
+
   CLEANUP : {
     for (reverse @cleanup) {
       ok $_->remove, 'entity removed from db';
