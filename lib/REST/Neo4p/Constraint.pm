@@ -1,5 +1,6 @@
 #$Id$
 package REST::Neo4p::Constraint;
+use base 'Exporter';
 use REST::Neo4p;
 use REST::Neo4p::Exceptions;
 use REST::Neo4p::Constraint::Property;
@@ -10,12 +11,15 @@ use Scalar::Util qw(looks_like_number);
 use strict;
 use warnings;
 
+our @EXPORT_OK = qw( validate_properties validate_relationship validate_relationship_type );
+our %EXPORT_TAGS = ( validate => [qw(validate_properties validate_relationship validate_relationship_type)] );
+
 BEGIN {
   $REST::Neo4p::Constraint::VERSION = 1.3;
 }
 
 # valid constraint types
-my @CONSTRAINT_TYPES = qw( node_property relationship_property
+our @CONSTRAINT_TYPES = qw( node_property relationship_property
 			   relationship_type relationship );
 our $CONSTRAINT_TABLE = {};
 
@@ -107,7 +111,7 @@ sub validate_properties {
 	     (ref($properties) eq 'HASH') ) {
     REST::Neo4p::LocalException->throw("Arg to validate_properties() must be a hashref, a Node object, or a Relationship object");
   }
-  my $type = (ref($properties) =~ /Neo4p/) ? $properties->entity_type : '';
+  my $type = (ref($properties) =~ /Neo4p/) ? $properties->entity_type : delete $properties->{__type};
   my @prop_constraints = grep { $_->type =~ /${type}_property$/ } values %$CONSTRAINT_TABLE;
   @prop_constraints = sort {$a->priority <=> $b->priority} @prop_constraints;
   my $ret;

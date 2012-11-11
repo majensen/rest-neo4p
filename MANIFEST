@@ -8,6 +8,7 @@ Makefile.PL
 lib/REST/Neo4p.pm
 lib/REST/Neo4p/Agent.pm
 lib/REST/Neo4p/Batch.pm
+lib/REST/Neo4p/Constrain.pm
 lib/REST/Neo4p/Constraint.pm
 lib/REST/Neo4p/Constraint/Property.pm
 lib/REST/Neo4p/Constraint/Relationship.pm

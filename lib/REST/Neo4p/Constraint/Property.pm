@@ -66,8 +66,13 @@ sub set_condition {
 sub validate {
   my $self = shift;
   my ($prop_hash) = @_;
-  if (ref($prop_hash) =~ /^REST::Neo4p/) {
+  if (ref($prop_hash) eq 'REST::Neo4p::Node') {
     $prop_hash = $prop_hash->get_properties();
+  }
+  if (ref($prop_hash) eq 'REST::Neo4p::Relationship') {
+    my $ph = $prop_hash->get_properties();
+    $ph->{_relationship_type} = $prop_hash->type; # psuedo property that must match exactly
+    $prop_hash = $ph;
   }
   # otherwise, $prop_hash is hashref as validated in the calling subclass
   my $is_valid = 1;
@@ -194,6 +199,8 @@ use base 'REST::Neo4p::Constraint::Property';
 use strict;
 use warnings;
 
+# relationship_type is added as a pseudoproperty
+
 sub new {
   my $class = shift;
   my $self = $class->SUPER::new(@_);
@@ -204,11 +211,11 @@ sub new {
 sub new_from_constraint_hash {
   my $self = shift;
   $self->SUPER::new_from_constraint_hash(@_);
-  $self->{_relationship_type} = (delete $self->constraints->{_relationship_type}) || '*';
+  $self->constraints->{_relationship_type} ||= [];
   return $self;
 }
 
-sub rtype { shift->{_relationship_type} }
+sub rtype { shift->constraints->{_relationship_type} }
 sub validate {
   my $self = shift;
   my ($item) = (@_);
@@ -235,7 +242,7 @@ property set tags
 
 "property constraint set"
 
-{ constraint_tag => 
+{ <property_constraint_tag> => 
  {
   constraint_type => 'node_property' | 'relationship_property',
   constraints =>

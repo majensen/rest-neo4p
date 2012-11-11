@@ -1,7 +1,7 @@
 #$Id$
 package REST::Neo4p::Exceptions;
 BEGIN {
-  $REST::Neo4p::Exceptions::VERSION = '0.129';
+  $REST::Neo4p::Exceptions::VERSION = '0.13';
 }
 use Exception::Class (
   'REST::Neo4p::Exception',
@@ -58,9 +58,12 @@ use Exception::Class (
   'REST::Neo4p::ConstraintException' => {
     isa => 'REST::Neo4p::LocalException',
     description => 'Application-level database constraint violated',
-    fields => [qw( constraint_tag constraint )]
-   }
-
+    fields => ['args']
+   },
+  'REST::Neo4p::ConstraintSpecException' => {
+    ias => 'REST::Neo4p::LocalException',
+    description => 'Constraint specification syntax incorrect',
+  }
    );
 
 =head1 NAME
@@ -120,7 +123,12 @@ Attempt to call a subclass-only method from a parent class.
 =item * REST::Neo4p::ConstraintException
 
 Attempt to perform a database action that violates an application-level
-constraint (L<REST::Neo4p::Constraint>).
+constraint (L<REST::Neo4p::Constrain>, L<REST::Neo4p::Constraint>).
+
+=item * REST::Neo4p::ConstraintSpecException
+
+Attempt to create a new constraint with incorrect constraint syntax
+(L<REST::Neo4p::Constrain>,L<REST::Neo4p::Constraint>)
 
 =back
 

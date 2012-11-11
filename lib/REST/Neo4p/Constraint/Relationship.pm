@@ -25,12 +25,12 @@ sub new_from_constraint_hash {
     unless (grep(/^$cond$/,qw( only none ))) {
       die "Relationship constraint condition must be only|none";
     }
-    $self->{_condition} = delete $constraints->{_condition};
-    $self->{_relationship_type} = delete $constraints->{_relationship_type};
   }
   else {
     $self->{_condition} = 'only';
   }
+  $self->{_condition} = delete $constraints->{_condition};
+  $self->{_relationship_type} = delete $constraints->{_relationship_type};
   unless (ref $constraints->{_descriptors} eq 'ARRAY') {
     die "relationship constraint descriptors must be array of hashrefs";
   }
@@ -156,7 +156,7 @@ REST::Neo4p::Constraint::Relationship - Neo4j Relationship Constraints
   constraints =>
   { _condition => (only|none),
     _relationship_type => <relationship_typename>,
-    _descriptors => [{ constraint_tag => constraint_tag },...] }
+    _descriptors => [{ property_constraint_tag => property_constraint_tag },...] }
  }
 }
 
