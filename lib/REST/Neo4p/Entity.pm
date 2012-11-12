@@ -8,7 +8,7 @@ use warnings;
 
 # base class for nodes, relationships, indexes...
 BEGIN {
-  $REST::Neo4p::Entity::VERSION = '0.1283';
+  $REST::Neo4p::Entity::VERSION = '0.20';
 }
 
 our $ENTITY_TABLE = {};

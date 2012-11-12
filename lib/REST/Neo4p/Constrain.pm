@@ -9,9 +9,15 @@ no warnings qw(once redefine);
 
 
 BEGIN {
-  $REST::Neo4p::Constrain::VERSION = '0.13';
+  $REST::Neo4p::Constrain::VERSION = '0.20';
 }
-our @EXPORT = qw(create_constraint constrain relax);
+our @EXPORT = qw(create_constraint drop_constraint constrain relax);
+our @EXPORT_OK = qw(validate_properties validate_relationship validate_relationship_type)
+our %EXPORT_TAGS = (
+  validate => [@EXPORT_OK],
+  auto => [@EXPORT],
+  all => [@EXPORT,@EXPORT_OK]
+);
 
 our $entity_new_func = \&REST::Neo4p::Entity::new;
 our $entity_set_prop_func = \&REST::Neo4p::Entity::set_property;
@@ -137,6 +143,11 @@ sub create_constraint {
     };
   }
   return $ret; # the Constraint object created
+}
+
+sub drop_constraint {
+  my ($tag) = @_;
+  REST::Neo4p::Constraint->drop_constraint($tag);
 }
 
 # hooks into REST::Neo4p::Entity methods
@@ -327,7 +338,7 @@ C<create_constraint> accepts a hash of parameters. The following are required:
   type => $type, # node_property|relationship_property|
                  # relationship|relationship_type
 
-  constraint => $constraint, # a reference that depends on the
+  constraints => $constraints, # a reference that depends on the
                              # constraint type, see below
  );
 
@@ -341,7 +352,7 @@ constraint type:
 The constraints are specified as a hashref whose keys are the property
 names and values are the constraints on the property values.
 
- constraint => {
+ constraints => {
     prop_1 => '' # property must be present, may have any value
     prop_2 => 'value', # property must be present, and value must eq 'value'
     prop_3 => qr/.alue/, # property must be present, and value must match qr/.alue/,
@@ -380,7 +391,7 @@ The basic constraint on a relationship is specified as a hashref that
 maps a "kind" of from-node to a "kind" of to-node. The "kind" of node
 is indicated by the tag of the node property constraint it satisfies.
 
-The C<constraint> parameter takes an arrayref of these one-row hashrefs.
+The C<constraints> parameter takes an arrayref of these one-row hashrefs.
 
 The C<rtype> parameter specifies the relationship type to which the
 constraint applies.
@@ -390,7 +401,7 @@ Here's an example. Create the following node property constraints:
  create_constraint(
   tag => 'owner',
   type => 'node_property',
-  constraint => {
+  constraints => {
     name => qr/a-z/i,
     species => 'human'
   }
@@ -399,7 +410,7 @@ Here's an example. Create the following node property constraints:
  create_constraint(
   tag => 'pet',
   type => 'node_property',
-  constraint => {
+  constraints => {
     name => qr/a-z/i,
     species => qr/^dog|cat|ferret|mole rat|platypus$/
   }
@@ -411,7 +422,7 @@ Then a relationship constraint that specifies owners can own pets is
   tag => 'owners2pets',
   type => 'relationship',
   rtype => 'OWNS',
-  constraint =>  [{ owner => 'pet' }] # note arrayref
+  constraints =>  [{ owner => 'pet' }] # note arrayref
  );
 
 In L<REST::Neo4p> terms, if this constraint (and only this one) is registered,
@@ -425,9 +436,57 @@ In L<REST::Neo4p> terms, if this constraint (and only this one) is registered,
 
 =item * Relationship type
 
+The relationship type constraint is just an arrayref of relationship types.
+
+ constraints => [@rel_types]
+
+The C<condition> parameter can take the following values:
+
+ condition => 'only' # new relationships must have one of the listed
+                     # types (whitelist)
+
+ condition => 'none' # no new relationship may have any of the listed
+                     # types (blacklist)
+
 =back
 
 =head2 Using Constraints
+
+L<create_constraint|/create_constraint()> registers the created constraint so that it is
+included in all relevant validations. 
+
+L<drop_constraint|/drop_constraint> deregisters and removes the constraint specified by its tag:
+
+ drop_constraint('owner');
+ drop_constraint('pet');
+
+=head3 Automatic validation
+
+Execute L<constrain|/constrain()> to force L<REST::Neo4p> to raise a
+L<REST::Neo4p::ConstraintException|REST::Neo4p::Exceptions> whenever
+the construction or modification of a Node or Relationship would
+violate the registered constraints.
+
+Executing L<relax|/relax()> causes L<REST::Neo4p> to ignore all
+constraint and create and modify entities as usual.
+
+C<constrain()> and C<relax()> can be used anywhere at any time. The
+effects are global.
+
+When C<constrain()> is in force, any new constraints created are
+immediately available to the validation.
+
+=head3 "Manual" validation
+
+To control validation directly, use the C<:validate> export tag:
+
+ use REST::Neo4p::Constrain qw(:validate);
+
+This provides three functions for checking properties, relationships,
+and relationship types against registered constraints. They return
+true if the object or spec satisfies the current constraints and false
+if it violates the current constraints. No constraint exceptions are
+raised.
 
 =head1 METHODS
 
@@ -435,9 +494,17 @@ In L<REST::Neo4p> terms, if this constraint (and only this one) is registered,
 
 =item create_constraint()
 
+=item drop_constraint()
+
 =item constrain()
 
 =item relax()
+
+=item validate_properties()
+
+=item validate_relationship()
+
+=item validate_relationship_type()
 
 =back
 

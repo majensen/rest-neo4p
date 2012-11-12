@@ -15,7 +15,7 @@ our @EXPORT_OK = qw( validate_properties validate_relationship validate_relation
 our %EXPORT_TAGS = ( validate => [qw(validate_properties validate_relationship validate_relationship_type)] );
 
 BEGIN {
-  $REST::Neo4p::Constraint::VERSION = 1.3;
+  $REST::Neo4p::Constraint::VERSION = "0.20";
 }
 
 # valid constraint types

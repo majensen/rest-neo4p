@@ -5,7 +5,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Constraint::RelationshipType::VERSION = 0.13;
+  $REST::Neo4p::Constraint::RelationshipType::VERSION = "0.20";
 }
 
 sub new {
