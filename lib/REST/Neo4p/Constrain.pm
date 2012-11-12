@@ -452,10 +452,11 @@ The C<condition> parameter can take the following values:
 
 =head2 Using Constraints
 
-L<create_constraint|/create_constraint()> registers the created constraint so that it is
-included in all relevant validations. 
+L<create_constraint|/create_constraint()> registers the created
+constraint so that it is included in all relevant validations.
 
-L<drop_constraint|/drop_constraint> deregisters and removes the constraint specified by its tag:
+L<drop_constraint|/drop_constraint> deregisters and removes the
+constraint specified by its tag:
 
  drop_constraint('owner');
  drop_constraint('pet');
