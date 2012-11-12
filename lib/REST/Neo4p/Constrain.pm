@@ -280,14 +280,14 @@ L<Below|/An Example> is an example.
 
 =head2 Types of Constraints
 
-L<REST::Neo4p::Constrain> handled four types of constraints.
+L<REST::Neo4p::Constrain> handles four types of constraints.
 
 =over
 
 =item * Node property constraints
 
 A node property constraint specifies the presence/absence of
-properties, and can specifiy the allowable values a property must (or
+properties, and can specify the allowable values a property must (or
 must not) take.
 
 =item * Relationship property constraints
@@ -296,7 +296,8 @@ A relationship property constraint specifies the presence/absence of
 properties, and can specifiy the allowable values a property must (or
 must not) take. In addition, a relationship property constraint can be
 linked to a given relationship type, so that, e.g., the creation of a
-relationship of a given type can be forced to have specified properties.
+relationship of a given type can be forced to have specified
+relationship properties.
 
 =item * Relationship constraints
 
@@ -313,7 +314,118 @@ disallowed) relationship types.
 
 =head2 Specifying Constraints
 
+L<REST::Neo4p::Constrain> exports C<create_constraint()>, which
+creates and registers the different constraint types. (It also returns
+the L<REST::Neo4p::Constraint> object so created, which can be
+useful.)
 
+C<create_constraint> accepts a hash of parameters. The following are required:
+
+ create_constraint(
+  tag => $tag, # a (preferably) simple and meaningful alias for this
+               # constraint
+  type => $type, # node_property|relationship_property|
+                 # relationship|relationship_type
+
+  constraint => $constraint, # a reference that depends on the
+                             # constraint type, see below
+ );
+
+Other parameters and the form of the constraint values depend on the
+constraint type:
+
+=over
+
+=item * Node property 
+
+The constraints are specified as a hashref whose keys are the property
+names and values are the constraints on the property values.
+
+ constraint => {
+    prop_1 => '' # property must be present, may have any value
+    prop_2 => 'value', # property must be present, and value must eq 'value'
+    prop_3 => qr/.alue/, # property must be present, and value must match qr/.alue/,
+    prop_4 => [] # property may be present, and may have any value
+    prop_5 => [<string|regexp>] # property may be present, if present
+                                # value must match the given condition
+    prop_6 => qr/^value1|value2|value3$/ # (use regexps for enumerations)
+ }
+
+A C<condition> parameter can be specified:
+
+ condition => 'all' # all the specified constraints must be met, and other
+                    # properties not in the constraint list may be
+                    # added freely
+ condition => 'only' # all the specified constraint must be met, and no other
+                     # properties may be added
+ condition => 'none' # reject if any of the specified constraints is
+                     # satisfied ('blacklist')
+
+C<condition> defaults to 'all'.
+
+=item * Relationship property
+
+Constraints on properties are specified as for node properties above.
+
+A relationship type can be associated with the relationship property
+constraint with the parameter C<rtype>:
+
+ rtype => $relationship_type # any relationship type name, or '*' for all types
+
+The C<condition> parameter works as for node properties above.
+
+=item * Relationship
+
+The basic constraint on a relationship is specified as a hashref that
+maps a "kind" of from-node to a "kind" of to-node. The "kind" of node
+is indicated by the tag of the node property constraint it satisfies.
+
+The C<constraint> parameter takes an arrayref of these one-row hashrefs.
+
+The C<rtype> parameter specifies the relationship type to which the
+constraint applies.
+
+Here's an example. Create the following node property constraints:
+
+ create_constraint(
+  tag => 'owner',
+  type => 'node_property',
+  constraint => {
+    name => qr/a-z/i,
+    species => 'human'
+  }
+ );
+
+ create_constraint(
+  tag => 'pet',
+  type => 'node_property',
+  constraint => {
+    name => qr/a-z/i,
+    species => qr/^dog|cat|ferret|mole rat|platypus$/
+  }
+ );
+
+Then a relationship constraint that specifies owners can own pets is
+
+ create_constraint(
+  tag => 'owners2pets',
+  type => 'relationship',
+  rtype => 'OWNS',
+  constraint =>  [{ owner => 'pet' }] # note arrayref
+ );
+
+In L<REST::Neo4p> terms, if this constraint (and only this one) is registered,
+
+ $fred = REST::Neo4p::Node->new( { name => 'fred', species => 'human' } );
+ $fluffy = REST::Neo4p::Node->new( { name => 'fluffy', species => 'mole rat' } );
+
+ $r1 = $fred->relate_to($fluffy, 'OWNS'); # valid
+ $r2 = $fluffy->relate_to($fred, 'OWNS'); # NOT VALID, throws when
+                                          # constrain() is in force
+
+=item * Relationship type
+
+=back
 
 =head2 Using Constraints
 
