@@ -19,6 +19,7 @@ my $num_live_tests = 34;
 use_ok('REST::Neo4p');
 
 my $not_connected;
+my @cleanup;
 eval {
   REST::Neo4p->connect($TEST_SERVER);
 };
@@ -35,14 +36,18 @@ SKIP : {
     ok $node->remove, "remove the node";
 
     ok my $node2 = REST::Neo4p::Node->new({ a => 1 }), 'create node with props';
+    push @cleanup, $node2 if $node2;
     is $node2->get_property('a'), 1, 'property created';
     1;
     ok $node2->set_property( { foo => 'bar', goob => 12 } ), 'set props';
     is_deeply [$node2->get_property('foo','goob')], ['bar',12], 'get props singly';
     is_deeply $node2->get_properties, { a => 1, foo => 'bar', goob => 12 }, 'get all props at once';
     ok my $node1 = REST::Neo4p::Node->new(), 'make node1';
+    push @cleanup, $node1 if $node1;
     ok my $rel12 = $node1->relate_to($node2, 'is_a'), 'relate n1 to n2';
+    push @cleanup, $rel12 if $rel12;
     ok my $rel21 = $node2->relate_to($node1, 'parent', { type => 'adoptive' }), 'relate n2 to n1, with property';
+    push @cleanup, $rel21 if $rel21;
     is $rel12->type, 'is_a', 'get rel12 type';
     is $rel21->type, 'parent', 'get rel21 type';
     is $rel21->get_property('type'), 'adoptive', 'rel21 property retrieved';
@@ -65,13 +70,11 @@ SKIP : {
     is $rel21->end_node->id, $node1->id, 'got end node';
     is $rel12->start_node->id, $node1->id, 'got start node';
     is $rel12->end_node->id, $node2->id, 'got end node';
-    
-    CLEANUP : {    
-	ok $rel12->remove, 'remove relationship n1 to n2';
-	ok $rel21->remove, 'remove relationship n2 to n1';
-	ok $node1->remove, 'remove n1';
-	ok $node2->remove, 'remove n2';
-    }
-
-
 }
+
+END {
+  CLEANUP : {
+    ok ($_->remove, 'entity removed') for reverse @cleanup;
+  }
+  }
+

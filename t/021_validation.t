@@ -9,6 +9,7 @@ use strict;
 use warnings;
 no warnings qw(once);
 
+my @cleanup;
 my $build;
 eval {
     $build = Module::Build->current;
@@ -247,9 +248,10 @@ my $position = {
 
 isa_ok( REST::Neo4p::Constraint->drop_constraint('c1'), 'REST::Neo4p::Constraint');
 ok my $position_constraint = REST::Neo4p::Constraint->get_constraint('position');
-is $position_constraint->rtype, '*', 'position constraint rtype is wildcard';
-ok $position_constraint->validate($position), 'relationship property constraint satisfied by \'position\'';
+is_deeply $position_constraint->rtype, [], 'position constraint rtype is wildcard';
 
+ok $position_constraint->validate($position), 'relationship property constraint satisfied by \'position\'';
+$DB::single=1;
 is $allowed_has_relns->validate( $module => $teh_shizznit, 'has' ), 1, 'module can have method (1)';
 is $allowed_has_relns->validate( $module => $bizzity_bomb, 'has'), 1,  'module can have method (2)';
 is $allowed_contains_relns->validate( $module => $teh_shizznit, 'contains' ), 1, 'module can also contain a method';
@@ -272,24 +274,23 @@ is $allowed_reln_types->validate('blarfs'), 0, 'blarfs is not a valid type';
 
 #class methods
 
-ok my $c = REST::Neo4p::Constraint->validate_properties($variable), 'validate_properties';
+ok my $c = REST::Neo4p::Constraint::validate_properties($variable), 'validate_properties';
 isa_ok($c,'REST::Neo4p::Constraint::NodeProperty');
 is $c->tag, 'variable', 'correct constraint tag';
-ok !REST::Neo4p::Constraint->validate_properties({glarb => 'foo'}), 'unmatched property hash returns false';
+ok !REST::Neo4p::Constraint::validate_properties({glarb => 'foo'}), 'unmatched property hash returns false';
 
-ok $c = REST::Neo4p::Constraint->validate_relationship($module => $bizzity_bomb,'contains');
+ok $c = REST::Neo4p::Constraint::validate_relationship($module => $bizzity_bomb,'contains');
 isa_ok($c, 'REST::Neo4p::Constraint::Relationship');
 is $c->tag, 'allowed_contains_relns', 'correct constraint tag';
-ok !REST::Neo4p::Constraint->validate_relationship($bizzity_bomb => $module, 'contains'), 'unallowed relationship returns false';
+ok !REST::Neo4p::Constraint::validate_relationship($bizzity_bomb => $module, 'contains'), 'unallowed relationship returns false';
 
-ok $c = REST::Neo4p::Constraint->validate_relationship_type('has');
+ok $c = REST::Neo4p::Constraint::validate_relationship_type('has');
 isa_ok($c, 'REST::Neo4p::Constraint::RelationshipType');
 is $c->tag, 'allowed_reln_types', 'correct constraint tag';
-ok !REST::Neo4p::Constraint->validate_relationship_type('freb'), 'unallowed rtype returns false';
+ok !REST::Neo4p::Constraint::validate_relationship_type('freb'), 'unallowed rtype returns false';
 
 SKIP : {
   skip 'no local connection to neo4j, live tests not performed', $num_live_tests if $not_connected;
-  my @cleanup;
   my @nodeset;
   foreach (@propset) {
       push @cleanup, my $n = REST::Neo4p::Node->new($_->[0]);
@@ -334,29 +335,31 @@ SKIP : {
   is $allowed_reln_types->validate($r7), 1, 'relationship r7 type is allowed';
   is $allowed_reln_types->validate($r8), 0, 'relationship r8 type is not allowed';
 
-#class methods
+#exported methods
 
-  ok my $c = REST::Neo4p::Constraint->validate_properties($variable_node), 'validate_properties';
+  ok my $c = REST::Neo4p::Constraint::validate_properties($variable_node), 'validate_properties';
   isa_ok($c,'REST::Neo4p::Constraint::NodeProperty');
   is $c->tag, 'variable', 'correct constraint tag';
-  ok !REST::Neo4p::Constraint->validate_properties($bad_node_no_biscuit), 
+  ok !REST::Neo4p::Constraint::validate_properties($bad_node_no_biscuit), 
     'unclassified node returns false';
 
 
-  ok $c = REST::Neo4p::Constraint->validate_properties($r9), 'validate relationship properties';
+  ok $c = REST::Neo4p::Constraint::validate_properties($r9), 'validate relationship properties';
   isa_ok($c, 'REST::Neo4p::Constraint::RelationshipProperty');
   is $c->tag, 'position', 'correct constraint tag';
-  ok !REST::Neo4p::Constraint->validate_properties($r8), 'unclassified relationship properties return false';
+  ok !REST::Neo4p::Constraint::validate_properties($r8), 'unclassified relationship properties return false';
 
-  ok $c = REST::Neo4p::Constraint->validate_relationship($r3);
+  ok $c = REST::Neo4p::Constraint::validate_relationship($r3);
   isa_ok($c, 'REST::Neo4p::Constraint::Relationship');
   is $c->tag, 'allowed_contains_relns', 'correct constraint tag';
-  ok !REST::Neo4p::Constraint->validate_relationship($r8), 'unallowed relationship returns false';
+  ok !REST::Neo4p::Constraint::validate_relationship($r8), 'unallowed relationship returns false';
 
+}
+
+END {
   CLEANUP : {
     for (reverse @cleanup) {
       ok $_->remove, 'entity removed from db';
     }
   }
   }
-

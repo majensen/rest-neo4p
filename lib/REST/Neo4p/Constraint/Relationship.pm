@@ -26,10 +26,8 @@ sub new_from_constraint_hash {
       die "Relationship constraint condition must be only|none";
     }
   }
-  else {
-    $self->{_condition} = 'only';
-  }
-  $self->{_condition} = delete $constraints->{_condition};
+
+  $self->{_condition} = delete $constraints->{_condition} || 'only';
   $self->{_relationship_type} = delete $constraints->{_relationship_type};
   unless (ref $constraints->{_descriptors} eq 'ARRAY') {
     die "relationship constraint descriptors must be array of hashrefs";
@@ -114,12 +112,12 @@ sub validate {
   return 1 if ( ($self->condition eq 'none') && !defined $self->constraints->{$reln_type} ); 
 
   my @descriptors = @{$self->constraints->{_descriptors}};
-  $from = $_->get_properties if ref($from) =~ /Neo4p::Node$/;
-  $to = $_->get_properties if ref($to) =~ /Neo4p::Node$/;
+  $from = $from->get_properties if ref($from) =~ /Neo4p::Node$/;
+  $to = $to->get_properties if ref($to) =~ /Neo4p::Node$/;
   # $to, $from now normalized to property hashrefs
 
-  my $from_constraint = REST::Neo4p::Constraint->validate_properties($from);
-  my $to_constraint = REST::Neo4p::Constraint->validate_properties($to);
+  my $from_constraint = REST::Neo4p::Constraint::validate_properties($from);
+  my $to_constraint = REST::Neo4p::Constraint::validate_properties($to);
 
   $from_constraint = $from_constraint && $from_constraint->tag;
   $to_constraint = $to_constraint && $to_constraint->tag;

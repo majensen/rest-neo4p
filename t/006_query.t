@@ -7,7 +7,7 @@ use lib '../lib';
 use strict;
 use warnings;
 no warnings qw(once);
-
+my @cleanup;
 use_ok('REST::Neo4p');
 
 my $build;
@@ -43,6 +43,7 @@ SKIP : {
   ok my $n3 = REST::Neo4p::Node->new({name => 'Pebbles', role => 'daughter'}), 'Pebbles';
   ok my $n4 = REST::Neo4p::Node->new({name => 'Betty', role=>'neighbor'}), 'Betty';
   ok my $n5 = REST::Neo4p::Node->new({name => 'BamBam', role=>'son'}), 'BamBam';
+  push @cleanup, ($n1,$n2,$n3,$n4,$n5);
 
   ok my $r1 = $n1->relate_to($n2, 'married_to');
   ok my $r2 = $n2->relate_to($n1, 'married_to');
@@ -53,9 +54,11 @@ SKIP : {
   ok my $r7 = $n2->relate_to($n3, 'parent_of');
   ok my $r8 = $n4->relate_to($n5, 'parent_of');
 
+  push @cleanup, ($r1,$r2,$r3,$r4,$r5,$r6,$r7,$r8);
+
   ok my $q = REST::Neo4p::Query->new("START n=node($$n1) MATCH (n)-->(x) RETURN x.name, x"), 'new node query';
  $q->{RaiseError} = 1;
-  $DB::single =1;
+
   ok $q->execute, 'execute query';
   while (my $row = $q->fetch) {
     like $row->[0], qr/Wilma|Pebbles/, 'got name';
@@ -87,9 +90,10 @@ SKIP : {
       cmp_ok scalar $path->relationships,'>=', 3, 'got all relationships';
   }
 
+}
+
+END {
   CLEANUP : {
-      ok $_ && $_->remove, 'reln removed' for ($r1, $r2, $r3, $r4, $r5,$r6,$r7,$r8);
-      ok $_ && $_->remove, 'node removed' for ($n1, $n2, $n3, $n4, $n5);
+    ok ($_->remove, 'entity removed') for @cleanup;
   }
-  
 }

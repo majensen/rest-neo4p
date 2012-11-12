@@ -1,13 +1,13 @@
 #-*- perl -*-
 #$Id$
 
-use Test::More tests => 64;
+use Test::More tests => 65;
 use Module::Build;
 use lib '../lib';
 use strict;
 use warnings;
 no warnings qw(once);
-
+my @cleanup;
 my $build;
 eval {
   $build = Module::Build->current;
@@ -36,7 +36,7 @@ SKIP : {
      { name => 'G', type => 'purine'},
      { name => 'C', type => 'pyrimidine' }
     );
-  my @cleanup = my ($A,$T,$G,$C) = map { REST::Neo4p::Node->new($_) } @node_defs;
+  @cleanup = my ($A,$T,$G,$C) = map { REST::Neo4p::Node->new($_) } @node_defs;
   for (@cleanup) {
     isa_ok($_, 'REST::Neo4p::Node')
   }
@@ -47,6 +47,10 @@ SKIP : {
 					     { type => 'fulltext',
 					       provider => 'lucene' }), 
 						 'create node index (test uri_escape)';
+  push @cleanup, $nt_types if $nt_types;
+  push @cleanup, $nt_names if $nt_names;
+  push @cleanup, $nt_comment if $nt_comment;
+
   ok $nt_types->add_entry($A, 'type' => 'purine'),'add A to types';
   ok $nt_types->add_entry($C, 'type' => 'pyrimidine'), 'add C to types';
   ok $nt_types->add_entry($G, 'type' => 'purine'), 'add G to types';
@@ -60,51 +64,52 @@ SKIP : {
   ok $nt_comment->add_entry($T, 'comment' => 'This one & A spell "at"'), 'funky value added';
 
   ok my $nt_muts = REST::Neo4p::Index->new('relationship','nt_muts'), 'create relationship index';
-  ok $nt_muts->add_entry(
+  push @cleanup, $nt_muts if $nt_muts;
+  ok $nt_muts->add_entry( $cleanup[@cleanup] =
 			 $A->relate_to($T,'transition'),
 			 'mut_type' => 'transition'
 			 ), 'add A->T';
-  ok $nt_muts->add_entry( 
+  ok $nt_muts->add_entry( $cleanup[@cleanup] =
 			 $T->relate_to($A,'transition'),
 			 'mut_type' => 'transition'
 			 ), 'add T->A';
-  ok $nt_muts->add_entry(  
+  ok $nt_muts->add_entry(  $cleanup[@cleanup] =
 			 $C->relate_to($G,'transition'),
 			 'mut_type' => 'transition'
 			), 'add C->G';
-  ok $nt_muts->add_entry( 
+  ok $nt_muts->add_entry( $cleanup[@cleanup] =
 			 $G->relate_to($C,'transition'),
 			 'mut_type' => 'transition'
 			 ), 'add G->C';
-  ok $nt_muts->add_entry( 
+  ok $nt_muts->add_entry( $cleanup[@cleanup] =
 			 $A->relate_to($T,'transversion'),
 			 'mut_type' => 'transversion'
 			), 'add A->T';
-  ok $nt_muts->add_entry( 
+  ok $nt_muts->add_entry( $cleanup[@cleanup] =
 			 $A->relate_to($C,'transversion'),
 			 'mut_type' => 'transversion'
 			 ), 'add A->C';
-  ok $nt_muts->add_entry( 
+  ok $nt_muts->add_entry( $cleanup[@cleanup] =
 			 $T->relate_to($A,'transversion'),
 			 'mut_type' => 'transversion'
 			), 'add T->A';
-  ok $nt_muts->add_entry( 
+  ok $nt_muts->add_entry( $cleanup[@cleanup] =
 			 $T->relate_to($G,'transversion'),
 			 'mut_type' => 'transversion'
 			), 'add T->G';
-  ok $nt_muts->add_entry( 
+  ok $nt_muts->add_entry( $cleanup[@cleanup] =
 			 $C->relate_to($A,'transversion'),
 			 'mut_type' => 'transversion'
 			), 'add C->A';
-  ok $nt_muts->add_entry( 
+  ok $nt_muts->add_entry( $cleanup[@cleanup] =
 			 $C->relate_to($T,'transversion'),
 			 'mut_type' => 'transversion'
 			), 'add C->T';
-  ok $nt_muts->add_entry( 
+  ok $nt_muts->add_entry( $cleanup[@cleanup] =
 			 $G->relate_to($A,'transversion'),
 			 'mut_type' => 'transversion'
 			), 'add G->A';
-  ok $nt_muts->add_entry( 
+  ok $nt_muts->add_entry( $cleanup[@cleanup] =
 			 $G->relate_to($T,'transversion'),
 			 'mut_type' => 'transversion'
 			 ), 'add G->T';
@@ -128,17 +133,10 @@ SKIP : {
   ok my @commented = $nt_comment->find_entries('comment:*spell*'), 'find T in comment index with lucene query';
   cmp_ok scalar @commented, '>=', 1, 'found one';
   is $commented[0]->get_property('name'), 'T', 'found T with comment';
-  CLEANUP : {
-    ok $nt_types->remove, 'remove index';
-    ok $nt_names->remove, 'remove index';
-    ok $nt_muts->remove, 'remove index';
-    for my $n (@cleanup) {
-      my @relns = $n->get_relationships;
-      ok $_->remove, 'remove relationship' for @relns;
-    }
-    for (@cleanup) {
-      ok $_->remove, 'remove node';
-    }
-  }
-
 }
+
+END {
+  CLEANUP : {
+    ok ($_->remove, 'entity removed') for reverse @cleanup;
+  }
+  }

@@ -1,13 +1,13 @@
 #-*-perl-*-
 #$Id$
-use Test::More tests => 25;
+use Test::More tests => 24;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
 use strict;
 use warnings;
 no warnings qw(once);
-
+my @cleanup;
 my $build;
 eval {
     $build = Module::Build->current;
@@ -31,6 +31,7 @@ SKIP : {
   ok my $n1 = REST::Neo4p::Node->new(), 'node 1';
   ok my $n2 = REST::Neo4p::Node->new(), 'node 2';
   ok my $r12 = $n1->relate_to($n2, "bubba"), 'relationship 1->2';
+  push @cleanup, ($n1,$n2, $r12);
 
   ok $n1->set_property({ dressing => 'mayo' }), 'node prop set with set_property';
   lives_and { is $n1->dressing, 'mayo' } 'getter works';
@@ -50,12 +51,11 @@ SKIP : {
   lives_and { is $n3->blue, 5 } 'blue setter works';
   my $idx;
   lives_ok {$idx = REST::Neo4p::Index->new('relationship','heydude')} 'index should be created np';
+  push @cleanup, $idx;
 
+}
+END {
   CLEANUP : {
-      ok $r12->remove, 'remove relationship';
-      ok $n1->remove, 'remove node';
-      ok $n2->remove, 'remove node';
-      ok $n3->remove, 'remove node';
-      ok $idx->remove, 'remove index';
+      ok ($_->remove, 'entity removed') for reverse @cleanup;
   }
 }

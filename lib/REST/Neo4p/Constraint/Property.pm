@@ -150,14 +150,29 @@ sub _validate_value {
 	    $is_valid = 0 unless ($value eq $value_spec);
 	  }
 	}
-	else { # $condition eq 'none'
+	elsif ($condition eq 'none') {
 	  if (defined $value) {
 	    $is_valid = 0 unless ($value ne $value_spec);
 	  }
 	}
+	else { #fallthru
+	  die "I shouldn't be here in _validate_value";
+	}
       }
-      else { # empty string
-	1; # stub
+      else { # empty string means this property is required to be present
+	if ($condition =~ /all|only/) {
+	  if (!defined $value) {
+	    $is_valid = 0;
+	  }
+	}
+	elsif ($condition eq 'none') {
+	  if (defined $value) {
+	    $is_valid = 0
+	  }
+	}
+	else { #fallthru
+	  die "I shouldn't be here in _validate_value";
+	}
       }
       last;
     };

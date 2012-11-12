@@ -44,7 +44,5 @@ SKIP : {
   ok -e $response_content, 'got responses in tmpfile';
   is $agent->batch_length, 0, 'queue length reset to 0';
   ok !defined $agent->{__batch_queue}, 'queue reset';
-  CLEANUP : {
-      1;
-  }
 }
+

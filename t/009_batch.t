@@ -1,6 +1,6 @@
 #-*-perl-*-
 #$Id$
-use Test::More tests => 61;
+use Test::More tests => 60;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
@@ -26,6 +26,7 @@ if ( my $e = REST::Neo4p::CommException->caught() ) {
   diag "Test server unavailable : ".$e->message;
 }
 
+my ($idx,$idx2);
 SKIP : {
   skip 'no local connection to neo4j', $num_live_tests if $not_connected;
 
@@ -34,7 +35,7 @@ SKIP : {
   ok( !(
   batch {
       ok $REST::Neo4p::AGENT->batch_mode, 'agent now in batch mode';
-      ok my $idx = REST::Neo4p::Index->new(node => 'test_node'), 'make an index inside batch';
+      ok $idx = REST::Neo4p::Index->new(node => 'test_node'), 'make an index inside batch';
       my $name = "__test_node";
       my @names = map { $name.$_ } (1..10);
       
@@ -45,7 +46,7 @@ SKIP : {
   } ('keep_objs')
       ), 'batch ran without errors');
   ok !$REST::Neo4p::AGENT->batch_mode, 'agent not now in batch mode';
-  ok my $idx = REST::Neo4p->get_index_by_name('test_node','node'), 'got index outside batch';
+  ok $idx = REST::Neo4p->get_index_by_name('test_node','node'), 'got index outside batch';
   ok !$idx->is_batch;
   for (1..10) {
       my ($n) = $idx->find_entries(name => "__test_node$_");
@@ -72,13 +73,16 @@ SKIP : {
   my ($node3) = $idx2->find_entries(name => $name);
   ok !$node3, '..but it does not work';
 
+}
+
+END {
   CLEANUP : {
-      my @nodes = $idx->find_entries('name:*');
+      my @nodes = $idx->find_entries('name:*') if $idx;
       for my $n (@nodes) {
 	  ok ($_->remove, 'remove relationship') for $n->get_all_relationships;
       }
       ok($_->remove,'remove node') for @nodes;
-      ok $idx->remove, 'remove index';
-      ok $idx2->remove, 'remove index';
+      ok ($idx->remove, 'remove index') if $idx;
+      ok ($idx2->remove, 'remove index') if $idx2;
   }
 }

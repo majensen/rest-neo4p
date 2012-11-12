@@ -8,6 +8,7 @@ use strict;
 use warnings;
 no warnings qw(once);
 
+my @cleanup;
 my $build;
 eval {
     $build = Module::Build->current;
@@ -28,8 +29,11 @@ if ( my $e = REST::Neo4p::CommException->caught() ) {
 SKIP : {
   skip 'no local connection to neo4j', $num_live_tests if $not_connected;
   ok my $n1 = REST::Neo4p::Node->new(), 'node 1';
+  push @cleanup, $n1 if $n1;
   ok my $n2 = REST::Neo4p::Node->new(), 'node 2';
+  push @cleanup, $n2 if $n2;
   ok my $r12 = $n1->relate_to($n2, "bubba"), 'relationship 1->2';
+  push @cleanup, $r12 if $r12;
   ok my $n3 = REST::Neo4p->get_node_by_id($$n1), 'got node by id';
   is $$n3, $$n1, 'same node';
   ok my $r = REST::Neo4p->get_relationship_by_id($$r12), 'got relationship by id';
@@ -38,7 +42,9 @@ SKIP : {
   ok grep(/bubba/,@rtypes), 'found relationship type in type list';
 
   ok my $node_idx = REST::Neo4p::Index->new('node', 'node_idx'), 'new node index';
+  push @cleanup, $node_idx if $node_idx;
   ok my $reln_idx = REST::Neo4p::Index->new('relationship', 'reln_idx'), 'new relationship index';
+  push @cleanup, $reln_idx if $reln_idx;
   ok my @idxs = REST::Neo4p->get_indexes('node'), 'get node indexes';
   is $idxs[0]->type, 'node', 'got a node index';
   ok @idxs = REST::Neo4p->get_indexes('relationship'), 'get relationship indexes';
@@ -63,16 +69,14 @@ SKIP : {
   is $$R, $$r12, 'got relationship 12 back';
   is $$I, $$node_idx, 'got node index back';
   is ${($I->find_entries('node' => 1))[0]}, $$n1, 'resurrected index works';
-
-
   
+  ok $r12->remove, 'remove relationship';
+  throws_ok {REST::Neo4p->get_relationship_by_id($$r12)} 'REST::Neo4p::Exception', 'relationship is gone';
+  splice @cleanup,2,1;
+}
 
+END {
   CLEANUP : {
-      ok $r12->remove, 'remove relationship';
-      throws_ok {REST::Neo4p->get_relationship_by_id($$r12)} 'REST::Neo4p::Exception', 'relationship is gone';
-      ok $n1->remove, 'remove node';
-      ok $n2->remove, 'remove node';
-      ok $node_idx->remove, 'remove node index';
-      ok $reln_idx->remove, 'remove relationship index';
+    ok ( $_->remove, 'entity removed') for reverse @cleanup;
   }
 }

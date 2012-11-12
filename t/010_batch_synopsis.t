@@ -27,7 +27,7 @@ if ( my $e = REST::Neo4p::CommException->caught() ) {
   $not_connected = 1;
   diag "Test server unavailable : ".$e->message;
 }
-
+my $idx;
 SKIP : {
   skip 'no local connection to neo4j', $num_live_tests if $not_connected;
 
@@ -41,18 +41,21 @@ SKIP : {
       diag("this may take a while ...");
   } 'keep_objs';
 
-  ok my $idx = REST::Neo4p->get_index_by_name('bunch' => 'node');
+  ok $idx = REST::Neo4p->get_index_by_name('bunch' => 'node');
   ok my ($the_99th_node) = $nodes[98];
   is $the_99th_node->get_property('name'), 'new_node_99';
   my ($points_to_100th_node) = $the_99th_node->get_outgoing_relationships;
   my ($the_100th_node) = $idx->find_entries( name => 'new_node_100');
   
+}
+
+END {
   CLEANUP : {
-      my @nodes = $idx->find_entries('name:*');
+      my @nodes = $idx->find_entries('name:*') if $idx;
       for my $n (@nodes) {
 	  ok ($_->remove, 'remove relationship') for $n->get_all_relationships;
       }
       ok($_->remove,'remove node') for @nodes;
-      ok $idx->remove, 'remove index';
+      ok ($idx->remove, 'remove index') if $idx;
   }
 }
