@@ -178,129 +178,46 @@ REST::Neo4p::Constraint - Application-level Neo4j Constraints
 
 =head1 SYNOPSIS
 
+See L<REST::Neo4p::Constraint::Property>, L<REST::Neo4p::Constraint::Relationship>, L<REST::Neo4p::Constraint::RelationshipType> for examples.
+
 =head1 DESCRIPTION
 
-C<REST::Neo4p::Constraint> 
+Objects of class REST::Neo4p::Constraint are used to capture and
+organize L<REST::Neo4p> application level constraints on Neo4j Node
+and Relationship content.
 
-Create the following constraints
-
-=over
-
-=item Constrain node properties
-
-=item Constrain relationship properties
-
-=item Constrain relationship types
-
-=item Constrain relationships between nodes
-
-=back
-
-=head2 Representing Constraints
-
-store constraints in the neo4j database if desired
-
-read/write as json 
-
-constrain nodes to property constraint sets
-
-constrain nodes to property sets according to a given property's value
-(or sets of properties/values)
-
-constrain relationships to property sets
-
-constrain property values
-
-constrain created relationships to those of certain types
-
-constrain relationships of a certain types to certain property sets
-
-constrain participation of nodes of given properties/values in relationships
-of given types
-
-constrain direction of relationships of given types from and to nodes of 
-given properties/values
-
-
-property set tags
-
-"property constraint set"
-
-{ constraint_tag => 
- {
-  constraint_type => 'node_property' | 'relationship_property',
-  constraints =>
-  { 
-    _condition => constraint_conditions, # ('all'|'only'|'none')
-    prop_0 => [] # may have, no constraint
-    prop_1 => [<string|regexp>] # may have, if present must meet 
-    prop_2 => '' # must have, no constraint
-    prop_3 => 'value', # must have, value must eq 'value'
-    prop_4 => qr/.alue/, # must have, value must match qr/.alue/,
-    prop_5 => qr/^value1|value2|value3$/
-      (use regexps for enumerations)
-
-  }
-}
-
-"relationship type constraint"
-
-{relationship_type_constraint_tag => 
- {
-  constraint_type => "relationship_type",
-  constraints =>
-  {
-   _condition => constraint_conditions, # ('only'|'none')
-    type_list => [ 'type_name_1', 'type_name_2', ...]
-  }
- }
-}
-
-"relationship constraint"
-
-{ relationship_constraint_tag =>
- {
-  constraint_type => "relationship",
- 
-  constraints =>
-  { _condition => (only|none),
-    _relationship_type => <relationship_typename>,
-    _descriptors => [{ constraint_tag => constraint_tag },...] }
- }
-}
-
-must meet at least these conditions - checklist - all
-must meet only these conditions - whitelist - only (cannot possess 
- properties not enumerated)
-must not meet any conditions - blacklist - none
-
-
-apply at entity construction
-apply at property add
-apply at property change
-
-method to instruct contraints not to be applied for a given operation
-
-method to scan a set of entities against set of constraints (validation)
-
-activate constraints
-suspend constraints
-resume constraints
-clear constraints
+The L<REST::Neo4p::Constrain> module provides a more convenient
+factory for REST::Neo4p::Constraint subclasses that specify L<node
+property|REST::Neo4p::Constraint::Property>, L<relationship
+property|REST::Neo4p::Property>,
+L<relationship|REST::Neo4p::Constraint::Relationship>, and
+L<relationship type|REST::Neo4p::Constraint::RelationshipType>
+constraints.
 
 =head1 METHODS
+
+=head2 Class Methods
 
 =over
 
 =item new()
 
-=item load_constraints()
+ $reln_pc = REST::Neo4p::Constraint::RelationshipProperty->new($constraints);
 
-=item get_constraint() (class method)
+Constructor.  Construction also registers the constraint for
+validation. See subclass pod for details.
 
-=item add_constraint()
+=item get_constraint()
+ 
+ $c = REST::Neo4p::Constraint->get_constraint('spiffy_node');
 
-=item remove_constraint()
+Get a registered constraint by constraint tag. Returns false if none found.
+
+=back 
+
+=head2 Instance Methods
+
+=over
 
 =item tag()
 
@@ -308,22 +225,45 @@ clear constraints
 
 =item condition()
 
-=item constraints()
-
 =item priority()
 
-=item type_list()
+=item constraints()
 
-=item add_relationship_types()
+Getters for object fields.
 
 =item set_condition()
 
- Set/get 'all', 'only', 'none' for a given constraint
+ $reln_c->set_condition('only');
+
+Set the group condition for the constraint. See subclass pod for details.
 
 =item set_priority()
 
- constraints with higher priority will be checked before constraints with 
- lower priority
+ $node_pc->set_priority(10);
+
+Set the constraint's priority. Constraints with higher priority will
+be checked before constraints with lower priority in the
+L<validate_*()|/Functional interface for validation> functions.
+
+=item add_constraint()
+
+ $node_pc->add_constraint( 'warning_level' => qr/^[0-9]$/ );
+ $reln_c->add_constraint( { 'species' => 'genus' } );
+
+Add an individual constraint specification to an existing constraint object. See subclass pod for details.
+
+=item remove_constraint()
+
+ $node_pc->remove_constraint( 'warning_level' );
+ $reln_c->remove_constraint( { 'genus' => 'species' } );
+
+Remove an individual constraint specification from an existing constraint object. See subclass pod for details.
+
+=back
+
+=head2 Functional interface for validation
+
+=over
 
 =item validate_properties()
 
@@ -331,17 +271,25 @@ clear constraints
 
 =item validate_relationship_type()
 
-Returns the registered constraint object with the highest priority that
-the argument satisfies, or false if none is satisfied.
+Functional interface. Returns the registered constraint object with
+the highest priority that the argument satisfies, or false if none is
+satisfied.
 
-These are class-only methods. Constraint objects are registered when they
-are constructed.
+These methods can be exported as follows:
+
+ use REST::Neo4p::Constraint qw(:validate)
+
+They can also be exported from L<REST::Neo4p::Constrain>:
+
+ use REST::Neo4p::Constrain qw(:validate)
+
+=back
 
 =head1 SEE ALSO
 
-L<REST::Neo4p>, L<REST::Neo4p::Node>, L<REST::Neo4p::Relationship>,
+L<REST::Neo4p>,L<REST::Neo4p::Constrain>,
 L<REST::Neo4p::Constraint::Property>, L<REST::Neo4p::Constraint::Relationship>,
-L<REST::Neo4p::Constraint::RelationshipType>.
+L<REST::Neo4p::Constraint::RelationshipType>. L<REST::Neo4p::Node>, L<REST::Neo4p::Relationship>,
 
 =head1 AUTHOR
 

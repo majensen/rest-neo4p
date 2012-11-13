@@ -240,9 +240,9 @@ REST::Neo4p::Constrain - Create and apply Neo4j app-level constraints
 
 =head1 DESCRIPTION
 
-L<Neo4j|http://www.neo4j.org>, as a NoSQL database, is intentionally
-lenient. One of the only hardwired constraints is its refusal to
-remove a Node that is involved in a relationship. Other constraints to
+L<Neo4j|http://neo4j.org>, as a NoSQL database, is intentionally
+lenient. One of its only hardwired constraints is its refusal to
+remove a Node that is involved in a Relationship. Other constraints to
 database content (properties and their values, "kinds" of
 relationships, and relationship types) must be applied at the
 application level.
@@ -258,16 +258,16 @@ fine. But you want to guarantee (to your client, for example) that
 
 =over
 
-=item * you can classify every node you add or read unambiguously into
+=item 1. You can classify every node you add or read unambiguously into
 a well-defined group;
 
-=item * you never relate two nodes belonging to particular groups in a
+=item 2. You never relate two nodes belonging to particular groups in a
 way that doesn't make sense according to your well-defined
 relationships.
 
 =back
 
-This set of modules allows you to create a set of constraints on node
+These modules allow you to create a set of constraints on node
 and relationship properties, relationships themselves, and
 relationship types to meet this use case and others. It is flexible,
 in that you can choose the level at which the validation is applied:
@@ -452,10 +452,10 @@ The C<condition> parameter can take the following values:
 
 =head2 Using Constraints
 
-L<create_constraint|/create_constraint()> registers the created
+L<C<create_constraint()>|/create_constraint()> registers the created
 constraint so that it is included in all relevant validations.
 
-L<drop_constraint|/drop_constraint> deregisters and removes the
+L<C<drop_constraint()>|/drop_constraint> deregisters and removes the
 constraint specified by its tag:
 
  drop_constraint('owner');
@@ -463,12 +463,12 @@ constraint specified by its tag:
 
 =head3 Automatic validation
 
-Execute L<constrain|/constrain()> to force L<REST::Neo4p> to raise a
+Execute L<C<constrain()>|/constrain()> to force L<REST::Neo4p> to raise a
 L<REST::Neo4p::ConstraintException|REST::Neo4p::Exceptions> whenever
 the construction or modification of a Node or Relationship would
 violate the registered constraints.
 
-Executing L<relax|/relax()> causes L<REST::Neo4p> to ignore all
+Executing L<C<relax()>|/relax()> causes L<REST::Neo4p> to ignore all
 constraint and create and modify entities as usual.
 
 C<constrain()> and C<relax()> can be used anywhere at any time. The
@@ -495,11 +495,47 @@ raised.
 
 =item create_constraint()
 
+ create_constraint( 
+  tag => $meaningful_tag,
+  type => $constraint_type,   # [node_property|relationship_property|
+                              #  relationship|relationship_type]
+  condition => $condition     # all|only|none, depends on type
+  rtype => $relationship_type # relationship type tag
+  constraints => $spec_ref    # hashref or arrayref, depends on type
+ );
+
+Creates and registers a constraint. Returns the created L<REST::Neo4p::Constraint> object.
+
+See L</Specifying Constraints> for details.
+
 =item drop_constraint()
+
+ drop_constraint($constraint_tag);
+
+Deregisters a constraint identified by its tag. Returns the constraint object.
 
 =item constrain()
 
 =item relax()
+
+ constrain();
+ eval {
+   $node = REST::Neo4p::Node->create({foo => bar, baz => 1});
+ };
+ if ($e = REST::Neo4p::ConstraintException->caught()) {
+   relax();
+   print "Got ".$e->msg.", but creating anyway\n";
+   $node = REST::Neo4p::Node->create({foo => bar, baz => 1});
+ }
+
+constrain() forces L<REST::Neo4p> constructors and property setters to
+comply with the currently registered
+constraints. L<REST::Neo4p::ConstraintException|REST::Neo4p::Exceptions>s
+are thrown if constraints are not met.
+
+relax() turns off the automatic validation of constrain().
+
+Effects are global.
 
 =item validate_properties()
 
