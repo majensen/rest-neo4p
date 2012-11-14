@@ -1,4 +1,4 @@
-#$Id: Relationship.pm 17677 2012-09-19 23:32:48Z jensenma $
+#$Id$
 package REST::Neo4p::Relationship;
 use base 'REST::Neo4p::Entity';
 use REST::Neo4p;

@@ -1,5 +1,5 @@
 #-*-perl-*-
-#$Id: 099_error.t 17684 2012-09-23 01:12:42Z jensenma $
+#$Id$
 use Test::More qw(no_plan);
 use Test::Exception;
 use Module::Build;
