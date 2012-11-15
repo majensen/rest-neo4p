@@ -48,6 +48,12 @@ Revision history for Perl module TCGA::Neo4j
       undef (rather than throwing an exception)
     - remove() checks for a NotFoundException and simply destroys the 
       Perl object (rather than throwing an exception)
+0.1284
+    - fixed incorrect handling of comm errors in REST::Neo4p::Agent
+    - added request retry capability (see REST::Neo4p::Agent pod)
+      (thanks Joseph)
+    - REST::Neo4p::Index::add_entry allows multiple key-value pairs
+      (thanks Joseph)
 0.20
     - Added support for application-level constraints (REST::Neo4p::Constrain
       and REST::Neo4p::Constraint)
