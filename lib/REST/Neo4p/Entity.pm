@@ -3,6 +3,7 @@ package REST::Neo4p::Entity;
 use REST::Neo4p::Exceptions;
 use Carp qw(croak carp);
 use JSON;
+use URI::Escape;
 use strict;
 use warnings;
 
@@ -188,6 +189,7 @@ sub get_property {
       ref $e ? $e->rethrow : die $e;
     }
     else {
+      _unescape($decoded_resp);
       push @ret, $decoded_resp;
     }
   }
@@ -214,8 +216,27 @@ sub get_properties {
   elsif ($e = Exception::Class->caught()) {
     ref $e ? $e->rethrow : die $e;
   }
+  _unescape($decoded_resp);
   return $decoded_resp;
-  
+}
+
+sub _unescape {
+  local $_ = shift;
+  if (ref eq 'HASH') {
+    while ( my ($k,$v) = each %$_ ) {
+      if (ref $v eq '') {
+	$_->{$k} = uri_unescape($v);
+      }
+      else {
+	_unescape($v);
+      }
+    }
+  }
+  elsif (ref eq 'ARRAY') {
+    foreach my $v (@$_) {
+      _unescape($v);
+    }
+  }
 }
 # remove_property( qw(prop1 prop2 ...) )
 sub remove_property {

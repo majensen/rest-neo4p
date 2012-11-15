@@ -13,6 +13,8 @@ BEGIN {
   $REST::Neo4p::Index::VERSION = '0.1282';
 }
 
+my $unsafe = "^A-Za-z0-9\-\._\ ~";
+
 # TODO: auto index objects ready-made
 
 # new( 'node|relationship', $index_name )
@@ -61,35 +63,41 @@ sub remove {
 
 # add an entity to an index
 # add_entry($node, 'rating' => 'best')
+# add_entry($node, %hash_of_entries)
 
 sub add_entry {
   my $self = shift;
-  my ($entity, $key, $value) = @_;
+  my ($entity, @entry_hash) = @_;
   unless ($self->type eq $entity->entity_type) {
     REST::Neo4p::LocalException->throw(
       "Can't add a ".$entity->entity_type." to a ".$self->type." index\n"
      );
   }
-  unless (defined $key && defined $value) {
-    REST::Neo4p::LocalException->throw("Both key and value must be supplied to add an entry\n");
+  unless (@entry_hash && 
+	    ((ref $entry_hash[0] eq 'HASH') || !(@entry_hash % 2))) {
+    REST::Neo4p::LocalException->throw("A hash of key => value pairs is required\n");
   }
+  my %entry_hash = (ref $entry_hash[0] eq 'HASH') ? 
+		      %{$entry_hash[0]} : @entry_hash;
+
   my $agent = $REST::Neo4p::AGENT;
   my $rq = "post_".$self->_action;
   my $decoded_resp;
-  eval {
-    $decoded_resp = $agent->$rq([$self->name], 
-				{ uri => $entity->_self_url,
-				  key => $key,
-				  value => uri_escape($value) }
-			       );
-  };
-  my $e;
-  if ($e = Exception::Class->caught('REST::Neo4p::Exception')) {
-    # TODO : handle different classes
-    $e->rethrow;
-  }
-  elsif ($@) {
-    ref $@ ? $@->rethrow : die $@;
+  while (my ($key, $value) = each %entry_hash) {
+    eval {
+      $decoded_resp = $agent->$rq([$self->name], 
+				  { uri => $entity->_self_url,
+				    key => $key,
+				    value => uri_escape($value,$unsafe) }
+				 );
+    };
+    if (my $e = REST::Neo4p::Exception->caught()) {
+      # TODO : handle different classes?
+      $e->rethrow;
+    }
+    elsif ($e = Exception::Class->caught()) {
+      ref $e ? $e->rethrow : die $e;
+    }
   }
   return 1;
 }
@@ -108,7 +116,7 @@ sub remove_entry {
   my $rq = 'delete_'.$self->_action;
   if (defined $key) {
     if (defined $value) {
-      @addl_components = ($key, uri_escape($value), $$entity);
+      @addl_components = ($key, uri_escape($value,$unsafe), $$entity);
     }
     else { # !defined $value
       @addl_components = ($key, $$entity);
@@ -144,7 +152,7 @@ sub find_entries {
   if ($value) { # exact key->value match
     eval {
       $decoded_resp = $agent->$rq( $self->name,
-				   $key, uri_escape($value) );
+				   $key, uri_escape($value,$unsafe) );
     };
     my $e;
     if ($e = Exception::Class->caught('REST::Neo4p::Exception')) {
@@ -161,7 +169,7 @@ sub find_entries {
     # must add the ?query string to the request url.
     eval {
       $decoded_resp = $agent->$rq( $self->name,
-				   "?query=".uri_escape($query) );
+				   "?query=".uri_escape($query,$unsafe) );
     };
     my $e;
     if ($e = Exception::Class->caught('REST::Neo4p::Exception')) {
@@ -210,6 +218,12 @@ REST::Neo4p::Index - Neo4j index object
                                     { type = 'fulltext',
                                       provider = 'lucene' });
  $node_idx->add_entry( $ShaggyNode, 'pet' => 'ScoobyDoo' );
+ $node_idx->add_entry( $ShaggyNode,
+   'pet' => 'ScoobyDoo',
+   'species' => 'Dog',
+   'genotype' => 'ScSc',
+   'episodes_featured' => 2343 );
+
  @returned_nodes = $node_idx->find_entries('pet' => 'ScoobyDoo');
  @returned_nodes = $node_idx->find_entries('pet:Scoob*');
  $node_idx->remove_entry( $JosieNode, 'hair' => 'red' );
@@ -250,6 +264,8 @@ API.
 =item add_entry()
 
  $index->add_entry( $node, $key => $value );
+ $index->add_entry( $node, $key1 => $value1, $key2 => $value2,...);
+ $index->add_entry( $node, $key_value_hashref );
 
 =item remove_entry()
 

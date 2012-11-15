@@ -8,12 +8,6 @@ BEGIN {
   $REST::Neo4p::Constraint::Property::VERSION = '0.20';
 }
 
-
-sub new {
-  my $class = shift;
-  my $self = $class->SUPER::new(@_);
-}
-
 sub new_from_constraint_hash {
   my $self = shift;
   my ($constraints) = @_;

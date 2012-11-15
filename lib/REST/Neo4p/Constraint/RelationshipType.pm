@@ -33,7 +33,7 @@ sub new_from_constraint_hash {
 	   ref $constraints->{_type_list} eq 'ARRAY' ) {
     die "Relationship type constraint must contain an arrayref of types"
   }
-  $self->{_type_list} = delete $constraints->{_type_list};
+#  $self->{_type_list} = delete $constraints->{_type_list};
   $self->{_constraints} = $constraints;
   return $self;
 }
@@ -47,19 +47,20 @@ sub add_constraint {
 sub add_types {
   my $self = shift;
   my @types = @_;
-  $self->{_type_list} ||= [];
+  $self->constraints->{_type_list} ||= [];
   for (@types) {
     if (ref) {
       REST::Neo4p::LocalException->throw("Relationship types must be strings\n");
     }
-    push @{$self->{_type_list}}, $_;
+    push @{$self->constraints->{_type_list}}, $_;
   }
   return 1;
 }
 
 sub type_list {
   my $self = shift;
-  return @{$self->{_type_list}} if (defined $self->{_type_list});
+  my $constraints = $self->constraints;
+  return @{$constraints->{_type_list}} if (defined $constraints->{_type_list});
   return;
 }
 
@@ -70,9 +71,10 @@ sub remove_type {
   my ($tag) = @_;
   my $ret;
   return unless $self->type_list;
-  for my $i (0..$#{$self->{_type_list}}) {
-    if ($tag eq $self->{_type_list}->{$i}) {
-      $ret = delete $self->{_type_list}->{$i};
+  my $constraints = $self->constraints;
+  for my $i (0..$#{$constraints->{_type_list}}) {
+    if ($tag eq $constraints->{_type_list}->{$i}) {
+      $ret = delete $constraints->{_type_list}->{$i};
       last;
     }
   }
@@ -95,6 +97,7 @@ sub validate {
   $type = $type->type if (ref($type) =~ /Neo4p::Relationship$/);
   return grep(/^$type$/,$self->type_list) ? 1 : 0;
 }
+
 =head1 NAME
 
 REST::Neo4p::Constraint::RelationshipType - Neo4j Relationship Type Constraints

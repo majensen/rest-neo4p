@@ -67,6 +67,7 @@ is $pet_pc->condition, 'all', 'pet_pc condition correct';
 ok $pet_pc->set_condition('only'), 'set condition';
 is $pet_pc->condition, 'only', 'set condition works';
 ok !$pet_pc->constraints->{_condition}, "pet_pc _condition removed from constraint hash";
+
 is_deeply [sort $reln_tc->type_list], [qw( acquaintance_of pet_of )], 'type_list correct';
 
 is $person_pc->tag, 'person', 'person_pc tag correct';
@@ -108,4 +109,19 @@ throws_ok { $person_pc->get_constraint('pet') } 'REST::Neo4p::ClassOnlyException
 
 isa_ok(REST::Neo4p::Constraint->get_constraint('pet'), 'REST::Neo4p::Constraint');
 is(REST::Neo4p::Constraint->get_constraint('pet')->tag, 'pet', 'got pet constraint');
+
+ok my $j1 = $pet_pc->to_json, 'serialize pet_pc';
+ok my $j2 = $reln_pc->to_json, 'serialize reln_pc';
+ok my $j3 = $reln_c->to_json, 'serialize reln_c';
+ok my $j4 = $reln_c2->to_json, 'serialize reln_c2';
+ok my $j5 = $reln_tc->to_json, 'serialize reln_tc';
+
+ok $_->drop, 'constraint dropped' for ($pet_pc,$reln_pc,$reln_c,$reln_c2,$reln_tc);
+
+ok my $pet_pc_j = REST::Neo4p::Constraint->new_from_json($j1);
+ok my $reln_pc_j = REST::Neo4p::Constraint->new_from_json($j2);
+ok my $reln_c_j = REST::Neo4p::Constraint->new_from_json($j3);
+ok my $reln_c2_j = REST::Neo4p::Constraint->new_from_json($j4);
+ok my $reln_tc_j = REST::Neo4p::Constraint->new_from_json($j5);
+
 

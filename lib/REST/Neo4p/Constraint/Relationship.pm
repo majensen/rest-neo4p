@@ -50,7 +50,8 @@ sub add_constraint {
   unless (ref($value) eq 'HASH') {
     REST::Neo4p::LocalException->throw("Relationship descriptor must be a hashref { node_property_constraint_tag => node_property_constraint_tag }\n");
   }
-  $self->constraints->{_descriptors} ||= [];
+  my $constraints = $self->constraints;
+  $constraints->{_descriptors} ||= [];
   while ( my ($tag1, $tag2) = each %$value ) {
     unless ( grep(/^$tag1$/, keys %$REST::Neo4p::Constraint::CONSTRAINT_TABLE) ) {
       REST::Neo4p::LocalException->throw("Constraint '$tag1' is not defined\n");
@@ -58,7 +59,7 @@ sub add_constraint {
     unless ( grep(/^$tag2$/, keys %$REST::Neo4p::Constraint::CONSTRAINT_TABLE) ) {
       REST::Neo4p::LocalException->throw("Constraint '$tag2' is not defined\n");
     }
-    push @{$self->constraints->{_descriptors}}, $value;
+    push @{$constraints->{_descriptors}}, $value;
   }
   return 1;
 }

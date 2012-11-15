@@ -6,6 +6,8 @@ use REST::Neo4p::Exceptions;
 use REST::Neo4p::Constraint::Property;
 use REST::Neo4p::Constraint::Relationship;
 use REST::Neo4p::Constraint::RelationshipType;
+use JSON;
+use Data::Dumper;
 
 use Scalar::Util qw(looks_like_number);
 use strict;
@@ -13,6 +15,16 @@ use warnings;
 
 our @EXPORT_OK = qw( validate_properties validate_relationship validate_relationship_type );
 our %EXPORT_TAGS = ( validate => [qw(validate_properties validate_relationship validate_relationship_type)] );
+our $jobj = JSON->new();
+$jobj->allow_blessed(1);
+$jobj->convert_blessed(1);
+my $regex_to_json = sub {
+  my $qr = shift;
+  local $Data::Dumper::Terse=1;
+  $qr = Dumper $qr;
+  chomp $qr;
+  return $qr;
+};
 
 BEGIN {
   $REST::Neo4p::Constraint::VERSION = "0.20";
@@ -48,7 +60,58 @@ sub new {
 }
 
 sub new_from_constraint_hash {
-  REST::Neo4p::AbstractMethodException->throw("Cannot call new_from_constraint_hash() from the Constraint parent class\n");
+  REST::Neo4p::AbstractMethodException->throw("new_from_constraint_hash() is an abstract method of ".__PACKAGE__."\n");
+}
+
+sub to_json {
+  no warnings qw(redefine);
+  my $self = shift;
+  my $store; 
+  my $old = *Regexp::TO_JSON{CODE};
+  *Regexp::TO_JSON = $regex_to_json;
+  $store = $self->constraints;
+  $store->{_condition} = $self->condition;
+  my $ret  = $jobj->encode({tag => $self->tag, type => $self->type,
+		 _constraint_hash => $store });
+  *Regexp::TO_JSON = $old if $old;
+  delete $store->{_condition};
+  return $ret;
+}
+
+sub new_from_json {
+  my $class = shift;
+  my ($json) = @_;
+  unless (ref($json)) {
+    $json = decode_json($json);
+  }
+  unless ( $json->{tag} && $json->{type} ) {
+    REST::Neo4p::LocalException->throw("json does not correctly specify a constraint object\n");
+  }
+  my $subclass = $json->{type};
+  _fix_constraints($json->{_constraint_hash});
+  $subclass =~ s/^(.)/\U\1\E/;
+  $subclass =~ s/_(.)/\U\1\E/;
+  $subclass = 'REST::Neo4p::Constraint::'.$subclass;
+  $subclass->new($json->{tag}, $json->{_constraint_hash});
+}
+
+sub _fix_constraints {
+  local $_ = shift;
+  if (ref eq 'HASH') {
+    while (my ($k, $v) = each %$_) {
+      if ($v =~ /^qr\//) {
+	$_->{$k} = eval $v; # replace with Regexp
+      }
+      else {
+	_fix_constraints($v);
+      }
+    }
+  }
+  elsif (ref eq 'ARRAY') {
+    foreach my $v (@$_) {
+      _fix_constraints($v);
+    }
+  }
 }
 
 sub tag { shift->{_tag} }
@@ -75,13 +138,18 @@ sub get_constraint {
   return $CONSTRAINT_TABLE->{$tag};
 }
 
+sub drop {
+  my $self = shift;
+  delete $CONSTRAINT_TABLE->{$self->tag};
+}
+
 sub drop_constraint {
   my $class = shift;
   if (ref $class) {
     REST::Neo4p::ClassOnlyException->throw("get_constraint is a class method only\n");
   }
   my ($tag) = @_;
-  return delete $CONSTRAINT_TABLE->{$tag};
+  delete $CONSTRAINT_TABLE->{$tag};
 }
 
 sub add_constraint {
@@ -178,7 +246,9 @@ REST::Neo4p::Constraint - Application-level Neo4j Constraints
 
 =head1 SYNOPSIS
 
-See L<REST::Neo4p::Constraint::Property>, L<REST::Neo4p::Constraint::Relationship>, L<REST::Neo4p::Constraint::RelationshipType> for examples.
+See L<REST::Neo4p::Constraint::Property>,
+L<REST::Neo4p::Constraint::Relationship>,
+L<REST::Neo4p::Constraint::RelationshipType> for examples.
 
 =head1 DESCRIPTION
 
@@ -227,9 +297,13 @@ Get a registered constraint by constraint tag. Returns false if none found.
 
 =item priority()
 
+Constraints with larger priority values are checked before those with
+smaller values by the L<C<validate_*()>|/Functional interface for
+validation> functions.
+
 =item constraints()
 
-Getters for object fields.
+Returns the hashref of constraints. Format depends on the subclass.
 
 =item set_condition()
 
