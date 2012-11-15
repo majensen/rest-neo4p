@@ -1,6 +1,6 @@
 #-*-perl-*-
 #$Id$
-use Test::More tests => 24;
+use Test::More tests => 25;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';

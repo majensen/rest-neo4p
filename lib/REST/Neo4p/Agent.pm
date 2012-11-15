@@ -15,7 +15,8 @@ BEGIN {
 our $AUTOLOAD;
 our $JOB_CHUNK = 1024;
 our $JSON = JSON->new()->allow_nonref(1);
-
+our $RQ_RETRIES = 3;
+our $RETRY_WAIT = 5;
 sub new {
   my $class = shift;
   my $self = $class->SUPER::new(@_);

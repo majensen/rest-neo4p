@@ -198,6 +198,8 @@ The relationship type to which this constraint applies.
 
  true if the item meets the constraint, false if not
 
+=back
+
 =head1 SEE ALSO
 
 L<REST::Neo4p>, L<REST::Neo4p::Node>, L<REST::Neo4p::Relationship>,

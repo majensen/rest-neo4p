@@ -13,7 +13,7 @@ eval {
   $build = Module::Build->current;
 };
 my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
-my $num_live_tests = 63;
+my $num_live_tests = 64;
 
 use_ok('REST::Neo4p');
 

@@ -12,7 +12,7 @@ BEGIN {
   $REST::Neo4p::Constrain::VERSION = '0.20';
 }
 our @EXPORT = qw(create_constraint drop_constraint constrain relax);
-our @EXPORT_OK = qw(validate_properties validate_relationship validate_relationship_type)
+our @EXPORT_OK = qw(validate_properties validate_relationship validate_relationship_type);
 our %EXPORT_TAGS = (
   validate => [@EXPORT_OK],
   auto => [@EXPORT],
