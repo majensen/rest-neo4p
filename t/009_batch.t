@@ -1,6 +1,6 @@
 #-*-perl-*-
 #$Id$
-use Test::More tests => 61;
+use Test::More qw(no_plan);
 use Test::Exception;
 use Module::Build;
 use lib '../lib';

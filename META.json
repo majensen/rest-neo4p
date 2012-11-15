@@ -40,11 +40,11 @@
    "provides" : {
       "REST::Neo4p" : {
          "file" : "lib/REST/Neo4p.pm",
-         "version" : "0.1283"
+         "version" : "0.1284"
       },
       "REST::Neo4p::Agent" : {
          "file" : "lib/REST/Neo4p/Agent.pm",
-         "version" : "0.1282"
+         "version" : "0.1284"
       },
       "REST::Neo4p::Batch" : {
          "file" : "lib/REST/Neo4p/Batch.pm",
@@ -85,5 +85,5 @@
          "http://dev.perl.org/licenses/"
       ]
    },
-   "version" : "0.1283"
+   "version" : "0.1284"
 }

@@ -1,7 +1,7 @@
 #-*- perl -*-
 #$Id$
 
-use Test::More tests => 64;
+use Test::More tests => 68;
 use Module::Build;
 use lib '../lib';
 use strict;
@@ -13,7 +13,7 @@ eval {
   $build = Module::Build->current;
 };
 my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
-my $num_live_tests = 63;
+my $num_live_tests = 67;
 
 use_ok('REST::Neo4p');
 
@@ -55,6 +55,17 @@ SKIP : {
   ok $nt_names->add_entry($C, 'fullname' => 'cytosine'), 'add C to names';
   ok $nt_names->add_entry($G, 'fullname' => 'guanosine'), 'add G to names';
   ok $nt_names->add_entry($T, 'fullname' => 'thymidine'), 'add T to names';
+
+  diag("rt80440");
+  ok $nt_names->add_entry($T, 'nickname' => 'old_thymy',
+			      'friends_call_him' => 'Mr_T'), 
+  'add multiple key/values (rt80440)';
+  ok my ($mrt) = $nt_names->find_entries('friends_call_him' => 'Mr_T'), 'found multiply added entry';
+  is $mrt->get_property('name'), 'T', 'found right node';
+  TODO : {
+      local $TODO = "uri escape is not working properly on add and find";
+      pass;
+  }
 
   ok $nt_comment->add_entry($C, 'comment' => 'Man, this is my fave nucleotide!'), 'funky value added';
   ok $nt_comment->add_entry($T, 'comment' => 'This one & A spell "at"'), 'funky value added';

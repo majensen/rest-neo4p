@@ -29,6 +29,7 @@ t/098_pod.t
 t/099_error.t
 t/rt_80150.t
 t/rt_80196.t
+t/rt_80471.t
 t/Neo4p.pm
 META.yml
 META.json

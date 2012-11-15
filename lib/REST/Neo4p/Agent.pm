@@ -9,11 +9,13 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Agent::VERSION = '0.1282';
+  $REST::Neo4p::Agent::VERSION = '0.1284';
 }
 
 our $AUTOLOAD;
 our $JOB_CHUNK = 1024;
+our $RQ_RETRIES = 3; # number of request retries to attempt on 500 error
+our $RETRY_WAIT = 5; # secs to wait between retries
 our $JSON = JSON->new()->allow_nonref(1);
 
 sub new {
@@ -87,7 +89,6 @@ sub connect {
 # _add_to_batch_queue
 # takes a request and converts to a Neo4j REST batch-friendly
 # hash
-# VERY internal and experimental
 # $url : rest endpoint that would be called ordinarily
 # $rq : [get|delete|post|put]
 # $content : hashref of rq content (post and put)
@@ -105,7 +106,8 @@ sub _add_to_batch_queue {
      };
   $job->{body} = $content if defined $content;
   push @{$self->{__batch_queue}}, $job;
-  return "{$id}"; # Neo4j batch reference for this job
+  $self->{_decoded_content} = "{$id}"; # Neo4j batch reference for this job
+  return "{$id}";
 }
 
 sub execute_batch {
@@ -170,11 +172,37 @@ sub AUTOLOAD {
   }
   return $self->{_actions}{$action} unless $rq;
   $rq =~ s/_$//;
-  # reset
+  for (my $i = $RQ_RETRIES; $i>0; $i--) {
+    eval {
+      $self->__do_request($rq, $action, @_);
+    };
+    if (my $e = REST::Neo4p::CommException->caught()) {
+      if ($i > 1) {
+	sleep $RETRY_WAIT;
+      }
+      else {
+	$e->{message} .= "(after $RQ_RETRIES retries)"; # evil.
+	$e->rethrow;
+      }
+    }
+    elsif ($e = Exception::Class->caught()) {
+      ref $e ? $e->rethrow : die $e;
+    }
+    else {
+      last; # success
+    }
+  }
+  return $self->{_decoded_content};
+}
+
+sub __do_request {
+  my $self = shift;
+  my ($rq, $action, @args) = @_;
   $self->{_errmsg} = $self->{_location} = $self->{_decoded_content} = undef;
   for ($rq) {
+    my $resp;
     /get|delete/ && do {
-      my @url_components = @_;
+      my @url_components = @args;
       my %rest_params = ();
       # look for a hashref as final arg containing field => value pairs
       if (@url_components && ref $url_components[-1] && (ref $url_components[-1] eq 'HASH')) {
@@ -183,38 +211,16 @@ sub AUTOLOAD {
       my $url = join('/',$self->{_actions}{$action},@url_components);
       if ($self->batch_mode) {
 	$url = ($url_components[0] =~ /{[0-9]+}/) ? $url_components[0] : $url; # index batch object kludge
+
 	@_ = ($self, 
 	      $url,
 	      $rq);
 	goto &_add_to_batch_queue; # short circuit to _add_to_batch_queue
       }
-      my $resp = $self->$rq($url,%rest_params);
-      eval { 
-	$self->{_decoded_content} = $resp->content ? $JSON->decode($resp->content) : {};
-      };
-      unless ($resp->is_success) {
-	if ( $self->{_decoded_content} ) {
-	  my $xclass = ($resp->code == 404) ? 'REST::Neo4p::NotFoundException' : 'REST::Neo4p::Neo4jException';
-	  $xclass->throw( 
-	    code => $resp->code,
-	    neo4j_message => $self->{_decoded_content}->{message},
-	    neo4j_exception => $self->{_decoded_content}->{exception},
-	    neo4j_stacktrace =>  $self->{_decoded_content}->{stacktrace}
-	      );
-	}
-	else {
-	  my $xclass = ($resp->code == 404) ? 'REST::Neo4p::NotFoundException' : 'REST::Neo4p::CommException';
-	  $xclass->throw( 
-	    code => $resp->code,
-	    message => $resp->message
-	   );
-	}
-      }
-      $self->{_location} = $resp->header('Location');
-      last;
+      $resp = $self->$rq($url,%rest_params);
     };
     /post|put/ && do {
-      my ($url_components, $content, $addl_headers) = @_;
+      my ($url_components, $content, $addl_headers) = @args;
       unless (!$addl_headers || (ref $addl_headers eq 'HASH')) {
 	REST::Neo4p::LocalException->throw("Arg 3 must be a hashref of additional headers\n");
       }
@@ -227,8 +233,15 @@ sub AUTOLOAD {
 	goto &_add_to_batch_queue;
       }
       $content = $JSON->encode($content) if $content;
-      my $resp  = $self->$rq($url, 'Content-Type' => 'application/json', Content=> $content, %$addl_headers);
-      $self->{_decoded_content} = $resp->content ? $JSON->decode($resp->content) : {};
+      $resp  = $self->$rq($url, 'Content-Type' => 'application/json', Content=> $content, %$addl_headers);
+    };
+    do { # exception handling
+      # rt80471...
+      eval {
+	$self->{_decoded_content} = $JSON->decode($resp->content);
+      };
+
+      undef $self->{_decoded_content} if $@;
       unless ($resp->is_success) {
 	if ( $self->{_decoded_content} ) {
 	  my %error_fields = (
@@ -241,12 +254,13 @@ sub AUTOLOAD {
 	  if ($resp->code == 404) {
 	    $xclass = 'REST::Neo4p::NotFoundException';
 	  }
-	  if ( $error_fields{neo4j_exception} =~ /^Syntax/ ) {
+	  if ( $error_fields{neo4j_exception} && 
+		 ($error_fields{neo4j_exception} =~ /^Syntax/ )) {
 	    $xclass = 'REST::Neo4p::QuerySyntaxException';
 	  }
 	  $xclass->throw(%error_fields);
 	}
-	else {
+	else { # couldn't parse the content as JSON...
 	  my $xclass = ($resp->code == 404) ? 'REST::Neo4p::NotFoundException' : 'REST::Neo4p::CommException';
 	  $xclass->throw( 
 	    code => $resp->code,
@@ -257,11 +271,7 @@ sub AUTOLOAD {
       $self->{_location} = $resp->header('Location');
       last;
     };
-    do { # fallthru
-      croak "I shouldn't be here";
-    };
   }
-  return $self->{_decoded_content};
 }
 
 sub DESTROY {}
@@ -296,6 +306,16 @@ L<REST::Neo4p::Exceptions>.
 
 C<REST::Neo4p::Agent> is a subclass of L<LWP::UserAgent|LWP::UserAgent>
 and inherits its capabilities.
+
+C<REST::Neo4p::Agent> will retry requests that fail with
+C<REST::Neo4p::CommException>. The default number of retries is 3; the
+default wait time between retries is 5 sec. These can be adjusted by
+setting the package variables
+
+ $REST::Neo4p::Agent::RQ_RETRIES
+ $REST::Neo4p::Agent::RETRY_WAIT
+
+to the desired values.
 
 According to the Neo4j recommendation, the agent requests streamed
 responses by default (i.e.,
