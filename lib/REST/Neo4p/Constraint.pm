@@ -13,6 +13,7 @@ use Scalar::Util qw(looks_like_number);
 use strict;
 use warnings;
 
+our @EXPORT = qw(serialize_constraints load_constraints);
 our @EXPORT_OK = qw( validate_properties validate_relationship validate_relationship_type );
 our %EXPORT_TAGS = ( validate => [qw(validate_properties validate_relationship validate_relationship_type)] );
 our $jobj = JSON->new();
@@ -49,14 +50,14 @@ sub new {
     REST::Neo4p::LocalException->throw("Constraint tag may contain only alphanumerics chars, underscore and period\n");
   }
   if ( !grep /^$tag$/,keys %$CONSTRAINT_TABLE ) {
-    $CONSTRAINT_TABLE->{$tag} = $self;
     $self->{_tag} = $tag;
-    $self->{_priority} = 0;
+    $self->{_constraints}{_priority} = 0; ##
   }
   else {
     REST::Neo4p::LocalException->throw("Constraint with tag '$tag' is already defined\n");
   }
-  return $self->new_from_constraint_hash($constraints);
+  $self->new_from_constraint_hash($constraints);
+  $CONSTRAINT_TABLE->{$tag} = $self;
 }
 
 sub new_from_constraint_hash {
@@ -71,10 +72,11 @@ sub to_json {
   *Regexp::TO_JSON = $regex_to_json;
   $store = $self->constraints;
   $store->{_condition} = $self->condition;
+  $store->{_priority} = $self->priority;
+  $store->{_relationship_type} = $self->rtype if $self->can('rtype');
   my $ret  = $jobj->encode({tag => $self->tag, type => $self->type,
 		 _constraint_hash => $store });
   *Regexp::TO_JSON = $old if $old;
-  delete $store->{_condition};
   return $ret;
 }
 
@@ -89,17 +91,21 @@ sub new_from_json {
   }
   my $subclass = $json->{type};
   _fix_constraints($json->{_constraint_hash});
-  $subclass =~ s/^(.)/\U\1\E/;
-  $subclass =~ s/_(.)/\U\1\E/;
+  $subclass =~ s/^(.)/\U$1\E/;
+  $subclass =~ s/_(.)/\U$1\E/;
   $subclass = 'REST::Neo4p::Constraint::'.$subclass;
   $subclass->new($json->{tag}, $json->{_constraint_hash});
 }
 
 sub _fix_constraints {
+  # make qr// strings into Regexp objects
   local $_ = shift;
   if (ref eq 'HASH') {
     while (my ($k, $v) = each %$_) {
-      if ($v =~ /^qr\//) {
+      if ($v && ($v =~ /^qr\//)) {
+
+	$v =~ s|/\(\?\^:|/|; # kludge - eval wants to wrap (?:^...) around a qr string
+	$v =~ s|\)/|/|; # kludge -      even if one is there already
 	$_->{$k} = eval $v; # replace with Regexp
       }
       else {
@@ -116,8 +122,8 @@ sub _fix_constraints {
 
 sub tag { shift->{_tag} }
 sub type { shift->{_type} }
-sub condition { shift->{_condition} }
-sub priority { shift->{_priority} }
+sub condition { shift->{_constraints}{_condition} } ##
+sub priority { shift->{_constraints}{_priority} } ##
 sub constraints { shift->{_constraints} }
 
 sub set_priority {
@@ -126,7 +132,7 @@ sub set_priority {
   unless (looks_like_number($priority_value)) {
     REST::Neo4p::LocalException->throw("Priority value must be numeric\n");
   }
-  return $self->{_priority} = $priority_value;
+  return $self->{_constraints}{_priority} = $priority_value;
 }
 
 sub get_constraint {
@@ -238,6 +244,25 @@ sub validate_relationship_type {
     }
   }
   return $ret;
+}
+
+sub serialize_constraints {
+  my $json = sprintf "%s", join(", ", map { $_->to_json } values %$CONSTRAINT_TABLE);
+  return "[$json]";
+}
+
+sub load_constraints {
+  my ($json) = @_;
+  eval {
+    $json = decode_json($json);
+  };
+  if (my $e = Exception::Class->caught()) {
+    REST::Neo4p::LocalException->throw("JSON error: $e");
+  }
+  for (@$json) {
+    REST::Neo4p::Constraint->new_from_json($_);
+  }
+  return 1;
 }
 
 =head1 NAME
@@ -356,6 +381,20 @@ These methods can be exported as follows:
 They can also be exported from L<REST::Neo4p::Constrain>:
 
  use REST::Neo4p::Constrain qw(:validate)
+
+=back
+
+=head2 Serializing and loading constraints
+
+=over 
+
+=item serialize_constraints()
+
+ $json = serialize_constraints();
+
+=item load_constraints()
+
+ load_constraints($json);
 
 =back
 

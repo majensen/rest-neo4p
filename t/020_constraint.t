@@ -1,6 +1,6 @@
 #-*-perl-*-
 #$Id$
-use Test::More tests => 51;
+use Test::More qw(no_plan);
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
@@ -66,7 +66,7 @@ is $person_pc->condition, 'only', 'person_pc condition correct (default)';
 is $pet_pc->condition, 'all', 'pet_pc condition correct';
 ok $pet_pc->set_condition('only'), 'set condition';
 is $pet_pc->condition, 'only', 'set condition works';
-ok !$pet_pc->constraints->{_condition}, "pet_pc _condition removed from constraint hash";
+# ok !$pet_pc->constraints->{_condition}, "pet_pc _condition removed from constraint hash"; ##
 
 is_deeply [sort $reln_tc->type_list], [qw( acquaintance_of pet_of )], 'type_list correct';
 
@@ -123,5 +123,18 @@ ok my $reln_pc_j = REST::Neo4p::Constraint->new_from_json($j2);
 ok my $reln_c_j = REST::Neo4p::Constraint->new_from_json($j3);
 ok my $reln_c2_j = REST::Neo4p::Constraint->new_from_json($j4);
 ok my $reln_tc_j = REST::Neo4p::Constraint->new_from_json($j5);
+$DB::single=1;
+is_deeply ($pet_pc_j, $pet_pc, 'thawed npc');
+is_deeply ($reln_pc_j, $reln_pc, 'thawed rpc');
+is_deeply ($reln_c_j, $reln_c, 'thawed rc');
+is_deeply ($reln_c2_j, $reln_c2, 'thawed rc2');
+is_deeply ($reln_tc_j, $reln_tc, 'thawed rtc');
 
+my @tags = keys %$REST::Neo4p::Constraint::CONSTRAINT_TABLE;
+my $serialized =  serialize_constraints() ;
+ok $_->drop, 'constraint dropped' for values %$REST::Neo4p::Constraint::CONSTRAINT_TABLE;
+ok !(values %$REST::Neo4p::Constraint::CONSTRAINT_TABLE), 'constraint table vacated';
+
+load_constraints($serialized);
+is_deeply [sort @tags], [sort map { $_->tag } values %$REST::Neo4p::Constraint::CONSTRAINT_TABLE], 'constraints reloaded';
 

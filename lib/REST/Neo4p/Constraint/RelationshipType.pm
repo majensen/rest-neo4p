@@ -24,10 +24,10 @@ sub new_from_constraint_hash {
     unless (grep(/^$cond$/,qw( only none ))) {
       die "Relationship type constraint condition must be one of (only|none)";
     }
-    $self->{_condition} = delete $constraints->{_condition};
+#    $self->{_condition} = delete $constraints->{_condition};
   }
   else {
-    $self->{_condition} = 'only'; # default
+    $self->{_constraints}{_condition} = 'only'; # default ##
   }
   unless ( defined $constraints->{_type_list} &&
 	   ref $constraints->{_type_list} eq 'ARRAY' ) {
@@ -87,7 +87,7 @@ sub set_condition {
   unless ($condition =~ /^(only|none)$/) {
     REST::Neo4p::LocalException->throw("Relationship type condition must be one of (only|none)\n");
   }
-  return $self->{_condition} = $condition;
+  return $self->{_constraints}{_condition} = $condition;
 }
 
 sub validate {

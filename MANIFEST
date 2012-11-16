@@ -33,6 +33,7 @@ t/010_batch_synopsis.t
 t/020_constraint.t
 t/021_validation.t
 t/022_constrain.t
+t/030_idx_escape.t
 t/098_pod.t
 t/099_error.t
 t/rt_80150.t
