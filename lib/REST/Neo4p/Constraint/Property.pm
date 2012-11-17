@@ -17,7 +17,6 @@ sub new_from_constraint_hash {
     unless (grep(/^$cond$/,qw( all only none ))) {
       die "Property constraint condition must be all|only|none";
     }
-#    $self->{_condition} = delete $constraints->{_condition};
   }
   else {
     $constraints->{_condition} = 'only'; ##
@@ -287,26 +286,38 @@ must not meet any conditions - blacklist - none
 
 =item tag()
 
+Returns the constraint tag.
+
 =item type()
 
+Returns the constraint type ('node_property' or 'relationship_property').
+
 =item condition()
-
-=item constraints()
-
-=item priority()
 
 =item set_condition()
 
  Set/get 'all', 'only', 'none' for a given constraint
 
+=item priority()
+
 =item set_priority()
 
- constraints with higher priority will be checked before constraints with 
- lower priority
+Constraints with higher priority will be checked before constraints
+with lower priority by
+L<C<validate_properties()>|REST::Neo4p::Constraint/Functional
+interface for validation>.
+
+=item constraints()
+
+Returns the internal constraint spec hashref.
 
 =item validate()
 
- true if the item meets the constraint, false if not
+ $c->validate( $node_object )
+ $c->validate( $relationship_object )
+ $c->validate( { name => 'Steve', instrument => 'banjo } );
+
+Returns true if the item meets the constraint, false if not.
 
 =back
 

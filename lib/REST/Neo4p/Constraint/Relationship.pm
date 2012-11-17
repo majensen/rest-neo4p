@@ -26,9 +26,8 @@ sub new_from_constraint_hash {
       die "Relationship constraint condition must be only|none";
     }
   }
+  $constraints->{_condition} ||= 'only'; ##
 
-  $self->{_constraints}{_condition} ||= 'only'; ##
-##  $self->{_constraints}{_relationship_type} = delete $constraints->{_relationship_type};
   unless (ref $constraints->{_descriptors} eq 'ARRAY') {
     die "relationship constraint descriptors must be array of hashrefs";
   }
@@ -89,8 +88,9 @@ sub set_condition {
 }
 
 sub validate {
+
   my $self = shift;
-  my ($from, $to, $reln_type) = @_;
+  my ($from, $to, $reln_type, $reln_props) = @_;
   my ($reln) = @_;
   return unless defined $from;
   if (ref($reln) =~ /Neo4p::Relationship$/) {
@@ -98,18 +98,23 @@ sub validate {
     $to = $reln->end_node->get_properties;
     $reln_type = $reln->type;
   }
-  REST::Neo4p::LocalException->throw("Relationship type (arg3) must be provided to validate") unless defined $reln_type;
-  # first check if relationship type is defined and
-  # is represented in this constraint
-  # if validation is strict, fail if type undefined or not found
-  # if validation is lax, continue
+  REST::Neo4p::LocalException->throw("Relationship type (arg3) must be provided to validate\n") unless defined $reln_type;
+  REST::Neo4p::LocalException->throw("Relationship properties (arg4) must be a hashref of properties\n") unless (!$reln_props) || (ref $reln_props eq 'HASH');
 
   unless ((ref($from) =~ /Neo4p::Node|HASH$/) &&
 	  (ref($to) =~ /Neo4p::Node|HASH$/)) {
     REST::Neo4p::LocalException->throw("validate() requires a pair of Node objects, a pair of hashrefs, or a single Relationship object\n");
   }
-
+  # first check if relationship type is defined and
+  # is represented in this constraint (or the constraint has 
+  # wildcard type)
   return 0 unless (($self->rtype eq '*') || ($reln_type eq $self->rtype));
+  # if rtype validation is strict, fail if type undefined or not found
+  # if validation is lax, continue
+  if ($REST::Neo4p::Constraint::STRICT_RELN_TYPES) {
+    return 0 unless REST::Neo4p::Constraint::validate_relationship_type($reln_type);
+  }
+
   return 1 if ( ($self->condition eq 'none') && !defined $self->constraints->{$reln_type} ); 
 
   my @descriptors = @{$self->constraints->{_descriptors}};
@@ -132,11 +137,23 @@ sub validate {
 
   if (@descriptors) {
     my $found = grep /^\Q$to_constraint\E$/, map {$_->{$from_constraint}} @descriptors;
-    return ($self->condition eq 'only') ? $found : !$found;
+    return 0 if (($self->condition eq 'only') && !$found);
+    return 0 if (($self->condition eq 'none') && $found);
   }
   else {
-    return ($self->condition eq 'only') ? 0 : 1;
+    return 0 if ($self->condition eq 'only');
   }
+
+
+  # TODO: validate relationship properties here
+  if ($REST::Neo4p::Constraint::STRICT_RELN_PROPS) {
+    $reln_props ||= {};
+    $reln_props->{__type} = 'relationship';
+    $reln_props->{_relationship_type} = $reln_type;
+    return 0 unless REST::Neo4p::Constraint::validate_properties($reln_props);
+  }
+
+  return 1;
 }
 
 =head1 NAME
@@ -174,30 +191,45 @@ must not meet any conditions - blacklist - none
 
 =item tag()
 
+Returns the constraint tag.
+
+=item type()
+
+Returns the constraint type ('relationship').
+
 =item rtype()
 
 The relationship type to which this constraint applies.
 
-=item type()
-
-=item condition()
-
 =item constraints()
+
+Returns the internal constraint spec hashref.
 
 =item priority()
 
-=item set_condition()
-
- Set/get 'all', 'only', 'none' for a given constraint
-
 =item set_priority()
 
- constraints with higher priority will be checked before constraints with 
- lower priority
+Constraints with higher priority will be checked before constraints
+with lower priority by
+L<C<validate_relationship()>|REST::Neo4p::Constraint/Functional
+interface for validation>.
+
+=item condition()
+
+=item set_condition()
+
+Get/set 'all', 'only', 'none' for a given constraint
 
 =item validate()
 
- true if the item meets the constraint, false if not
+ $c->validate( $relationship_object );
+ $c->validate( $node_object1 => $node_object2, 
+                         $reln_type );
+ $c->validate( { name => 'Steve', instrument => 'banjo' } =>
+               { name => 'Marcia', instrument => 'blunt' },
+                 'avoids' );
+
+Returns true if the item meets the constraint, false if not.
 
 =back
 

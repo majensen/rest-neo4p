@@ -14,8 +14,14 @@ use strict;
 use warnings;
 
 our @EXPORT = qw(serialize_constraints load_constraints);
-our @EXPORT_OK = qw( validate_properties validate_relationship validate_relationship_type );
-our %EXPORT_TAGS = ( validate => [qw(validate_properties validate_relationship validate_relationship_type)] );
+our @VALIDATE = qw(validate_properties validate_relationship validate_relationship_type);
+our @EXPORT_OK = (@VALIDATE);
+our %EXPORT_TAGS = (
+  validate => \@VALIDATE,
+  auto => [@EXPORT],
+  all => [@EXPORT,@EXPORT_OK]
+);
+
 our $jobj = JSON->new();
 $jobj->allow_blessed(1);
 $jobj->convert_blessed(1);
@@ -36,8 +42,23 @@ our @CONSTRAINT_TYPES = qw( node_property relationship_property
 			   relationship_type relationship );
 our $CONSTRAINT_TABLE = {};
 
+
+# flag - when set, disallow relationships that are not allowed by current 
+# relationship types
+# default strict
+$REST::Neo4p::Constraint::STRICT_RELN_TYPES = 1;
+
+# flag - when set, require strict checking of relationship properties when
+# validating relationships -- i.e., a relationship with no properties is
+# disallowed unless there is a specific relationship_property constraint
+# allow this
+# default relaxed
+
+$REST::Neo4p::Constraint::STRICT_RELN_PROPS = 0;
+
 # flag - when set, use the database to store constraints
 $REST::Neo4p::Constraint::USE_NEO4J = 0;
+
 
 sub new {
   my $class = shift;
@@ -51,7 +72,6 @@ sub new {
   }
   if ( !grep /^$tag$/,keys %$CONSTRAINT_TABLE ) {
     $self->{_tag} = $tag;
-    $self->{_constraints}{_priority} = 0; ##
   }
   else {
     REST::Neo4p::LocalException->throw("Constraint with tag '$tag' is already defined\n");
@@ -64,7 +84,7 @@ sub new_from_constraint_hash {
   REST::Neo4p::AbstractMethodException->throw("new_from_constraint_hash() is an abstract method of ".__PACKAGE__."\n");
 }
 
-sub to_json {
+sub to_json ($@) {
   no warnings qw(redefine);
   my $self = shift;
   my $store; 
@@ -144,6 +164,14 @@ sub get_constraint {
   return $CONSTRAINT_TABLE->{$tag};
 }
 
+sub get_all_constraints {
+  my $class = shift;
+  if (ref $class) {
+    REST::Neo4p::ClassOnlyException->throw("get_constraint is a class method only\n");
+  }
+  return %{$CONSTRAINT_TABLE};
+}
+
 sub drop {
   my $self = shift;
   delete $CONSTRAINT_TABLE->{$self->tag};
@@ -203,7 +231,7 @@ sub validate_properties {
 sub validate_relationship {
 #  my $class = shift;
   # Exported
-  my ($from, $to, $reln_type) = @_;
+  my ($from, $to, $reln_type, $reln_props) = @_;
   my ($reln) = @_;
   # if (ref $class) {
   #   REST::Neo4p::ClassOnlyException->throw("validate_relationship() is a class-only method\n");
@@ -218,7 +246,7 @@ sub validate_relationship {
   @reln_constraints = sort {$a->priority <=> $b->priority} @reln_constraints;
   my $ret;
   foreach (@reln_constraints) {
-    if ($_->validate($from => $to, $reln_type)) {
+    if ($_->validate($from => $to, $reln_type, $reln_props)) {
       $ret = $_;
       last;
     }
@@ -308,6 +336,12 @@ validation. See subclass pod for details.
 
 Get a registered constraint by constraint tag. Returns false if none found.
 
+=item get_all_constraints()
+
+ %constraints = REST::Neo4p::Constraint->get_all_constraints();
+
+Get a hash of all registered constraint objects, keyed by constraint tag.
+
 =back 
 
 =head2 Instance Methods
@@ -356,7 +390,8 @@ Add an individual constraint specification to an existing constraint object. See
  $node_pc->remove_constraint( 'warning_level' );
  $reln_c->remove_constraint( { 'genus' => 'species' } );
 
-Remove an individual constraint specification from an existing constraint object. See subclass pod for details.
+Remove an individual constraint specification from an existing
+constraint object. See subclass pod for details.
 
 =back
 
@@ -366,9 +401,22 @@ Remove an individual constraint specification from an existing constraint object
 
 =item validate_properties()
 
+ validate_properties( $node_object )
+ validate_properties( $relationship_object );
+ validate_properties( { name => 'Steve', instrument => 'banjo } );
+
 =item validate_relationship()
 
+ validate_relationship ( $relationship_object );
+ validate_relationship ( $node_object1 => $node_object2, 
+                         $reln_type );
+ validate_relationship ( { name => 'Steve', instrument => 'banjo' } =>
+                         { name => 'Marcia', instrument => 'blunt' },
+                         'avoids' );
+
 =item validate_relationship_type()
+
+ validate_relationship_type( 'avoids' )
 
 Functional interface. Returns the registered constraint object with
 the highest priority that the argument satisfies, or false if none is
@@ -390,11 +438,21 @@ They can also be exported from L<REST::Neo4p::Constrain>:
 
 =item serialize_constraints()
 
- $json = serialize_constraints();
+ open $f, ">constraints.json";
+ print $f serialize_constraints();
+
+Returns a JSON-formatted representation of all currently registered constraints.
 
 =item load_constraints()
 
- load_constraints($json);
+ open $f, "constraints.json";
+ {
+   local $/ = undef;
+   load_constraints(<$f>);
+ }
+
+Creates and registers a list of constraints specified by a JSON string
+as produced by L</serialize_constraints()>.
 
 =back
 

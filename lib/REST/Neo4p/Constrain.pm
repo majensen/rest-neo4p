@@ -1,7 +1,7 @@
 #$Id$
 package REST::Neo4p::Constrain;
 use base 'Exporter';
-use REST::Neo4p::Constraint qw(:validate);
+use REST::Neo4p::Constraint qw(:all);
 use REST::Neo4p::Exceptions;
 use strict;
 use warnings;
@@ -12,9 +12,12 @@ BEGIN {
   $REST::Neo4p::Constrain::VERSION = '0.20';
 }
 our @EXPORT = qw(create_constraint drop_constraint constrain relax);
-our @EXPORT_OK = qw(validate_properties validate_relationship validate_relationship_type);
+our @VALIDATE = qw(validate_properties validate_relationship validate_relationship_type);
+our @SERIALIZE = qw(serialize_constraints load_constraints);
+our @EXPORT_OK = (@VALIDATE,@SERIALIZE);
 our %EXPORT_TAGS = (
-  validate => [@EXPORT_OK],
+  validate => \@VALIDATE,
+  serialize => \@SERIALIZE,
   auto => [@EXPORT],
   all => [@EXPORT,@EXPORT_OK]
 );
@@ -44,7 +47,7 @@ require REST::Neo4p::Node;
 sub create_constraint {
   my %parms = @_;
   # reqd: tag, type, constraints
-  # opt: condition, rtype
+  # opt: condition, rtype, priority
   if ( @_ % 2 ) {
     REST::Neo4p::LocalException->throw("create_constraint requires a hash arg");
   }
@@ -60,6 +63,7 @@ sub create_constraint {
       unless (ref $parms{constraints} eq 'HASH') {
 	REST::Neo4p::LocalException->throw("constraints parameter requires a hashref\n");
       }
+      $parms{constraints}->{_priority} = $parms{priority} || 0;
       $parms{constraints}->{_condition} = $parms{condition} if defined $parms{condition};
       eval {
 	$ret = REST::Neo4p::Constraint::NodeProperty->new(
@@ -79,6 +83,7 @@ sub create_constraint {
       unless (ref $parms{constraints} eq 'HASH') {
 	REST::Neo4p::LocalException->throw("constraints parameter requires a hashref\n");
       }
+      $parms{constraints}->{_priority} = $parms{priority} || 0;
       $parms{constraints}->{_condition} = $parms{condition} if defined $parms{condition};
       $parms{constraints}->{_relationship_type} = $parms{rtype} if defined $parms{rtype};
       eval {
@@ -103,6 +108,7 @@ sub create_constraint {
 	$ret = REST::Neo4p::Constraint::Relationship->new(
 	  $parms{tag} => { 
 	    _condition => $parms{condition},
+	    _priority => $parms{priority} || 0,
 	    _relationship_type => $parms{rtype},
 	    _descriptors => $parms{constraints}
 	   }
@@ -125,6 +131,7 @@ sub create_constraint {
 	$ret = REST::Neo4p::Constraint::RelationshipType->new(
 	  $parms{tag} => {
 	    _condition => $parms{condition},
+	    _priority => $parms{priority} || 0,
 	    _type_list => $parms{constraints}
 	   }
 	 );
@@ -203,23 +210,23 @@ sub constrain {
 	args => [@_]
        );
     }
-    unless (validate_relationship($n1,$n2,$reln_type)) {
+    unless (validate_relationship($n1,$n2,$reln_type,$reln_props)) {
       REST::Neo4p::ConstraintException->throw(
 	message => "Relationship violates active relationship constraints\n",
 	args => [@_]
        );
     }
-    $reln_props ||= {};
-    $reln_props->{__type} = 'relationship';
-    $reln_props->{_relationship_type} = $reln_type;
-    unless (validate_properties($reln_props)) {
-      REST::Neo4p::ConstraintException->throw(
-	message => "Specified relationship properties violate active constraints\n",
-	args => [@_]
-       );
-    }
-    delete $reln_props->{__type};
-    delete $reln_props->{_relationship_type};
+    # $reln_props ||= {};
+    # $reln_props->{__type} = 'relationship';
+    # $reln_props->{_relationship_type} = $reln_type;
+    # unless (validate_properties($reln_props)) {
+    #   REST::Neo4p::ConstraintException->throw(
+    # 	message => "Specified relationship properties violate active constraints\n",
+    # 	args => [@_]
+    #    );
+    # }
+    # delete $reln_props->{__type};
+    # delete $reln_props->{_relationship_type};
     goto $node_relate_to_func;
   };
     return 1;
@@ -237,6 +244,131 @@ sub relax {
 REST::Neo4p::Constrain - Create and apply Neo4j app-level constraints
 
 =head1 SYNOPSIS
+
+ use REST::Neo4p;
+ use REST::Neo4p::Constrain qw(:all); # not included by REST::Neo4p
+ 
+ # create some constraints
+ 
+  create_constraint (
+  tag => 'owner',
+  type => 'node_property',
+  condition => 'only',
+  constraints => {
+    name => qr/[a-z]+/i,
+    species => 'human'
+  }
+ );
+ 
+ create_constraint(
+  tag => 'pet',
+  type => 'node_property',
+  condition => 'all',
+  constraints => {
+    name => qr/[a-z]+/i,
+    species => qr/^dog|cat|ferret|mole rat|platypus$/
+  }
+ );
+ 
+ create_constraint(
+  tag => 'owners_own_pets',
+  type => 'relationship',
+  rtype => 'OWNS',
+  constraints =>  [{ owner => 'pet' }] # note arrayref
+ );
+
+ create_constraint(
+  tag => 'ignore'
+  type => 'relationship',
+  rtype => 'IGNORES',
+  constraints =>  [{ pet => 'owner' },
+                   { owner => 'pet' }] # both directions ok
+ );
+
+ create_constraint(
+  tag => 'allowed_rtypes',
+  type => 'relationship_type',
+  constraints => [qw( OWNS FEEDS LOVES )] # IGNORES is missing, see below
+ );
+
+ # constrain by automatic exception-throwing
+
+ constrain();
+
+ $fred = REST::Neo4p::Node->new( { name => 'fred', species => 'human' } );
+ $fluffy = REST::Neo4p::Node->new( { name => 'fluffy', species => 'mole rat' } );
+
+ $r1 = $fred->relate_to($fluffy, 'OWNS'); # valid
+ eval {
+   $r2 = $fluffy->relate_to($fred, 'OWNS');
+ };
+ if (my $e = REST::Neo4p::ConstraintException->caught()) {
+   print STDERR "Pet can't own an owner, ignored\n";
+ }
+
+ eval {
+   $r3 = $fluffy->relate_to($fred, 'IGNORES');
+ };
+ if (my $e = REST::Neo4p::ConstraintException->caught()) {
+   print STDERR "Pet can't ignore an owner, ignored\n";
+ }
+
+ # allow relationship types that are not explictly
+ # allowed -- a relationship constraint is still required
+
+ $REST::Neo4p::Constraint::STRICT_RELN_TYPES = 0;
+
+ $r3 = $fluffy->relate_to($fred, 'IGNORES'); # no throw now
+
+ relax(); # stop automatic constraints
+
+ # use validation
+
+ $r2 = $fluffy->relate_to($fred, 'OWNS'); # not valid, but auto-constraint not in force
+ if ( validate_properties($r2) ) {
+   print STDERR "Relationship properties are valid\n";
+ }
+ if ( !validate_relationship($r2) ) {
+   print STDERR "Relationship does not meet constraints, ignoring...\n";
+ }
+
+ # try a relationship
+
+ if ( validate_relationship( $fred => $fluffy, 'LOVES' ) {
+   $fred->relate_to($fluffy, 'LOVES');
+ }
+ else {
+   print STDERR "Prospective relationship fails constraints, ignoring...\n";
+ }
+
+ # try a relationship type
+
+ if ( validate_relationship( $fred => $fluffy, 'EATS' ) {
+   $fred->relate_to($fluffy, 'EATS');
+ }
+ else {
+   print STDERR "Relationship type disallowed, ignoring...\n";
+ }
+
+ # serialize all constraints
+
+ open $f, ">my_constraints.json";
+ print $f serialize_constraints();
+ close $f;
+
+ # remove current constraints
+
+ while ( my ($tag, $constraint) = 
+           each REST::Neo4p::Constraint->get_all_constraints ) {
+   $constraint->drop;
+ }
+
+ # restore constraints
+
+ open $f, "my_constraints.json";
+ local $/ = undef;
+ $json = <$f>;
+ load_constraints($json);
 
 =head1 DESCRIPTION
 
@@ -347,7 +479,7 @@ constraint type:
 
 =over
 
-=item * Node property 
+=item * Node property
 
 The constraints are specified as a hashref whose keys are the property
 names and values are the constraints on the property values.
@@ -489,7 +621,9 @@ true if the object or spec satisfies the current constraints and false
 if it violates the current constraints. No constraint exceptions are
 raised.
 
-=head1 METHODS
+=head1 FUNCTIONS
+
+=head2 Exported by default
 
 =over
 
@@ -537,11 +671,69 @@ relax() turns off the automatic validation of constrain().
 
 Effects are global.
 
+=back
+
+=head2 Serialization functions
+
+Use these functions to freeze and thaw the currently registered
+constraints to and from a JSON representation.
+
+Import with
+
+ use REST::Neo4p::Constrain qw(:serialize);
+
+=over
+
+=item seralize_constraints()
+
+ open $f, ">constraints.json";
+ print $f serialize_constraints();
+
+Returns a JSON-formatted representation of all currently registered constraints.
+
+=item load_constraints()
+
+ open $f, "constraints.json";
+ {
+   local $/ = undef;
+   load_constraints(<$f>);
+ }
+
+Creates and registers a list of constraints specified by a JSON string
+as produced by L</serialize_constraints()>.
+
+=back
+
+=head2 Validation functions
+
+Functional interface. Returns the registered constraint object with
+the highest priority that the argument satisfies, or false if no
+constraint is satisfied.
+
+Import with
+
+ use REST::Neo4p::Constrain qw(:validate);
+
 =item validate_properties()
+
+ validate_properties( $node_object )
+ validate_properties( $relationship_object );
+ validate_properties( { name => 'Steve', instrument => 'banjo } );
 
 =item validate_relationship()
 
+ validate_relationship ( $relationship_object );
+ validate_relationship ( $node_object1 => $node_object2, 
+                         $reln_type );
+ validate_relationship ( { name => 'Steve', instrument => 'banjo' } =>
+                         { name => 'Marcia', instrument => 'blunt' },
+                         'avoids' );
+
 =item validate_relationship_type()
+
+ validate_relationship_type( 'avoids' )
+
+These methods can also be exported from L<REST::Neo4p::Constraint>.
 
 =back
 
