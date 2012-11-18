@@ -84,7 +84,7 @@ sub new_from_constraint_hash {
   REST::Neo4p::AbstractMethodException->throw("new_from_constraint_hash() is an abstract method of ".__PACKAGE__."\n");
 }
 
-sub to_json ($@) {
+sub to_json {
   no warnings qw(redefine);
   my $self = shift;
   my $store; 
@@ -123,9 +123,10 @@ sub _fix_constraints {
   if (ref eq 'HASH') {
     while (my ($k, $v) = each %$_) {
       if ($v && ($v =~ /^qr\//)) {
-
-	$v =~ s|/\(\?\^:|/|; # kludge - eval wants to wrap (?:^...) around a qr string
-	$v =~ s|\)/|/|; # kludge -      even if one is there already
+	 if ($v =~ /\(\?\^:.*\)/) {
+	   $v =~ s|/\(\?\^:|/|; # kludge - eval wants to wrap (?:^...) around a qr string
+	   $v =~ s|\)/|/|; # kludge -      even if one is there already
+	 }
 	$_->{$k} = eval $v; # replace with Regexp
       }
       else {
@@ -316,6 +317,32 @@ property|REST::Neo4p::Property>,
 L<relationship|REST::Neo4p::Constraint::Relationship>, and
 L<relationship type|REST::Neo4p::Constraint::RelationshipType>
 constraints.
+
+=head1 FLAGS
+
+=item C<$REST::Neo4p::Constraint::STRICT_RELN_TYPES>
+
+When true, relationships are disallowed if the relationship type does
+not meet any current relationship type constraint. Default is true.
+
+=item C<$REST::Neo4p::Constraint::STRICT_RELN_PROPS>
+
+When true, relationships are disallowed if their relationship
+properties do not meet any current relationship property constraint.
+
+Default is false. This is so relationships without properties can be
+made freely. When relationship property checking is strict, you can
+allow relationships without properties by setting the following
+constraint:
+
+  create_constraint(
+   tag => 'free_reln_prop',
+   type => 'relationship_property',
+   rtype => '*',
+   condition => 'all',
+   constraints => {}
+  );
+
 
 =head1 METHODS
 

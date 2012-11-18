@@ -76,6 +76,24 @@ SKIP : {
 		     { owner => 'pet' }] # both directions ok
    ), 'create constraint 5';
 
+  ok create_constraint(
+    tag => 'love',
+    type => 'relationship',
+    rtype => 'LOVES',
+    constraints =>  [{ pet => 'owner' },
+		     { owner => 'pet' }] # both directions ok
+   ), 'create constraint 6';
+
+  ok create_constraint(
+    tag => 'OWNS_props',
+    type => 'relationship_property',
+    rtype => 'OWNS',
+    condition => 'all',
+    constraints => {
+      year_purchased => qr/^20[0-9]{2}$/
+    }
+   ), 'create constraint 7';
+
   # constrain by automatic exception-throwing
   
   ok constrain(), 'constrain()';
@@ -85,11 +103,11 @@ SKIP : {
   ok my $fluffy = REST::Neo4p::Node->new( { name => 'fluffy', species => 'mole rat' } ), 'fluffy';
   push @cleanup, $fluffy if $fluffy;
 
-  ok my $r1 = $fred->relate_to($fluffy, 'OWNS'), 'reln 1 is valid,created';
+  ok my $r1 = $fred->relate_to($fluffy, 'OWNS',{year_purchased => 2010}), 'reln 1 is valid,created';
   push @cleanup, $r1 if $r1;
   my $r2;
 
-  throws_ok { $r2 = $fluffy->relate_to($fred, 'OWNS') } 'REST::Neo4p::ConstraintException', 'constrained';
+  throws_ok { $r2 = $fluffy->relate_to($fred, 'OWNS',{year_purchased => 2010}) } 'REST::Neo4p::ConstraintException', 'constrained';
   push @cleanup, $r2 if $r2;
   my $r3;
   throws_ok { $r3 = $fluffy->relate_to($fred, 'IGNORES') } 'REST::Neo4p::ConstraintException', 'constrained';
@@ -106,7 +124,7 @@ SKIP : {
 
   # use validation
 
-  ok $r2 = $fluffy->relate_to($fred, 'OWNS'),'relaxed, invalid relationship created'; # not valid, but auto-constraint not in force
+  ok $r2 = $fluffy->relate_to($fred, 'OWNS',{year_purchased => 2010}),'relaxed, invalid relationship created'; # not valid, but auto-constraint not in force
   push @cleanup, $r2 if $r2;
   ok validate_properties($r2), 'r2 properties are valid';
   ok !validate_relationship($r2), 'r2 is invalid';
@@ -132,9 +150,26 @@ SKIP : {
   my $json = <$tmpfh>;
   ok load_constraints($json), 'load constraints';
   %c = REST::Neo4p::Constraint->get_all_constraints;
-  is scalar values %c, 5, 'got back constraints';
+  is scalar values %c, 7, 'got back constraints';
   close $tmpfh;
   unlink $tmpf;
+
+  constrain();
+  my $r4;
+  $REST::Neo4p::Constraint::STRICT_RELN_PROPS = 1;
+  throws_ok { $r4 = $fred->relate_to($fluffy, 'OWNS') } 'REST::Neo4p::ConstraintException', 'fred -OWNS-> fluffy with no properties invalid';
+  push @cleanup, $r4 if $r4;
+  # create a free relationship property constraint
+  ok create_constraint(
+    tag => 'free_reln_prop',
+    type => 'relationship_property',
+    rtype => '*',
+    condition => 'all',
+    constraints => {}
+   ), 'create free reln prop constraint';
+  ok $r4 = $fred->relate_to($fluffy, 'OWNS'), 'now can create OWNS reln w/o props';
+  push @cleanup, $r4 if $r4;
+
 }
 
 END {

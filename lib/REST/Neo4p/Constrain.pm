@@ -271,10 +271,28 @@ REST::Neo4p::Constrain - Create and apply Neo4j app-level constraints
  );
  
  create_constraint(
+  tag => 'OWNS_props',
+  type => 'relationship_property',
+  rtype => 'OWNS',
+  condition => 'all',
+  constraints => {
+    year_purchased => qr/^20[0-9]{2}$/
+  }
+ );
+
+ create_constraint(
   tag => 'owners_own_pets',
   type => 'relationship',
   rtype => 'OWNS',
   constraints =>  [{ owner => 'pet' }] # note arrayref
+ );
+
+ create_constraint(
+  tag => 'ignore',
+  type => 'relationship',
+  rtype => 'LOVES',
+  constraints =>  [{ pet => 'owner' },
+                   { owner => 'pet' }] # both directions ok
  );
 
  create_constraint(
@@ -288,19 +306,26 @@ REST::Neo4p::Constrain - Create and apply Neo4j app-level constraints
  create_constraint(
   tag => 'allowed_rtypes',
   type => 'relationship_type',
-  constraints => [qw( OWNS FEEDS LOVES )] # IGNORES is missing, see below
+  constraints => [qw( OWNS FEEDS LOVES )] 
+  # IGNORES is missing, see below
  );
 
  # constrain by automatic exception-throwing
 
  constrain();
 
- $fred = REST::Neo4p::Node->new( { name => 'fred', species => 'human' } );
- $fluffy = REST::Neo4p::Node->new( { name => 'fluffy', species => 'mole rat' } );
+ $fred = REST::Neo4p::Node->new( 
+  { name => 'fred', species => 'human' }
+ );
+ $fluffy = REST::Neo4p::Node->new( 
+  { name => 'fluffy', species => 'mole rat' }
+ );
 
- $r1 = $fred->relate_to($fluffy, 'OWNS'); # valid
+ $r1 = $fred->relate_to(
+  $fluffy, 'OWNS', {year_purchased => 2010}
+ ); # valid
  eval {
-   $r2 = $fluffy->relate_to($fred, 'OWNS');
+   $r2 = $fluffy->relate_to($fred, 'OWNS', {year_purchased => 2010});
  };
  if (my $e = REST::Neo4p::ConstraintException->caught()) {
    print STDERR "Pet can't own an owner, ignored\n";
@@ -324,12 +349,17 @@ REST::Neo4p::Constrain - Create and apply Neo4j app-level constraints
 
  # use validation
 
- $r2 = $fluffy->relate_to($fred, 'OWNS'); # not valid, but auto-constraint not in force
+ $r2 = $fluffy->relate_to(
+  $fred, 'OWNS',
+  {year_purchased => 2010}
+ ); # not valid, but auto-constraint not in force
+
  if ( validate_properties($r2) ) {
    print STDERR "Relationship properties are valid\n";
  }
  if ( !validate_relationship($r2) ) {
-   print STDERR "Relationship does not meet constraints, ignoring...\n";
+   print STDERR 
+    "Relationship does not meet constraints, ignoring...\n";
  }
 
  # try a relationship
@@ -338,7 +368,8 @@ REST::Neo4p::Constrain - Create and apply Neo4j app-level constraints
    $fred->relate_to($fluffy, 'LOVES');
  }
  else {
-   print STDERR "Prospective relationship fails constraints, ignoring...\n";
+   print STDERR 
+    "Prospective relationship fails constraints, ignoring...\n";
  }
 
  # try a relationship type
@@ -347,7 +378,8 @@ REST::Neo4p::Constrain - Create and apply Neo4j app-level constraints
    $fred->relate_to($fluffy, 'EATS');
  }
  else {
-   print STDERR "Relationship type disallowed, ignoring...\n";
+   print STDERR 
+    "Relationship type disallowed, ignoring...\n";
  }
 
  # serialize all constraints
@@ -485,22 +517,30 @@ The constraints are specified as a hashref whose keys are the property
 names and values are the constraints on the property values.
 
  constraints => {
-    prop_1 => '' # property must be present, may have any value
-    prop_2 => 'value', # property must be present, and value must eq 'value'
-    prop_3 => qr/.alue/, # property must be present, and value must match qr/.alue/,
-    prop_4 => [] # property may be present, and may have any value
-    prop_5 => [<string|regexp>] # property may be present, if present
-                                # value must match the given condition
-    prop_6 => qr/^value1|value2|value3$/ # (use regexps for enumerations)
+    # property must be present, may have any value
+    prop_1 => '',
+    # property must be present, and value must eq 'value'
+    prop_2 => 'value', 
+    # property must be present, and value must match qr/.alue/
+    prop_3 => qr/.alue/, 
+    # property may be present, and may have any value
+    prop_4 => [],
+    # property may be present, if present
+    # value must match the given condition
+    prop_5 => [<string|regexp>],
+    # (use regexps for enumerations)
+    prop_6 => qr/^value1|value2|value3$/ 
  }
 
 A C<condition> parameter can be specified:
 
- condition => 'all' # all the specified constraints must be met, and other
-                    # properties not in the constraint list may be
-                    # added freely
- condition => 'only' # all the specified constraint must be met, and no other
-                     # properties may be added
+ condition => 'all'  # all the specified constraints must be met, and
+                     # other properties not in the constraint list may
+                     # be added freely
+
+ condition => 'only' # all the specified constraint must be met, and
+                     # no other properties may be added
+
  condition => 'none' # reject if any of the specified constraints is
                      # satisfied ('blacklist')
 
@@ -556,6 +596,7 @@ Then a relationship constraint that specifies owners can own pets is
   rtype => 'OWNS',
   constraints =>  [{ owner => 'pet' }] # note arrayref
  );
+ 
 
 In L<REST::Neo4p> terms, if this constraint (and only this one) is registered,
 
@@ -620,6 +661,16 @@ and relationship types against registered constraints. They return
 true if the object or spec satisfies the current constraints and false
 if it violates the current constraints. No constraint exceptions are
 raised.
+
+=head3 Controlling relationship validation strictness
+
+You can set whether relationship types or relationship properties are
+strictly validated or not, even when constraints are in
+force. Relaxing one or both of these can allow you to follow
+constraints you have defined strictly, while enabling other kinds of
+relationships to be created ad hoc outside of validation.
+
+See L<REST::Neo4p::Constraint|/FLAGS> for details.
 
 =head1 FUNCTIONS
 

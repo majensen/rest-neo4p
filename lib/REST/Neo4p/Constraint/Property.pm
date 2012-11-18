@@ -103,6 +103,7 @@ sub validate {
 
 sub _validate_value {
   my ($prop,$value,$value_spec,$condition) = @_;
+
   die "arg1(prop), arg3(value_spec), and arg4(condition) must all be defined" unless defined $prop && defined $value_spec && defined $condition;
   my $is_valid = 1;
   for ($value_spec) {
@@ -142,7 +143,8 @@ sub _validate_value {
 	    $is_valid = 0;
 	  }
 	  else {
-	    $is_valid = 0 unless ($value eq $value_spec);
+	    $is_valid = 0 unless (($value eq $value_spec) ||
+				    $value_spec eq '*');
 	  }
 	}
 	elsif ($condition eq 'none') {
