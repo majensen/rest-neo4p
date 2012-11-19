@@ -69,7 +69,7 @@ SKIP : {
 
   CLEANUP : {
       ok $r12->remove, 'remove relationship';
-      throws_ok {REST::Neo4p->get_relationship_by_id($$r12)} 'REST::Neo4p::Exception', 'relationship is gone';
+      ok !REST::Neo4p->get_relationship_by_id($$r12), 'relationship is gone';
       ok $n1->remove, 'remove node';
       ok $n2->remove, 'remove node';
       ok $node_idx->remove, 'remove node index';

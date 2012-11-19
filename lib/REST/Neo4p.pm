@@ -12,7 +12,7 @@ use REST::Neo4p::Query;
 use REST::Neo4p::Exceptions;
 
 BEGIN {
-  $REST::Neo4p::VERSION = '0.1284';
+  $REST::Neo4p::VERSION = '0.1285';
 }
 
 our $CREATE_AUTO_ACCESSORS = 0;
@@ -27,13 +27,13 @@ sub connect {
   eval {
     $AGENT = REST::Neo4p::Agent->new();
   };
-  my $e;
-  if ($e = Exception::Class->caught('REST::Neo4p::Exception')) {
+  
+  if (my $e = REST::Neo4p::Exception->caught()) {
     # TODO : handle different classes
     $e->rethrow;
   }
-  elsif ($@) {
-    ref $@ ? $@->rethrow : die $@;
+  elsif ($e = Exception::Class->caught()) {
+    ref $e ? $e->rethrow : die $e;
   }
 
   return 1 if $AGENT->connect($server_address);
@@ -49,13 +49,11 @@ sub get_node_by_id {
   eval {
     $node = REST::Neo4p::Node->_entity_by_id($id);
   };
-  my $e;
-  if ($e = Exception::Class->caught('REST::Neo4p::Exception')) {
-    # TODO : handle different classes
-    $e->rethrow;
+  if (my $e = REST::Neo4p::NotFoundException->caught()) {
+    return;
   }
-  elsif ($@) {
-    ref $@ ? $@->rethrow : die $@;
+  elsif ($e = Exception::Class->caught) {
+    ref $e ? $e->rethrow : die $e;
   }
   return $node;
 }
@@ -69,13 +67,11 @@ sub get_relationship_by_id {
   eval {
     $relationship = REST::Neo4p::Relationship->_entity_by_id($id);
   };
-  my $e;
-  if ($e = Exception::Class->caught('REST::Neo4p::Exception')) {
-    # TODO : handle different classes
-    $e->rethrow;
+  if (my $e = REST::Neo4p::NotFoundException->caught()) {
+    return;
   }
-  elsif ($@) {
-    ref $@ ? $@->rethrow : die $@;
+  elsif ($e = Exception::Class->caught) {
+    ref $e ? $e->rethrow : die $e;
   }
   return $relationship;
 }
@@ -93,13 +89,11 @@ sub get_index_by_name {
   eval {
     $idx = REST::Neo4p::Index->_entity_by_id($name,$type);
   };
-  my $e;
-  if ($e = Exception::Class->caught('REST::Neo4p::Exception')) {
-    # TODO : handle different classes
-    $e->rethrow;
+  if (my $e = REST::Neo4p::NotFoundException->caught()) {
+    return;
   }
-  elsif ($@) {
-    ref $@ ? $@->rethrow : die $@;
+  elsif ($e = Exception::Class->caught) {
+    ref $e ? $e->rethrow : die $e;
   }
   return $idx;
 }
@@ -265,14 +259,20 @@ for you to make; the default is I<no> auto-accessors.
 
  $node = REST::Neo4p->get_node_by_id( $id );
 
+Returns false if node C<$id> does not exist in database.
+
 =item get_relationship_by_id()
 
  $relationship = REST::Neo4p->get_relationship_by_id( $id );
+
+Returns false if relationship C<$id> does not exist in database.
 
 =item get_index_by_name()
 
  $node_index = REST::Neo4p->get_index_by_name( $name, 'node' );
  $relationship_index = REST::Neo4p->get_index_by_name( $name, 'relationship' );
+
+Returns false if index C<$name> does not exist in database.
 
 =item get_relationship_types()
 

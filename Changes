@@ -54,3 +54,6 @@ Revision history for Perl module TCGA::Neo4j
       (thanks Joseph)
     - REST::Neo4p::Index::add_entry allows multiple key-value pairs
       (thanks Joseph)
+0.1285
+    - get_<entity> methods in REST::Neo4p now quietly return undef if item
+      not found (thanks Sergei)

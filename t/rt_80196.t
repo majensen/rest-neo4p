@@ -1,6 +1,6 @@
 #-*-perl-*-
 #$Id$
-use Test::More tests => 5;
+use Test::More tests => 3;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
@@ -13,7 +13,7 @@ eval {
     $build = Module::Build->current;
 };
 my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
-my $num_live_tests = 4;
+my $num_live_tests = 2;
 
 use_ok('REST::Neo4p');
 
@@ -31,11 +31,9 @@ SKIP : {
   throws_ok {
     REST::Neo4p::Entity::new_from_json_response('REST::Neo4p::Index');
   } 'REST::Neo4p::LocalException', 'new_from_json_response(undef) throws local exception';
-  throws_ok { 
-    my $idx = REST::Neo4p->get_index_by_name('node','sxxcfdsjgjkllrarsdwejrkl')
-  } 'REST::Neo4p::NotFoundException', 'missing index throws not found execption';
-  ok ref $@;
-  like $@->message, qr/sxxcfdsjgjkllrarsdwejrkl/, 'message returned';
+
+  ok !REST::Neo4p->get_index_by_name('node','sxxcfdsjgjkllrarsdwejrkl'), 
+  'missing index is not found';
 
   CLEANUP : {
       1;

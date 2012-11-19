@@ -19,7 +19,7 @@ name: REST-Neo4p
 provides:
   REST::Neo4p:
     file: lib/REST/Neo4p.pm
-    version: 0.1284
+    version: 0.1285
   REST::Neo4p::Agent:
     file: lib/REST/Neo4p/Agent.pm
     version: 0.1284
@@ -55,4 +55,4 @@ requires:
   URI::Escape: 3.3
 resources:
   license: http://dev.perl.org/licenses/
-version: 0.1284
+version: 0.1285
