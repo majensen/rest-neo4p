@@ -765,6 +765,8 @@ Import with
 
  use REST::Neo4p::Constrain qw(:validate);
 
+=over
+
 =item validate_properties()
 
  validate_properties( $node_object )

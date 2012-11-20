@@ -84,7 +84,7 @@ sub new_from_constraint_hash {
   REST::Neo4p::AbstractMethodException->throw("new_from_constraint_hash() is an abstract method of ".__PACKAGE__."\n");
 }
 
-sub to_json {
+sub TO_JSON {
   no warnings qw(redefine);
   my $self = shift;
   my $store; 
@@ -276,7 +276,7 @@ sub validate_relationship_type {
 }
 
 sub serialize_constraints {
-  my $json = sprintf "%s", join(", ", map { $_->to_json } values %$CONSTRAINT_TABLE);
+  my $json = sprintf "%s", join(", ", map { $jobj->encode($_) } values %$CONSTRAINT_TABLE);
   return "[$json]";
 }
 
@@ -320,6 +320,8 @@ constraints.
 
 =head1 FLAGS
 
+=over
+
 =item C<$REST::Neo4p::Constraint::STRICT_RELN_TYPES>
 
 When true, relationships are disallowed if the relationship type does
@@ -343,6 +345,7 @@ constraint:
    constraints => {}
   );
 
+=back
 
 =head1 METHODS
 
@@ -461,7 +464,7 @@ They can also be exported from L<REST::Neo4p::Constrain>:
 
 =head2 Serializing and loading constraints
 
-=over 
+=over
 
 =item serialize_constraints()
 
