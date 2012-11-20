@@ -212,6 +212,13 @@ my $allowed_contains_relns = REST::Neo4p::Constraint::Relationship->new
  }
 );
 
+ok my $allowed_reln_types = REST::Neo4p::Constraint::RelationshipType->new( 
+  'allowed_reln_types',
+  { _condition => 'only', 
+    _type_list => [qw(contains has)] }
+), 'relationship type constraint';
+
+
 my $module = {
   entity => 'module',
   namespace => 'Acme::BeesKnees'
@@ -261,12 +268,6 @@ is $allowed_has_relns->validate( $bizzity_bomb => $variable, 'has'), 0, 'method 
 is $allowed_has_relns->validate( $variable => $bizzity_bomb, 'has'), 0, 'variable cannot contain a method';
 
 # test validation : relationship type constraints
-
-ok my $allowed_reln_types = REST::Neo4p::Constraint::RelationshipType->new( 
-  'allowed_reln_types',
-  { _condition => 'only', 
-    _type_list => [qw(contains has)] }
-), 'relationship type constraint';
 
 is $allowed_reln_types->validate('contains'), 1, 'contains is a valid type';
 is $allowed_reln_types->validate('has'), 1, 'has is a valid type';

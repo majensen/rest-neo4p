@@ -1,4 +1,4 @@
-#$Id#
+#$Id$#
 package REST::Neo4p::Index;
 use base 'REST::Neo4p::Entity';
 use REST::Neo4p::Node;

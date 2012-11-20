@@ -19,8 +19,9 @@ sub new_from_constraint_hash {
     }
   }
   else {
-    $constraints->{_condition} = 'only'; ##
+    $constraints->{_condition} = 'only'; 
   }
+  $constraints->{_priority} ||= 0;
   $self->{_constraints} = $constraints;
   return $self;
 };
@@ -50,7 +51,7 @@ sub set_condition {
   unless ($condition =~ /^(all|only|none)$/) {
     REST::Neo4p::LocalException->throw("Property constraint condition must be all|only|none\n");
   }
-  return $self->{_constraints}{_condition} = $condition; ##
+  return $self->{_constraints}{_condition} = $condition;
 }
 
 # validate the input property hash or Entity with respect to the 
@@ -72,7 +73,7 @@ sub validate {
   my $condition = $self->condition;
  FORWARDCHECK:
   while (my ($prop,$val) = each %$prop_hash ) {
-    next if ($prop =~ /^_(condition|priority)$/); ##
+    next if ($prop =~ /^_(condition|priority)$/);
     my $value_spec = $self->constraints->{$prop};
     if (defined $value_spec) {
       unless (_validate_value($prop,$val,$value_spec,$condition)) {

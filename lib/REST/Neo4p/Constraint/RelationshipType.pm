@@ -26,8 +26,9 @@ sub new_from_constraint_hash {
     }
   }
   else {
-    $constraints->{_condition} = 'only'; # default ##
+    $constraints->{_condition} = 'only'; # default
   }
+  $constraints->{_priority} ||= 0;
   unless ( defined $constraints->{_type_list} &&
 	   ref $constraints->{_type_list} eq 'ARRAY' ) {
     die "Relationship type constraint must contain an arrayref of types"

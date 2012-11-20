@@ -26,8 +26,8 @@ sub new_from_constraint_hash {
       die "Relationship constraint condition must be only|none";
     }
   }
-  $constraints->{_condition} ||= 'only'; ##
-
+  $constraints->{_condition} ||= 'only'; 
+  $constraints->{_priority} ||= 0;
   unless (ref $constraints->{_descriptors} eq 'ARRAY') {
     die "relationship constraint descriptors must be array of hashrefs";
   }
@@ -84,7 +84,7 @@ sub set_condition {
   unless ($condition =~ /^(only|none)$/) {
     REST::Neo4p::LocalException->throw("Relationship condition must be one of (only|none)\n");
   }
-  return $self->{_constraints}{_condition} = $condition; ##
+  return $self->{_constraints}{_condition} = $condition; 
 }
 
 sub validate {
