@@ -71,8 +71,8 @@ SKIP : {
   is ${($I->find_entries('node' => 1))[0]}, $$n1, 'resurrected index works';
   
   ok $r12->remove, 'remove relationship';
-  throws_ok {REST::Neo4p->get_relationship_by_id($$r12)} 'REST::Neo4p::Exception', 'relationship is gone';
-  splice @cleanup,2,1;
+  ok !REST::Neo4p->get_relationship_by_id($$r12), 'relationship is gone';
+
 }
 
 END {
