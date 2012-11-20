@@ -85,6 +85,7 @@ sub new_from_json_response {
     $ENTITY_TABLE->{$entity_type}{$obj}{self_url} = $self_url;
     $ENTITY_TABLE->{$entity_type}{$obj}{start_id} = $start_id;
     $ENTITY_TABLE->{$entity_type}{$obj}{end_id} = $end_id;
+    $ENTITY_TABLE->{$entity_type}{$obj}{batch} = 0;
     $ENTITY_TABLE->{$entity_type}{$obj}{type} = $decoded_resp->{type};
   }
   if ($REST::Neo4p::CREATE_AUTO_ACCESSORS && ($entity_type ne 'index')) {

@@ -48,6 +48,7 @@ SKIP : {
   ok !$REST::Neo4p::AGENT->batch_mode, 'agent not now in batch mode';
   ok $idx = REST::Neo4p->get_index_by_name('test_node','node'), 'got index outside batch';
   ok !$idx->is_batch;
+  $DB::single=1;
   for (1..10) {
       my ($n) = $idx->find_entries(name => "__test_node$_");
       ok $n, 'got node outside batch';

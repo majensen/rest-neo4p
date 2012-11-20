@@ -160,7 +160,6 @@ sub drop_constraint {
 # hooks into REST::Neo4p::Entity methods
 sub constrain {
   my %parms = @_;
-  my $strict_types = $parms{strict_types};
   *REST::Neo4p::Entity::new =
     sub {
       my ($class,$properties) = @_;
@@ -204,7 +203,8 @@ sub constrain {
 
   *REST::Neo4p::Node::relate_to = sub {
     my ($n1, $n2, $reln_type, $reln_props) = @_;
-    unless (validate_relationship_type($reln_type) || !$strict_types) {
+    unless (validate_relationship_type($reln_type) || 
+	   !$REST::Neo4p::Constraint::STRICT_RELN_TYPES) {
       REST::Neo4p::ConstraintException->throw(
 	message => "Relationship type '$reln_type' is not allowed by active constraints\n",
 	args => [@_]
@@ -212,21 +212,10 @@ sub constrain {
     }
     unless (validate_relationship($n1,$n2,$reln_type,$reln_props)) {
       REST::Neo4p::ConstraintException->throw(
-	message => "Relationship violates active relationship constraints\n",
+	message => "Relationship or its properties violate active relationship constraints\n",
 	args => [@_]
        );
     }
-    # $reln_props ||= {};
-    # $reln_props->{__type} = 'relationship';
-    # $reln_props->{_relationship_type} = $reln_type;
-    # unless (validate_properties($reln_props)) {
-    #   REST::Neo4p::ConstraintException->throw(
-    # 	message => "Specified relationship properties violate active constraints\n",
-    # 	args => [@_]
-    #    );
-    # }
-    # delete $reln_props->{__type};
-    # delete $reln_props->{_relationship_type};
     goto $node_relate_to_func;
   };
     return 1;

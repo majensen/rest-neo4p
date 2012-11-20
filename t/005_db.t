@@ -33,7 +33,7 @@ SKIP : {
   ok my $n2 = REST::Neo4p::Node->new(), 'node 2';
   push @cleanup, $n2 if $n2;
   ok my $r12 = $n1->relate_to($n2, "bubba"), 'relationship 1->2';
-  push @cleanup, $r12 if $r12;
+
   ok my $n3 = REST::Neo4p->get_node_by_id($$n1), 'got node by id';
   is $$n3, $$n1, 'same node';
   ok my $r = REST::Neo4p->get_relationship_by_id($$r12), 'got relationship by id';
@@ -76,7 +76,9 @@ SKIP : {
 }
 
 END {
+
   CLEANUP : {
+      diag scalar @cleanup;
     ok ( $_->remove, 'entity removed') for reverse @cleanup;
   }
 }

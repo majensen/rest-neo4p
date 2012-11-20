@@ -44,6 +44,7 @@ SKIP : {
   lives_and { is $r12->amount, 'little bit' } 'setter works';
 
   ok my $n3 = REST::Neo4p::Node->new( {red => 1, yellow => 2, blue => 3} ), 'node3, properties created in constructor';
+  push @cleanup, $n3 if $n3;
   lives_and { is $n3->red, 1 } 'red getter';
   lives_and { is $n3->yellow, 2 } 'yellow getter';
   lives_and { is $n3->blue, 3 } 'blue getter';
@@ -51,7 +52,7 @@ SKIP : {
   lives_and { is $n3->blue, 5 } 'blue setter works';
   my $idx;
   lives_ok {$idx = REST::Neo4p::Index->new('relationship','heydude')} 'index should be created np';
-  push @cleanup, $idx;
+  push @cleanup, $idx if $idx;
 
 }
 END {

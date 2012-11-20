@@ -110,11 +110,11 @@ throws_ok { $person_pc->get_constraint('pet') } 'REST::Neo4p::ClassOnlyException
 isa_ok(REST::Neo4p::Constraint->get_constraint('pet'), 'REST::Neo4p::Constraint');
 is(REST::Neo4p::Constraint->get_constraint('pet')->tag, 'pet', 'got pet constraint');
 
-ok my $j1 = $pet_pc->to_json, 'serialize pet_pc';
-ok my $j2 = $reln_pc->to_json, 'serialize reln_pc';
-ok my $j3 = $reln_c->to_json, 'serialize reln_c';
-ok my $j4 = $reln_c2->to_json, 'serialize reln_c2';
-ok my $j5 = $reln_tc->to_json, 'serialize reln_tc';
+ok my $j1 = $pet_pc->TO_JSON, 'serialize pet_pc';
+ok my $j2 = $reln_pc->TO_JSON, 'serialize reln_pc';
+ok my $j3 = $reln_c->TO_JSON, 'serialize reln_c';
+ok my $j4 = $reln_c2->TO_JSON, 'serialize reln_c2';
+ok my $j5 = $reln_tc->TO_JSON, 'serialize reln_tc';
 
 ok $_->drop, 'constraint dropped' for ($pet_pc,$reln_pc,$reln_c,$reln_c2,$reln_tc);
 

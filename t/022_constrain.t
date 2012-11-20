@@ -90,7 +90,7 @@ SKIP : {
   skip 'no local connection to neo4j, live tests not performed', $num_live_tests if $not_connected;
   
   ok constrain(), 'turn on auto constraints';
-  $DB::single=1;
+
   ok my $n1 = REST::Neo4p::Node->new(
     { entity => 'method',
       name => 'is_acme',
@@ -119,9 +119,10 @@ SKIP : {
   
   push @cleanup, $r1 if $r1;
   my $r2;
+  ok $REST::Neo4p::Constraint::STRICT_RELN_PROPS=1, 'set strict relationship properties';
   throws_ok { $r2 = $n3->relate_to($n1, 'contains') } 'REST::Neo4p::ConstraintException';
-  like $@, qr/Specified relationship properties/, 'correct message (no properties does not match fact that contained_by is a required property';
-  
+  like $@, qr/Relationship or its properties violate/, 'correct message (no properties does not match fact that contained_by is a required property';
+  ok !($REST::Neo4p::Constraint::STRICT_RELN_PROPS=0), 'clear strict relationship properties';
   # create  constraint that is looser and add it will lower priority
   ok my $c6 = create_constraint( 
     tag => 'how_contained_loose',
@@ -140,7 +141,7 @@ SKIP : {
 
   my $r3;
   throws_ok { $r3 = $n1->relate_to($n3, 'contains') } 'REST::Neo4p::ConstraintException';
-  like $@, qr/Relationship violates active/, 'correct message (type allowed, bad spec)';
+  like $@, qr/Relationship or its properties violate active/, 'correct message (type allowed, bad spec)';
 
   throws_ok { $r3 = $n3->relate_to($n1, 'nonexistent') } 'REST::Neo4p::ConstraintException';
   like $@, qr/Relationship type 'nonexistent' is not allowed/, 'correct message (type not registered)';
