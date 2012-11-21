@@ -8,7 +8,7 @@ use Carp qw(croak carp);
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Query::VERSION = '0.1284';
+  $REST::Neo4p::Query::VERSION = '0.20';
 }
 
 my $BUFSIZE = 4096;

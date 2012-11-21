@@ -5,7 +5,7 @@ use Carp qw(croak carp);
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Path::VERSION = '0.1282';
+  $REST::Neo4p::Path::VERSION = '0.20';
 }
 
 sub new {
@@ -21,6 +21,7 @@ sub new_from_json_response {
   $obj->{_length} = $decoded_resp->{length};
   my @node_urls = @{$decoded_resp->{nodes}};
   my @reln_urls = @{$decoded_resp->{relationships}};
+
   while (my $node_url = shift @node_urls) {
     my $reln_url = shift @reln_urls;
     my ($node_id) = $node_url =~ /([0-9]+)$/;
@@ -29,26 +30,25 @@ sub new_from_json_response {
     eval {
       $node = REST::Neo4p::Node->_entity_by_id($node_id);
     };
-    my $e;
-    if ($e = Exception::Class->caught('REST::Neo4p::Exception')) {
+    if (my $e = REST::Neo4p::Exception->caught()) {
       # TODO : handle different classes
       $e->rethrow;
     }
-    elsif ($@) {
-      ref $@ ? $@->rethrow : die $@;
+    elsif ($e = Exception::Class->caught()) {
+      ref $e ? $e->rethrow : die $e;
     }
     push @{$obj->{_nodes}}, $node;
     eval {
       $relationship =  REST::Neo4p::Relationship->_entity_by_id($reln_id) if $reln_id;
     };
-    if ($e = Exception::Class->caught('REST::Neo4p::Exception')) {
+    if (my $e = REST::Neo4p::Exception->caught()) {
       # TODO : handle different classes
       $e->rethrow;
     }
-    elsif ($@) {
-      ref $@ ? $@->rethrow : die $@;
+    elsif ($e = Exception::Class->caught()) {
+      ref $e ? $e->rethrow : die $e;
     }
-    push @{$obj->{_relationships}}, $relationship;
+    push @{$obj->{_relationships}}, $relationship if $relationship;
   }
   REST::Neo4p::LocalException->throw("Extra relationships in path\n") if @reln_urls;
   return $obj;

@@ -247,41 +247,42 @@ REST::Neo4p::Constraint::Property - Neo4j Property Constraints
 
 =head1 SYNOPSIS
 
+See L<REST::Neo4p::Constraint>.
+
 =head1 DESCRIPTION
 
-constrain property values
+C<REST::Neo4p::Constraint::NodeProperty> and
+C<REST::Neo4p::Constraint::RelationshipProperty> are classes that
+represent constraints on the presence and values of Node and
+Relationship entities.
 
-property set tags
+Constraint hash specification:
 
-"property constraint set"
-
-{ <property_constraint_tag> => 
- {
-  constraint_type => 'node_property' | 'relationship_property',
-  constraints =>
-  { 
-    _condition => constraint_conditions, # ('all'|'only'|'none')
-    _relationship_type => <relationship type>,
-    prop_0 => [], # may have, no constraint
-    prop_1 => [<string|regexp>], # may have, if present must meet 
-    prop_2 => '', # must have, no constraint
-    prop_3 => 'value', # must have, value must eq 'value'
-    prop_4 => qr/.alue/, # must have, value must match qr/.alue/,
-    prop_5 => qr/^value1|value2|value3$/
-      (use regexps for enumerations)
+   { 
+     _condition => constraint_conditions, # ('all'|'only'|'none')
+     _relationship_type => <relationship type>,
+     _priority => <integer priority>,
+     prop_0 => [], # may have, no constraint
+     prop_1 => [<string|regexp>], # may have, if present must meet 
+     prop_2 => '', # must have, no constraint
+     prop_3 => 'value', # must have, value must eq 'value'
+     prop_4 => qr/.alue/, # must have, value must match qr/.alue/,
+     prop_5 => qr/^value1|value2|value3$/ # regexp for enumerations
   }
-}
-
-must meet at least these conditions - checklist - all
-must meet only these conditions - whitelist - only (cannot possess 
- properties not enumerated)
-must not meet any conditions - blacklist - none
 
 =head1 METHODS
 
 =over
 
 =item new()
+
+ $np = REST::Neo4p::Constraint::NodeProperty->new(
+         $tag => $constraint_hash
+       );
+
+ $rp = REST::Neo4p::Constraint::RelationshipProperty->new(
+         $tag => $constraint_hash
+       );
 
 =item add_constraint()
 
@@ -299,7 +300,8 @@ Returns the constraint type ('node_property' or 'relationship_property').
 
 =item set_condition()
 
- Set/get 'all', 'only', 'none' for a given constraint
+Set/get 'all', 'only', 'none' for a given property constraint. See
+L<REST::Neo4p::Constrain>.
 
 =item priority()
 

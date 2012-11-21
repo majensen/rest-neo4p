@@ -157,9 +157,9 @@ REST::Neo4p - Perl object bindings for a Neo4j database
   REST::Neo4p->connect('http://127.0.0.1:7474');
   $i = REST::Neo4p::Index->new('node', 'my_node_index');
   $i->add_entry(REST::Neo4p::Node->new({ name => 'Fred Rogers' }),
-                                       guy  => 'Fred_Rogers');
+                                       guy  => 'Fred Rogers');
   $index = REST::Neo4p->get_index_by_name('my_node_index','node');
- ($my_node) = $index->find_entries('guy' => 'Fred_Rogers');
+ ($my_node) = $index->find_entries('guy' => 'Fred Rogers');
   $new_neighbor = REST::Neo4p::Node->new({'name' => 'Donkey Hoty'});
   $my_reln = $my_node->relate_to($new_neighbor, 'neighbor');
 
@@ -247,6 +247,24 @@ but there is no fundamental reason why new nodes or relationships must
 have the property (it is NoSQL, after all). Therefore this is a choice
 for you to make; the default is I<no> auto-accessors.
 
+=head2 Application-level constraints
+
+L<REST::Neo4p::Constrain> provides a flexible means for creating,
+enforcing, serializing and loading property and relationship
+constraints on your database through REST::Neo4p. It allows you, for
+example, to specify "kinds" of nodes based on their properties,
+constrain properties and the values of properties for those nodes, and
+then specify allowable relationships between kinds of nodes.
+
+Constraints can be enforced automatically, causing exceptions to be
+thrown when constraints are violated. Alternatively, you can use
+validation functions to test properties and relationships, including
+those already present in the database.
+
+This is a mixin that is not C<use>d automatically by REST::Neo4p. For
+details and examples, see L<REST::Neo4p::Constrain> and
+L<REST::Neo4p::Constraint>.
+
 =head1 CLASS METHODS
 
 =over
@@ -290,7 +308,8 @@ Returns false if index C<$name> does not exist in database.
 =head1 SEE ALSO
 
 L<REST::Neo4p::Node>,L<REST::Neo4p::Relationship>,L<REST::Neo4p::Index>,
-L<REST::Neo4p::Query>, L<REST::Neo4p::Path>, L<REST::Neo4p::Batch>
+L<REST::Neo4p::Query>, L<REST::Neo4p::Path>, L<REST::Neo4p::Batch>,
+L<REST::Neo4p::Constrain>, L<REST::Neo4p::Constraint>.
 
 =head1 AUTHOR
 

@@ -162,28 +162,33 @@ REST::Neo4p::Constraint::Relationship - Neo4j Relationship Constraints
 
 =head1 SYNOPSIS
 
+See L<REST::Neo4p::Constraint>.
+
 =head1 DESCRIPTION
 
-"relationship constraint"
+C<REST::Neo4p::Constraint::Relationship> is a class that represents
+constraints on the type and direction of relationships between nodes
+that satisfy given sets of property constraints.
 
-{ <relationship_constraint_tag> =>
- {
-  constraint_type => "relationship",
-  constraints =>
-  { _condition => (only|none),
-    _relationship_type => <relationship_typename>,
-    _descriptors => [{ property_constraint_tag => property_constraint_tag },...] }
- }
-}
+Constraint hash specification:
 
-must meet only these conditions - whitelist - only (cannot match unless matching descriptor is enumerated)
-must not meet any conditions - blacklist - none
+   { 
+     _condition => <'only'|'none'>,
+     _relationship_type => <relationship_typename>,
+     _priority => <integer priority>,
+     _descriptors => [{ property_constraint_tag => 
+                        property_constraint_tag },...] }
+   }
 
 =head1 METHODS
 
 =over
 
 =item new()
+
+ $r = $REST::Neo4p::Constraint::Relationship->new(
+        $tag => $constraint_hash
+      );
 
 =item add_constraint()
 
@@ -218,7 +223,10 @@ interface for validation>.
 
 =item set_condition()
 
-Get/set 'all', 'only', 'none' for a given constraint
+ $r->set_condition('only');
+
+Get/set 'only' or 'none' for a given relationship constraint. See
+L<REST::Neo4p::Constrain>.
 
 =item validate()
 

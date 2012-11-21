@@ -30,6 +30,7 @@ t/007_accessors.t
 t/008_batch_agent.t
 t/009_batch.t
 t/010_batch_synopsis.t
+t/011_neo4p_synopsis.t
 t/020_constraint.t
 t/021_validation.t
 t/022_constrain.t

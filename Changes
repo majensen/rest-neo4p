@@ -63,4 +63,5 @@ Revision history for Perl module TCGA::Neo4j
     - refactored tests to better cleanup test entities on failed suites
     - Module version numbers reflect last version in which the module was
       modified
+    - fixed problem with escaped spaces in queries
     

@@ -413,7 +413,8 @@ L<validate_*()|/Functional interface for validation> functions.
  $node_pc->add_constraint( 'warning_level' => qr/^[0-9]$/ );
  $reln_c->add_constraint( { 'species' => 'genus' } );
 
-Add an individual constraint specification to an existing constraint object. See subclass pod for details.
+Add an individual constraint specification to an existing constraint
+object. See subclass pod for details.
 
 =item remove_constraint()
 
@@ -471,7 +472,8 @@ They can also be exported from L<REST::Neo4p::Constrain>:
  open $f, ">constraints.json";
  print $f serialize_constraints();
 
-Returns a JSON-formatted representation of all currently registered constraints.
+Returns a JSON-formatted representation of all currently registered
+constraints.
 
 =item load_constraints()
 

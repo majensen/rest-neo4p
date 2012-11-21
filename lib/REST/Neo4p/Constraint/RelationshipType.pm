@@ -104,22 +104,22 @@ REST::Neo4p::Constraint::RelationshipType - Neo4j Relationship Type Constraints
 
 =head1 SYNOPSIS
 
+See L<REST::Neo4p::Constraint>.
+
 =head1 DESCRIPTION
 
-constrain relationship types 
+C<REST::Neo4p::Constraint::RelationshipType> is a class that represent
+the set of relationship types that Relationships must (or must not)
+use.
 
-"relationship type constraint"
+Constraint hash specification:
 
-{relationship_type_constraint_tag => 
- {
-  constraint_type => "relationship_type",
-  constraints =>
-  {
-   _condition => constraint_conditions, # ('only'|'none')
-   _type_list => [ 'type_name_1', 'type_name_2', ...]
-  }
+ { 
+  _condition => <'only'|'none'>,
+  _priority => <integer priority>,
+   _type_list => [ 'type_name_1', 'type_name_2', ...]  }
  }
-}
+
 
 must meet only these conditions - whitelist - only (cannot match unless matching type is enumerated)
 must not meet any conditions - blacklist - none
@@ -129,6 +129,10 @@ must not meet any conditions - blacklist - none
 =over
 
 =item new()
+
+ $rt = REST::Neo4p::Constraint::RelationshipType->new(
+         $tag => $constraint_hash
+       );
 
 =item add_constraint()
 
@@ -154,14 +158,17 @@ The relationship type to which this constraint applies.
 
 =item set_condition()
 
- Set/get 'all', 'only', 'none' for a given constraint
+Get/set 'only' or 'none' for a given relationship constraint. See
+L<REST::Neo4p::Constrain>.
 
 =item priority()
 
 =item set_priority()
 
 Constraints with higher priority will be checked before constraints
-with lower priority by L<C<validate_relationship_type()>|REST::Neo4p::Constraint/Functional interface for validation>.
+with lower priority by
+L<C<validate_relationship_type()>|REST::Neo4p::Constraint/Functional
+interface for validation>.
 
 =item constraints()
 
