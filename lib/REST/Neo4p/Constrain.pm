@@ -9,7 +9,7 @@ no warnings qw(once redefine);
 
 
 BEGIN {
-  $REST::Neo4p::Constrain::VERSION = '0.2001';
+  $REST::Neo4p::Constrain::VERSION = '0.2002';
 }
 our @EXPORT = qw(create_constraint drop_constraint constrain relax);
 our @VALIDATE = qw(validate_properties validate_relationship validate_relationship_type);
@@ -277,7 +277,7 @@ REST::Neo4p::Constrain - Create and apply Neo4j app-level constraints
  );
 
  create_constraint(
-  tag => 'ignore',
+  tag => 'loves',
   type => 'relationship',
   rtype => 'LOVES',
   constraints =>  [{ pet => 'owner' },
