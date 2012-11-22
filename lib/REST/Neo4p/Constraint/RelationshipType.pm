@@ -5,7 +5,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Constraint::RelationshipType::VERSION = "0.20";
+  $REST::Neo4p::Constraint::RelationshipType::VERSION = '0.2001';
 }
 
 sub new {
@@ -104,7 +104,13 @@ REST::Neo4p::Constraint::RelationshipType - Neo4j Relationship Type Constraints
 
 =head1 SYNOPSIS
 
-See L<REST::Neo4p::Constraint>.
+ # use REST::Neo4p::Constrain, it's nicer
+
+ $rtc = REST::Neo4p::Constraint::RelationshipType->new(
+  'allowed_reln_types' =>
+    { _condition => 'only', 
+      _type_list => [qw(contains has)] }
+  );
 
 =head1 DESCRIPTION
 
@@ -115,14 +121,10 @@ use.
 Constraint hash specification:
 
  { 
-  _condition => <'only'|'none'>,
-  _priority => <integer priority>,
+   _condition => <'only'|'none'>,
+   _priority => <integer priority>,
    _type_list => [ 'type_name_1', 'type_name_2', ...]  }
  }
-
-
-must meet only these conditions - whitelist - only (cannot match unless matching type is enumerated)
-must not meet any conditions - blacklist - none
 
 =head1 METHODS
 
@@ -138,9 +140,15 @@ must not meet any conditions - blacklist - none
 
 =item add_types()
 
+ $rc->add_constraint('new_type');
+ $rc->add_type('new_type');
+
 =item remove_constraint()
 
 =item remove_type()
+
+ $rc->remove_constraint('old_type');
+ $rc->remove_type('old_type');
 
 =item tag()
 
@@ -149,10 +157,6 @@ Returns the constraint tag.
 =item type()
 
 Returns the constraint type ('relationship_type').
-
-=item rtype()
-
-The relationship type to which this constraint applies.
 
 =item condition()
 

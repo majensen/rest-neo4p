@@ -8,7 +8,7 @@ use base 'REST::Neo4p::Entity';
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Node::VERSION = '0.1282';
+  $REST::Neo4p::Node::VERSION = '0.2001';
 }
 
 # creation, deletion and property manipulation are delegated
@@ -119,7 +119,7 @@ REST::Neo4p::Node - Neo4j node object
 
 =head1 DESCRIPTION
 
-C<REST::Neo4p::Node> objects represent Neo4j nodes.
+REST::Neo4p::Node objects represent Neo4j nodes.
 
 =head1 METHODS
 
@@ -136,7 +136,7 @@ Instantiates a new Node object and creates corresponding node in the database.
 
  $node->remove()
 
-Removes a node from the database and destroys the object.
+B<CAUTION>: Removes a node from the database and destroys the object.
 
 =item get_property()
 
@@ -161,12 +161,12 @@ Get all the properties of a node or relationship as a hashref.
 
 =item relate_to()
 
- $relationship = $node1->relate_to($node2, 'manager');
+ $relationship = $node1->relate_to($node2, 'manager', { matrixed => 'yes' });
 
-Set a relationship between two nodes and returns the
-L<REST::Neo4p::Relationship|REST::Neo4p::Relationship> thus
-created. Call on the "from" node, first argument is the "to" node,
-second argument is the relationship type.
+Create a relationship between two nodes in the database and return the
+L<REST::Neo4p::Relationship> object. Call on the "from" node, first
+argument is the "to" node, second argument is the relationship type,
+third optional argument is a hashref of I<relationship> properties.
 
 =item get_relationships()
 

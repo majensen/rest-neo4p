@@ -34,11 +34,13 @@ t/011_neo4p_synopsis.t
 t/020_constraint.t
 t/021_validation.t
 t/022_constrain.t
+t/023_constrain_synopsis.t
 t/030_idx_escape.t
 t/098_pod.t
 t/099_error.t
 t/rt_80150.t
 t/rt_80196.t
+t/rt_80471.t
 t/Neo4p.pm
 META.yml
 META.json

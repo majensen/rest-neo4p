@@ -8,7 +8,7 @@ use Carp qw(croak carp);
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Query::VERSION = '0.20';
+  $REST::Neo4p::Query::VERSION = '0.2001';
 }
 
 my $BUFSIZE = 4096;
@@ -275,18 +275,24 @@ REST::Neo4p::Query - Execute Neo4j Cypher queries
 
 =head1 DESCRIPTION
 
-C<REST::Neo4p::Query> encapsulates Neo4j Cypher language queries,
-executing them via C<REST::Neo4p::Agent> and returning an iterator
-over the rows, in the spirit of L<DBI|DBI>.
+REST::Neo4p::Query encapsulates Neo4j Cypher language queries,
+executing them via L<REST::Neo4p::Agent> and returning an iterator
+over the rows, in the spirit of L<DBI>.
 
 =head2 Streaming
 
-C<execute()> captures the Neo4j query response in a temp
-file. C<fetch()> iterates over the JSON in the response using
+L<C<execute()>|/execute()> captures the Neo4j query response in a temp
+file. L<C<fetch()>|/fetch()> iterates over the JSON in the response using
 L<JSON::Streaming::Reader|JSON::Streaming::Reader>. So go ahead and
 make those 100 meg queries. The tempfile is unlinked after the
 iterator runs out of rows, or upon object destruction, which ever
 comes first.
+
+=head2 Paths
+
+If your query returns a path, L<C<fetch()>|/fetch()> returns a
+L<REST::Neo4p::Path> object from which you can obtain the Nodes and
+Relationships.
 
 =head1 METHODS
 
@@ -306,7 +312,9 @@ Create a new query object. First argument is the Cypher query
 
 Execute the query on the server. Not supported in batch mode.
 
-=item fetch(), fetchrow_arrayref()
+=item fetch()
+
+=item fetchrow_arrayref()
 
  $query = REST::Neo4p::Query->new('START n=node(0) RETURN n, n.name');
  $query->execute;

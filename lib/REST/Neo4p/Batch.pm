@@ -8,7 +8,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Batch::VERSION = '0.1282';
+  $REST::Neo4p::Batch::VERSION = '0.2001';
 }
 
 our @EXPORT = qw(batch);
@@ -194,17 +194,14 @@ The C<$action> parameter B<must be> (there is no default) one of
 
 If C<keep_objs> is specified, any nodes, relationships or indexes
 returned in the server reponse will be created in memory as
-REST::Neo4p objects.  This is more time-efficient if the program plans
-to use the objects subsequently.
+REST::Neo4p objects.
 
 =item * 'discard_objs'
 
 If C<discard_objs> is specified, Neo4j entities in the server response
 will not be automatically registered as REST::Neo4p objects. Of
 course, these objects can be retrieved from the server through object
-creation and other methods, outside of the batch block. This is more
-space efficient if the program does not plan to use the objects
-subsequently:
+creation and other methods, outside of the batch block.
 
  #!perl
  # loader...
@@ -265,7 +262,7 @@ but this does not:
  } 'keep_objs';
 
 because $node has not been created on the server at the time that
-add_entry() is executed.
+add_entry() is executed, so C<get_property('name')> fails.
 
 =back
 

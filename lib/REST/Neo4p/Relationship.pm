@@ -6,18 +6,18 @@ use Carp qw(croak carp);
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Relationship::VERSION = '0.1282';
+  $REST::Neo4p::Relationship::VERSION = '0.2001';
 }
 
 sub new {
   my $self = shift;
-  my ($from_node, $to_node, $type) = @_;
+  my ($from_node, $to_node, $type, $rel_props) = @_;
   unless (ref $from_node && $from_node->is_a('REST::Neo4p::Node') &&
 	  ref $to_node && $to_node->is_a('REST::Neo4p::Node') &&
 	  defined $type) {
     REST::Neo4p::LocalException->throw("Requires 2 REST::Neo4p::Node objects and a relationship type\n");
   }
-  return $from_node->relate_to($to_node, $type);
+  return $from_node->relate_to($to_node, $type, $rel_props);
 }
 
 sub type {
@@ -44,9 +44,11 @@ REST::Neo4p::Relationship - Neo4j relationship object
  $r1 = $n1->relate_to($n2, 'met');
  $r1->set_property({ when => 'July' });
 
+ $r2 = REST::Neo4p::Relationship->new( $n2 => $n1, 'dropped' );
+
 =head1 DESCRIPTION
 
-C<REST::Neo4p::Relationship> objects represent Neo4j relationships.
+REST::Neo4p::Relationship objects represent Neo4j relationships.
 
 =head1 METHODS
 
@@ -58,18 +60,17 @@ C<REST::Neo4p::Relationship> objects represent Neo4j relationships.
 
 Creates the relationship given by the scalar third argument between
 the first argument and second argument, both C<REST::Neo4p::Node>
-objects.
+objects. An optional third argument is a hashref of I<relationship> 
+properties.
 
 =item get_property()
 
- $name = $node->get_property('name');
- @vitals = $node->get_property( qw( height weight bp temp ) );
+ $status = $reln->get_property('status');
 
 Get the values of properties on nodes and relationships.
 
 =item set_property()
 
- $name = $node->set_property( {name => "Sun Tzu", occupation => "General"} );
  $node1->relate_to($node2,"is_pal_of")->set_property( {duration => 'old pal'} );
 
 Sets values of properties on nodes and relationships.
@@ -77,9 +78,9 @@ Sets values of properties on nodes and relationships.
 =item get_properties()
 
  $props = $relationship->get_properties;
- print "'Sup, Al." if ($props->{name} eq 'Al');
+ print "Come here often?" if ($props->{status} eq 'not_currently_seeing');
 
-Get all the properties of a node or relationship as a hashref.
+Get all the properties of relationship as a hashref.
 
 =item start_node(), end_node()
 
@@ -95,7 +96,7 @@ Get the start and end nodes of the relationship.
 
 Gets a relationship's type.
 
-=item property auto-accessors
+=item Property auto-accessors
 
 See L<REST::Neo4p/Property Auto-accessors>.
 

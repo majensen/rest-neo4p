@@ -5,7 +5,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Constraint::Relationship::VERSION = '0.20';
+  $REST::Neo4p::Constraint::Relationship::VERSION = '0.2001';
 }
 
 sub new {
@@ -162,7 +162,17 @@ REST::Neo4p::Constraint::Relationship - Neo4j Relationship Constraints
 
 =head1 SYNOPSIS
 
-See L<REST::Neo4p::Constraint>.
+ # use REST::Neo4p::Constrain, it's nicer
+
+ $rc = REST::Neo4p::Constraint::Relationship->new(
+   'allowed_contains_relns' => 
+     { _condition => 'only',
+       _relationship_type => 'contains',
+       _priority => 0,
+       _descriptors  => [ {'module' => 'method'},
+                          {'module' => 'variable'},
+                          {'method' => 'variable'} ] }
+   );
 
 =head1 DESCRIPTION
 
@@ -186,13 +196,17 @@ Constraint hash specification:
 
 =item new()
 
- $r = $REST::Neo4p::Constraint::Relationship->new(
+ $rc = $REST::Neo4p::Constraint::Relationship->new(
         $tag => $constraint_hash
       );
 
 =item add_constraint()
 
+ $rc->add_constraint( { 'star' => 'planet' });
+
 =item remove_constraint()
+
+ $rc->remove_constraint( { 'developer' => 'parole_officer' } );
 
 =item tag()
 

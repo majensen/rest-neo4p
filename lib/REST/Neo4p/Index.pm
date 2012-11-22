@@ -10,7 +10,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Index::VERSION = '0.1282';
+  $REST::Neo4p::Index::VERSION = '0.2001';
 }
 
 my $unsafe = "^A-Za-z0-9\-\._\ ~";
@@ -230,7 +230,7 @@ REST::Neo4p::Index - Neo4j index object
 
 =head1 DESCRIPTION
 
-C<REST::Neo4p::Index> objects represent Neo4j node and relationship indexes.
+REST::Neo4p::Index objects represent Neo4j node and relationship indexes.
 
 =head1 METHODS
 
@@ -252,6 +252,8 @@ API.
 =item remove()
 
  $index->remove()
+
+B<CAUTION>: This method removes the index from the database and destroys the object.
 
 =item name()
 

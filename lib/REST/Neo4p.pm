@@ -12,7 +12,7 @@ use REST::Neo4p::Query;
 use REST::Neo4p::Exceptions;
 
 BEGIN {
-  $REST::Neo4p::VERSION = '0.20';
+  $REST::Neo4p::VERSION = '0.2001';
 }
 
 our $CREATE_AUTO_ACCESSORS = 0;
@@ -189,7 +189,7 @@ Batch processing (see L<REST::Neo4p::Batch> for more)
 
 =head1 DESCRIPTION
 
-C<REST::Neo4p> provides a Perl 5 object framework for accessing and
+REST::Neo4p provides a Perl 5 object framework for accessing and
 manipulating a L<Neo4j|http://neo4j.org> graph database server via the
 Neo4j REST API. Its goals are
 
@@ -218,7 +218,7 @@ Indexes : L<REST::Neo4p::Index|REST::Neo4p::Index>
 =back
 
 Actions on class instances have a corresponding effect on the database
-(i.e., C<REST::Neo4p> approximates an ORM).
+(i.e., REST::Neo4p approximates an ORM).
 
 The class L<REST::Neo4p::Query> provides a DBIesqe Cypher query facility.
 
@@ -230,8 +230,9 @@ for the entity properties, set
 
  $REST::Neo4p::CREATE_AUTO_ACCESSORS = 1;
 
-Then, when L</set_property()> is used to first create and set a
-property, accessors will be created on the class:
+Then, when L<set_property()|REST::Neo4p::Node/set_property()> is used
+to first create and set a property, accessors will be created on the
+class:
 
  $node1->set_property({ flavor => 'strange', spin => -0.5 });
  printf "Quark has flavor %s\n", $node1->flavor;
@@ -261,7 +262,7 @@ thrown when constraints are violated. Alternatively, you can use
 validation functions to test properties and relationships, including
 those already present in the database.
 
-This is a mixin that is not C<use>d automatically by REST::Neo4p. For
+This is a mixin that is not I<use>d automatically by REST::Neo4p. For
 details and examples, see L<REST::Neo4p::Constrain> and
 L<REST::Neo4p::Constraint>.
 

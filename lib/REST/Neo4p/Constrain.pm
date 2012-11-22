@@ -9,7 +9,7 @@ no warnings qw(once redefine);
 
 
 BEGIN {
-  $REST::Neo4p::Constrain::VERSION = '0.20';
+  $REST::Neo4p::Constrain::VERSION = '0.2001';
 }
 our @EXPORT = qw(create_constraint drop_constraint constrain relax);
 our @VALIDATE = qw(validate_properties validate_relationship validate_relationship_type);
@@ -440,7 +440,7 @@ the database
 
 =back
 
-L<Below|/An Example> is an example.
+The L</SYNOPSIS> is a full example.
 
 =head2 Types of Constraints
 
@@ -457,7 +457,7 @@ must not) take.
 =item * Relationship property constraints
 
 A relationship property constraint specifies the presence/absence of
-properties, and can specifiy the allowable values a property must (or
+properties, and can specify the allowable values a property must (or
 must not) take. In addition, a relationship property constraint can be
 linked to a given relationship type, so that, e.g., the creation of a
 relationship of a given type can be forced to have specified
@@ -490,7 +490,8 @@ C<create_constraint> accepts a hash of parameters. The following are required:
                # constraint
   type => $type, # node_property|relationship_property|
                  # relationship|relationship_type
-
+  priority => $integer_priority, # to determine which constraints
+                                 # are evaluated first during validation
   constraints => $constraints, # a reference that depends on the
                              # constraint type, see below
  );
@@ -617,7 +618,7 @@ The C<condition> parameter can take the following values:
 L<C<create_constraint()>|/create_constraint()> registers the created
 constraint so that it is included in all relevant validations.
 
-L<C<drop_constraint()>|/drop_constraint> deregisters and removes the
+L<C<drop_constraint()>|/drop_constraint()> deregisters and removes the
 constraint specified by its tag:
 
  drop_constraint('owner');
@@ -724,7 +725,7 @@ Import with
 
 =over
 
-=item seralize_constraints()
+=item serialize_constraints()
 
  open $f, ">constraints.json";
  print $f serialize_constraints();
@@ -760,7 +761,7 @@ Import with
 
  validate_properties( $node_object )
  validate_properties( $relationship_object );
- validate_properties( { name => 'Steve', instrument => 'banjo } );
+ validate_properties( { name => 'Steve', instrument => 'banjo' } );
 
 =item validate_relationship()
 

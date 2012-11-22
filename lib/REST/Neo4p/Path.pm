@@ -5,7 +5,7 @@ use Carp qw(croak carp);
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Path::VERSION = '0.20';
+  $REST::Neo4p::Path::VERSION = '0.2001';
 }
 
 sub new {
@@ -78,11 +78,11 @@ REST::Neo4p::Path - Container for Neo4j path elements
 
 =head1 DESCRIPTION
 
-C<REST::Neo4p::Path> provides a container for Neo4j paths as returned
+REST::Neo4p::Path provides a simple container for Neo4j paths as returned
 by Cypher queries. Nodes and relationships are stored in path order.
 
-Currently, creating de novo instances of class is really the job of 
-L<REST::Neo4p::Query|REST::Neo4p::Query>.
+Currently, creating de novo instances of this class is really the job
+of L<REST::Neo4p::Query>.
 
 =head1 METHODS
 
@@ -92,9 +92,13 @@ L<REST::Neo4p::Query|REST::Neo4p::Query>.
 
  @nodes = $path->nodes;
 
+Get the nodes in path order.
+
 =item relationships()
 
  @relationships = $path->relationships;
+
+Get the relationships in path order.
 
 =back
 

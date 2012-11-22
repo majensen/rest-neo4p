@@ -34,7 +34,7 @@ my $regex_to_json = sub {
 };
 
 BEGIN {
-  $REST::Neo4p::Constraint::VERSION = "0.20";
+  $REST::Neo4p::Constraint::VERSION = '0.2001';
 }
 
 # valid constraint types
@@ -384,7 +384,17 @@ Get a hash of all registered constraint objects, keyed by constraint tag.
 
 =item condition()
 
+=item set_condition()
+
+ $reln_c->set_condition('only');
+
+Set the group condition for the constraint. See subclass pod for details.
+
 =item priority()
+
+=item set_priority()
+
+ $node_pc->set_priority(10);
 
 Constraints with larger priority values are checked before those with
 smaller values by the L<C<validate_*()>|/Functional interface for
@@ -393,20 +403,6 @@ validation> functions.
 =item constraints()
 
 Returns the hashref of constraints. Format depends on the subclass.
-
-=item set_condition()
-
- $reln_c->set_condition('only');
-
-Set the group condition for the constraint. See subclass pod for details.
-
-=item set_priority()
-
- $node_pc->set_priority(10);
-
-Set the constraint's priority. Constraints with higher priority will
-be checked before constraints with lower priority in the
-L<validate_*()|/Functional interface for validation> functions.
 
 =item add_constraint()
 
@@ -434,7 +430,7 @@ constraint object. See subclass pod for details.
 
  validate_properties( $node_object )
  validate_properties( $relationship_object );
- validate_properties( { name => 'Steve', instrument => 'banjo } );
+ validate_properties( { name => 'Steve', instrument => 'banjo' } );
 
 =item validate_relationship()
 
@@ -449,6 +445,8 @@ constraint object. See subclass pod for details.
 
  validate_relationship_type( 'avoids' )
 
+=back
+
 Functional interface. Returns the registered constraint object with
 the highest priority that the argument satisfies, or false if none is
 satisfied.
@@ -460,8 +458,6 @@ These methods can be exported as follows:
 They can also be exported from L<REST::Neo4p::Constrain>:
 
  use REST::Neo4p::Constrain qw(:validate)
-
-=back
 
 =head2 Serializing and loading constraints
 
