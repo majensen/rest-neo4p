@@ -705,7 +705,7 @@ Deregisters a constraint identified by its tag. Returns the constraint object.
 
 constrain() forces L<REST::Neo4p> constructors and property setters to
 comply with the currently registered
-constraints. L<REST::Neo4p::ConstraintException|REST::Neo4p::Exceptions>s
+constraints. L<REST::Neo4p::Exceptions|REST::Neo4p::ConstraintException>s
 are thrown if constraints are not met.
 
 relax() turns off the automatic validation of constrain().

@@ -240,7 +240,6 @@ sub __do_request {
       eval {
 	$self->{_decoded_content} = $JSON->decode($resp->content);
       };
-
       undef $self->{_decoded_content} if $@;
       unless ($resp->is_success) {
 	if ( $self->{_decoded_content} ) {
@@ -261,6 +260,7 @@ sub __do_request {
 	  $xclass->throw(%error_fields);
 	}
 	else { # couldn't parse the content as JSON...
+
 	  my $xclass = ($resp->code == 404) ? 'REST::Neo4p::NotFoundException' : 'REST::Neo4p::CommException';
 	  $xclass->throw( 
 	    code => $resp->code,

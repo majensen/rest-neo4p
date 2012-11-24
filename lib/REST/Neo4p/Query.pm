@@ -8,7 +8,7 @@ use Carp qw(croak carp);
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Query::VERSION = '0.2001';
+  $REST::Neo4p::Query::VERSION = '0.2010';
 }
 
 my $BUFSIZE = 4096;
@@ -194,7 +194,23 @@ sub execute {
 	    last;
 	  };
 	  /ARRAY/ && do {
-	    REST::Neo4p::LocalException->throw("Don't know what to do with arrays yet\n");
+	    for my $ary_elt (@$elt) {
+	      my ($entity_type,$entity_class);
+	      eval {
+		$entity_type = _response_entity($ary_elt);
+	      };
+	      my $e;
+	      if ($e = Exception::Class->caught()) {
+		ref $e ? $e->rethrow : die $e;
+	      }
+	      if ($entity_type eq 'bareword') {
+		push @ret, $ary_elt;
+	      }
+	      else {
+		$entity_class = 'REST::Neo4p::'.$entity_type;
+		push @ret, $entity_class->new_from_json_response($ary_elt);
+	      }
+	    }
 	    last;
 	  };
 	  do {
@@ -207,7 +223,13 @@ sub execute {
   return $row_count;
 }
 
-sub fetchrow_arrayref { shift->{_iterator}->() }
+sub fetchrow_arrayref { 
+  my $self = shift;
+  unless ( defined $self->{_iterator} ) {
+    REST::Neo4p::LocalException->throw("Can't run fetch(), query not execute()'d yet\n");
+  }
+  $self->{_iterator}->();
+}
 
 sub fetch { shift->fetchrow_arrayref(@_) }
 
@@ -232,7 +254,10 @@ sub params { shift->{_params} }
 
 sub _response_entity {
   my ($resp) = @_;
-  if (defined $resp->{self}) {
+  if ( ref($resp) eq '' ) { #handle arrays of barewords
+    return 'bareword';
+  }
+  elsif (defined $resp->{self}) {
     for ($resp->{self}) {
       m|data/node| && do {
 	return 'Node';
