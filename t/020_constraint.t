@@ -92,7 +92,7 @@ is $reln_pc->priority, 20, 'person_pc priority set';
 is $reln_tc->priority, 50, 'person_pc priority set';
 
 $person_pc->add_constraint( species => ['sapiens', 'habilis'] );
-ok grep(/species/,keys $person_pc->constraints), 'constraint added';
+ok grep(/species/,keys {$person_pc->constraints}), 'constraint added';
 
 ok $reln_c->add_constraint( { 'pet' => 'pet' } ), 'add relationship constraint';
 ok $reln_c2->add_constraint( { 'pet' => 'person' } ), 'add relationship constraint';
