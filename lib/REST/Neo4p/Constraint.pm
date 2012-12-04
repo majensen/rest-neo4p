@@ -123,8 +123,8 @@ sub _fix_constraints {
   if (ref eq 'HASH') {
     while (my ($k, $v) = each %$_) {
       if ($v && ($v =~ /^qr\//)) {
-	 if ($v =~ /\(\?\^:.*\)/) {
-	   $v =~ s{/\(\?\^:}{/}; # kludge - eval wants to wrap (?:^...) around a qr string
+	 if ($v =~ /\(\?(\^|-[a-z]+):.*\)/) {
+	   $v =~ s{/\(\?(\^|-[a-z]+):}{/}; # kludge - eval wants to wrap (?:^...) around a qr string
 	   $v =~ s{\)/}{/}; # kludge -      even if one is there already
 	 }
 	$_->{$k} = eval $v; # replace with Regexp
