@@ -124,8 +124,8 @@ sub _fix_constraints {
     while (my ($k, $v) = each %$_) {
       if ($v && ($v =~ /^qr\//)) {
 	 if ($v =~ /\(\?\^:.*\)/) {
-	   $v =~ s|/\(\?\^:|/|; # kludge - eval wants to wrap (?:^...) around a qr string
-	   $v =~ s|\)/|/|; # kludge -      even if one is there already
+	   $v =~ s{/\(\?\^:}{/}; # kludge - eval wants to wrap (?:^...) around a qr string
+	   $v =~ s{\)/}{/}; # kludge -      even if one is there already
 	 }
 	$_->{$k} = eval $v; # replace with Regexp
       }

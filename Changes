@@ -69,3 +69,5 @@ Revision history for Perl module TCGA::Neo4j
       (thanks Joseph)
     - fetch() now throws a reasonable exception if the query has not
       been execute()d    
+0.2012
+    - changed s||| to s{}{} (was failing on 5.10 and below) (Constraint.pm)
