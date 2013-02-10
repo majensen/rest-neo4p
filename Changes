@@ -71,3 +71,5 @@ Revision history for Perl module TCGA::Neo4j
       been execute()d    
 0.2012
     - modified _fix_constraints regexp to accommodate 5.10 and less
+0.2013
+    - fixed bad Perl in Index synopsis

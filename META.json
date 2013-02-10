@@ -4,7 +4,7 @@
       "Mark A. Jensen"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "Module::Build version 0.4001, CPAN::Meta::Converter version 2.112150",
+   "generated_by" : "Module::Build version 0.4001, CPAN::Meta::Converter version 2.120921",
    "license" : [
       "perl_5"
    ],
@@ -16,15 +16,15 @@
    "prereqs" : {
       "build" : {
          "requires" : {
-            "List::MoreUtils" : 0,
-            "Module::Build" : 0,
-            "Test::Exception" : 0,
-            "Test::More" : 0
+            "List::MoreUtils" : "0",
+            "Module::Build" : "0",
+            "Test::Exception" : "0",
+            "Test::More" : "0"
          }
       },
       "configure" : {
          "requires" : {
-            "Module::Build" : 0
+            "Module::Build" : "0"
          }
       },
       "runtime" : {
@@ -40,7 +40,7 @@
    "provides" : {
       "REST::Neo4p" : {
          "file" : "lib/REST/Neo4p.pm",
-         "version" : "0.2012"
+         "version" : "0.2013"
       },
       "REST::Neo4p::Agent" : {
          "file" : "lib/REST/Neo4p/Agent.pm",
@@ -88,7 +88,7 @@
       },
       "REST::Neo4p::Index" : {
          "file" : "lib/REST/Neo4p/Index.pm",
-         "version" : "0.2001"
+         "version" : "0.2013"
       },
       "REST::Neo4p::Node" : {
          "file" : "lib/REST/Neo4p/Node.pm",
@@ -113,5 +113,5 @@
          "http://dev.perl.org/licenses/"
       ]
    },
-   "version" : "0.2012"
+   "version" : "0.2013"
 }
