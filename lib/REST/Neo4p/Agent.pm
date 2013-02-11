@@ -9,7 +9,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Agent::VERSION = '0.2000';
+  $REST::Neo4p::Agent::VERSION = '0.2020';
 }
 
 our $AUTOLOAD;
