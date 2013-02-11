@@ -304,11 +304,11 @@ REST::Neo4p::Index - Neo4j index object
 
 =head1 SYNOPSIS
 
- $node_idx = REST::Neo4p::Index('node', 'my_node_index');
- $rel_idx = REST::Neo4p::Index('relationship', 'my_rel_index');
- $fulltext_idx = REST::Neo4p::Index('node', "my_ft_index,
-                                    { type = 'fulltext',
-                                      provider = 'lucene' });
+ $node_idx = REST::Neo4p::Index->new('node', 'my_node_index');
+ $rel_idx = REST::Neo4p::Index->new('relationship', 'my_rel_index');
+ $fulltext_idx = REST::Neo4p::Index->new('node', "my_ft_index,
+                                    { type => 'fulltext',
+                                      provider => 'lucene' });
  $node_idx->add_entry( $ShaggyNode, 'pet' => 'ScoobyDoo' );
  $node_idx->add_entry( $ShaggyNode,
    'pet' => 'ScoobyDoo',
@@ -353,7 +353,7 @@ B<CAUTION>: This method removes the index from the database and destroys the obj
 
 =item type()
 
- if ($index->type eq 'node') { $index->add_entry( $node, $key ); }
+ if ($index->type eq 'node') { $index->add_entry( $node, $key => $value ); }
 
 =item add_entry()
 
