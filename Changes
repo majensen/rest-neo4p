@@ -73,3 +73,5 @@ Revision history for Perl module TCGA::Neo4j
     - modified _fix_constraints regexp to accommodate 5.10 and less
 0.2013
     - fixed bad Perl in Index synopsis
+0.2020
+    - added create_unique functionality to node and relationship indexes

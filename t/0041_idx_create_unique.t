@@ -1,5 +1,5 @@
 #$Id$
-use Test::More tests => 20;
+use Test::More tests => 24;
 use Module::Build;
 use lib '../lib';
 use strict;
@@ -52,6 +52,12 @@ SKIP : {
   ok my $r1 = $ridx->create_unique( name => 'transversion', $n1 => $n2, 'transversion'), 'attempt to create same relationship with create_unique';
   is $$r, $$r1, '.. and get the same relationship object returned';
   push @cleanup, $r1 unless $$r == $$r1;
+  my $r2;
+    ok $r2 = $ridx->create_unique( name => 'transversion_back', $n2 => $n1, 'transversion', { extra => 'screlb' }), 'create_unique relationship with properties';
+    is $r2->get_property('extra'), 'screlb', 'property correctly set';
+  isnt $$r1, $$r2, 'this is a different, new relationship';
+  push @cleanup, $r2;
+
 
 END {
   CLEANUP : {
