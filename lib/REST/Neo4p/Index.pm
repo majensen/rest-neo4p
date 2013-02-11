@@ -171,13 +171,12 @@ sub find_entries {
       $decoded_resp = $agent->$rq( $self->name,
 				   "?query=".uri_escape($query,$unsafe) );
     };
-    my $e;
-    if ($e = Exception::Class->caught('REST::Neo4p::Exception')) {
+    if (my $e = Exception::Class->caught('REST::Neo4p::Exception')) {
       # TODO : handle different classes
       $e->rethrow;
     }
-    elsif ($@) {
-      ref $@ ? $@->rethrow : die $@;
+    elsif ($e = Exception::Class->caught) {
+      ref $e ? $e->rethrow : die $e;
     }
   }
   my @ret; 
@@ -189,6 +188,99 @@ sub find_entries {
   return @ret;
 }
 
+# create_unique : route to correct method
+sub create_unique {
+  my $self = shift;
+  my $method = 'create_unique_'.$self->type;
+  $self->$method(@_);
+}
+
+# single key => value pair
+sub create_unique_node {
+  my $self = shift;
+  my ($key, $value, $properties, $on_found) = @_;
+  $on_found ||= 'get';
+  $on_found = lc $on_found;
+  unless ($self->type eq 'node') {
+    REST::Neo4p::LocalException->throw("Can't create node on a non-node index\n");
+  }
+  unless ($key && $value && $properties && (ref $properties eq 'HASH')) {
+    REST::Neo4p::LocalException->throw("Args required: key => value, hashref_of_properties\n");
+  }
+  unless ( $on_found =~ /^get|fail$/ ) {
+    REST::Neo4p::LocalException->throw("on_found parameter (4th arg) must be one of 'get', 'fail'\n");
+  }
+  my $agent = $REST::Neo4p::AGENT;
+  my $rq = "post_".$self->_action;
+  my $restq = 'uniqueness='.($on_found eq 'get' ? 'get_or_create' : 'create_or_fail');
+  my $decoded_resp;
+  eval {
+    $decoded_resp = $agent->$rq([join('?',$self->name,$restq)],
+				{ key => $key,
+				  value => $value,
+				  properties => $properties}
+			       );
+  };
+  if (my $e = Exception::Class->caught('REST::Neo4p::ConflictException')) {
+    if ($on_found eq 'fail') {
+      return; # user expects to get nothing back if not found
+    }
+    else {
+      $e->rethrow; # uh oh, better bail
+    }
+  }
+  elsif ($e = Exception::Class->caught) {
+    ref $e ? $e->rethrow : die $e;
+  }
+  return REST::Neo4p::Node->new_from_json_response($decoded_resp);
+}
+
+sub create_unique_relationship {
+  my $self = shift;
+  my ($key, $value, $from_node, $to_node, $rel_type, $properties, $on_found) = @_;
+  $on_found ||= 'get';
+  $on_found = lc $on_found;
+  unless ($self->type eq 'relationship') {
+    REST::Neo4p::LocalException->throw("Can't create relationship on a non-relationship index\n");
+  }
+  unless ($key && $value && $from_node && $to_node && $rel_type &&
+	    (ref $from_node eq 'REST::Neo4p::Node') &&
+	      (ref $to_node eq 'REST::Neo4p::Node') ) {
+    REST::Neo4p::LocalException->throw("Args required: key => value, from_node => to_node, rel_type\n");
+  }
+  unless (!defined $properties || (ref $properties eq 'HASH')) {
+    REST::Neo4p::LocalException->throw("properties parameter (6th arg) must be undef or hashref of properties\n");
+  }
+  unless ( $on_found =~ /^get|fail$/ ) {
+    REST::Neo4p::LocalException->throw("on_found parameter (7th arg) must be one of 'get', 'fail'\n");
+  }
+  my $agent = $REST::Neo4p::AGENT;
+  my $rq = "post_".$self->_action;
+  my $restq = 'uniqueness='.($on_found eq 'get' ? 'get_or_create' : 'create_or_fail');
+  my $decoded_resp;
+  my %json_params = ( key => $key,
+		      value => $value,
+		      start => $from_node->_self_url,
+		      end => $to_node->_self_url,
+		      type => $rel_type );
+  $json_params{properties} = $properties if defined $properties;
+  eval {
+    $decoded_resp = $agent->$rq([join('?',$self->name,$restq)],
+				\%json_params);
+  };
+  if (my $e = Exception::Class->caught('REST::Neo4p::ConflictException')) {
+    if ($on_found eq 'fail') {
+      return; # user expects to get nothing back if not found
+    }
+    else {
+      $e->rethrow; # uh oh, better bail
+    }
+  }
+  elsif ($e = Exception::Class->caught) {
+    ref $e ? $e->rethrow : die $e;
+  }
+  return REST::Neo4p::Relationship->new_from_json_response($decoded_resp);
+}
 
 # index name
 sub name { ${$_[0]} }

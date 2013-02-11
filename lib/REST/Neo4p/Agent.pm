@@ -249,9 +249,15 @@ sub __do_request {
 	    neo4j_exception => $self->{_decoded_content}->{exception},
 	    neo4j_stacktrace =>  $self->{_decoded_content}->{stacktrace}
 	   );
-	  my $xclass = 'REST::Neo4p::Neo4jException';
+	  my $xclass;
 	  if ($resp->code == 404) {
 	    $xclass = 'REST::Neo4p::NotFoundException';
+	  }
+	  elsif ($resp->code == 409) {
+	    $xclass = 'REST::Neo4p::ConflictException';
+	  }
+	  else {
+	    $xclass = 'REST::Neo4p::Neo4jException';
 	  }
 	  if ( $error_fields{neo4j_exception} && 
 		 ($error_fields{neo4j_exception} =~ /^Syntax/ )) {

@@ -1,4 +1,3 @@
-#-*- perl -*-
 #$Id$
 
 use Test::More tests => 68;

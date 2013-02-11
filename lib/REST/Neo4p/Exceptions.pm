@@ -27,6 +27,12 @@ use Exception::Class (
 		'neo4j_exception', 'neo4j_stacktrace' ],
     description => 'URL or item not found'
    },
+  'REST::Neo4p::ConflictException' => {
+    isa => 'REST::Neo4p::Neo4jException',
+    fields => [ 'code', 'neo4j_message', 
+		'neo4j_exception', 'neo4j_stacktrace' ],
+    description => 'Conflict (409) thrown when fail is specified for create_unique on indexes'
+   },
   'REST::Neo4p::QuerySyntaxException' =>
     {
       isa => 'REST::Neo4p::Neo4jException',
