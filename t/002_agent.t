@@ -3,7 +3,6 @@
 use Test::More tests => 8;
 use Module::Build;
 use lib '../lib';
-use version;
 use strict;
 use warnings;
 
@@ -35,9 +34,7 @@ if ( my $e = REST::Neo4p::CommException->caught() ) {
 SKIP : {
   skip 'no local connection to neo4j',3 if $not_connected;
     is $ua->node, join('/',$TEST_SERVER, qw(db data node)), 'node url looks good';
-  my $version = $ua->neo4j_version;
-  $version =~ s/-.*//;;
-  $version = version->parse($version);
+  my ($version) = $ua->neo4j_version =~ /(^[0-9]+\.[0-9]+)/;
   cmp_ok $version, '>=', 1.8, 'Neo4j version >= 1.8 as required';
     like $ua->relationship_types, qr/^http.*types/, 'relationship types url';
 }

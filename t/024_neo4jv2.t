@@ -1,8 +1,7 @@
 #$Id#
-use Test::More qw(no_plan);
+use Test::More tests => 24;
 use Test::Exception;
 use Module::Build;
-use version;
 use lib '../lib';
 use strict;
 use warnings;
@@ -15,7 +14,7 @@ eval {
     $build = Module::Build->current;
 };
 my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
-my $num_live_tests = 1;
+my $num_live_tests = 23;
 
 use_ok('REST::Neo4p');
 
@@ -29,9 +28,7 @@ if ( my $e = REST::Neo4p::CommException->caught() ) {
 }
 SKIP : {
   skip 'no local connection to neo4j', $num_live_tests if $not_connected;
-  my $version = $REST::Neo4p::AGENT->neo4j_version;
-  $version =~ s/-.*//;
-  $version = version->parse($version);
+  my ($version) = $REST::Neo4p::AGENT->neo4j_version =~ /(^[0-9]+\.[0-9]+)/;
   my $VERSION_OK = ($version >= 2.0);
   SKIP : {
     skip "Server version $version < 2.0", $num_live_tests unless $VERSION_OK;
@@ -57,6 +54,7 @@ SKIP : {
     ok ((grep {$$_ == $$n1} @mom), 'retrieved node 1..');
     ok ((grep {$$_ == $$n2} @mom), '..and also node 2');
     ok $n1->drop_labels('mom'), 'drop other label from node 1';
+    ok @mom = REST::Neo4p->get_nodes_by_label('mom'), 'get nodes by other label again';
     ok ((grep {$$_ == $$n2} @mom), 'retrieved node 2..');
     ok (!(grep {$$_ == $$n1} @mom), '..but now not node 1');
     ok $n1->drop_labels('dad'), 'ok to drop a non-existent label';
