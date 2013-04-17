@@ -8,7 +8,7 @@ use base 'REST::Neo4p::Entity';
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Node::VERSION = '0.2001';
+  $REST::Neo4p::Node::VERSION = '0.2100';
 }
 
 # creation, deletion and property manipulation are delegated
