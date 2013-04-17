@@ -379,6 +379,20 @@ L<Lucene|http://lucene.apache.org/core/old_versioned_docs/versions/3_5_0/querypa
 
 C<find_entries()> is not supported in batch mode.
 
+=item create_unique()
+
+ $node = $index->create_unique( name => 'fred', 
+                                { name => 'fred', state => 'unshaven'} );
+
+ $reln = $index->create_unique( name =. 'married_to',
+                                $node => $wilma_node );
+
+Creates a unique node or relationship on the basis of presence or absence
+of a matching item in the index. 
+
+Optional final argument: one of 'get' or 'fail'. If 'get' (default), the 
+matching item is returned if present. If 'fail', false is returned.
+
 =back
 
 =head1 SEE ALSO
