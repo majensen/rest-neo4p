@@ -75,3 +75,7 @@ Revision history for Perl module TCGA::Neo4j
     - fixed bad Perl in Index synopsis
 0.2020
     - added create_unique functionality to node and relationship indexes
+0.2100
+    - experimental support for Neo4j-2.0
+    - set_property, remove_property returns the object itself on 
+      success (for chaining calls)

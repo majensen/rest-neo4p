@@ -12,7 +12,7 @@ use REST::Neo4p::Query;
 use REST::Neo4p::Exceptions;
 
 BEGIN {
-  $REST::Neo4p::VERSION = '0.2020';
+  $REST::Neo4p::VERSION = '0.2100';
 }
 
 our $CREATE_AUTO_ACCESSORS = 0;
@@ -57,6 +57,31 @@ sub get_node_by_id {
   return $node;
 }
 
+sub get_nodes_by_label {
+  my $class = shift;
+  my ($label) = @_;
+  REST::Neo4p::CommException->throw("Not connected\n") unless $AGENT;
+  my $decoded_resp;
+  eval {
+# following line should work, but doesn't yet (self-discovery issue)
+#    $decoded_resp = $AGENT->get_label($label, 'nodes');
+    $decoded_resp = $AGENT->get_data('label',$label,'nodes');
+    1;
+  };
+  if (my $e = REST::Neo4p::NotFoundException->caught()) {
+    return;
+   }
+  elsif ($e = Exception::Class->caught) {
+    ref $e ? $e->rethrow : die $e;
+  }
+  my @ret;
+  foreach my $node_json (@$decoded_resp) {
+    push @ret, REST::Neo4p::Node->new_from_json_response($node_json);
+  }
+  return @ret;
+
+}
+
 # $reln = REST::Neo4p->get_relationship_by_id($id);
 sub get_relationship_by_id {
   my $class = shift;
@@ -66,7 +91,6 @@ sub get_relationship_by_id {
   eval {
     $relationship = REST::Neo4p::Relationship->_entity_by_id($id);
   };
-
   if (my $e = REST::Neo4p::NotFoundException->caught()) {
     return;
    }
@@ -279,6 +303,12 @@ L<REST::Neo4p::Constraint>.
  $node = REST::Neo4p->get_node_by_id( $id );
 
 Returns false if node C<$id> does not exist in database.
+
+=item get_nodes_by_label() B<Neo4j Server Version 2.0>
+
+ @nodes = REST::Neo4p->get_nodes_by_label( $label );
+
+Returns false if no nodes with given label in database.
 
 =item get_relationship_by_id()
 

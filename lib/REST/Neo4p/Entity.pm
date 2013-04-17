@@ -161,7 +161,7 @@ sub set_property {
   if ($REST::Neo4p::CREATE_AUTO_ACCESSORS) {
     for (keys %$props) { $self->_create_accessors($_) unless $self->can($_) }
   }
-  return 1;
+  return $self;
 }
 
 # @prop_values = get_property( qw(prop1 prop2 ...) )
@@ -258,7 +258,7 @@ sub remove_property {
       ref $e ? $e->rethrow : die $e;
     }
   }
-  return 1;
+  return $self;
 }
 
 sub id { ${$_[0]} }
