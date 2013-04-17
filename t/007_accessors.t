@@ -23,7 +23,7 @@ eval {
 };
 if ( my $e = REST::Neo4p::CommException->caught() ) {
   $not_connected = 1;
-  diag "Test server unavailable : ".$e->message;
+  diag "Test server unavailable : tests skipped";
 }
 SKIP : {
   skip 'no local connection to neo4j', $num_live_tests if $not_connected;
