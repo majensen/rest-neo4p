@@ -79,3 +79,6 @@ Revision history for Perl module TCGA::Neo4j
     - experimental support for Neo4j-2.0
     - set_property, remove_property returns the object itself on 
       success (for chaining calls)
+0.2101
+    - REST::Neo4p::agent() allows access to the LWP::UserAgent to change
+      parameters, add credentials, etc. before/after connection

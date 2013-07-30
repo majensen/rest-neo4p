@@ -12,30 +12,35 @@ use REST::Neo4p::Query;
 use REST::Neo4p::Exceptions;
 
 BEGIN {
-  $REST::Neo4p::VERSION = '0.2100';
+  $REST::Neo4p::VERSION = '0.2101';
 }
 
 our $CREATE_AUTO_ACCESSORS = 0;
 our $AGENT;
 
+sub agent {
+  my $class = shift;
+  unless (defined $AGENT) {
+    eval {
+      $AGENT = REST::Neo4p::Agent->new();
+    };
+    if (my $e = REST::Neo4p::Exception->caught()) {
+      # TODO : handle different classes
+      $e->rethrow;
+    }
+    elsif ($e = Exception::Class->caught()) {
+      ref $e ? $e->rethrow : die $e;
+    }
+  }
+  return $AGENT;
+}
 
 # connect($host_and_port)
 sub connect {
   my $class = shift;
   my ($server_address) = @_;
   REST::Neo4p::LocalException->throw("Server address not set\n")  unless $server_address;
-  eval {
-    $AGENT = REST::Neo4p::Agent->new();
-  };
-  if (my $e = REST::Neo4p::Exception->caught()) {
-    # TODO : handle different classes
-    $e->rethrow;
-  }
-  elsif ($e = Exception::Class->caught()) {
-    ref $e ? $e->rethrow : die $e;
-  }
-
-  return 1 if $AGENT->connect($server_address);
+  return 1 if $class->agent->connect($server_address);
   return;
 }
 
