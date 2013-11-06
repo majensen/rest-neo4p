@@ -9,7 +9,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Agent::VERSION = '0.2020';
+  $REST::Neo4p::Agent::VERSION = '0.2110';
 }
 
 our $AUTOLOAD;
@@ -117,7 +117,8 @@ sub execute_batch {
     REST::Neo4p::LocalException->throw("Agent not in batch mode; can't execute batch\n");
   }
   return unless ($self->batch_length);
-  my ($tfh, $tfname) = tempfile;
+#  my ($tfh, $tfname) = tempfile;
+  my $tfh = File::Temp->new;
   $self->batch_mode(0);
   my @chunk;
   if ($chunk_size) {
@@ -129,9 +130,9 @@ sub execute_batch {
     undef $self->{__batch_queue};
     $self->{__batch_length} = 0;
   }
-  $self->post_batch([],\@chunk, {':content_file' => $tfname});
+  $self->post_batch([],\@chunk, {':content_file' => $tfh->filename});
   $self->batch_mode(1);
-  return $tfname;
+  return $tfh;
 }
 
 sub execute_batch_chunk { shift->execute_batch($JOB_CHUNK) }
@@ -507,9 +508,10 @@ batch mode.
 
 =item execute_batch()
 
- $tempfile_name = $agent->execute_batch();
+ $tmpfh = $agent->execute_batch();
+ $tmpfh = $agent->execute_batch(50);
 
- while (my $tmpf = $agent->execute_batch(50)) {
+ while (<$tmpfn>) {
    # handle responses
  }
 
@@ -521,7 +523,8 @@ Second form takes an integer argument; this will submit the next [integer]
 jobs and return the server response in the tempfile. The batch length is
 updated.
 
-You are responsible for unlinking the tempfile.
+The filehandle returned is a L<File::Temp> object. The file will be unlinked
+when the object is destroyed.
 
 =item execute_batch_chunk()
 

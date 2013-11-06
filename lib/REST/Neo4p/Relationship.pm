@@ -6,7 +6,7 @@ use Carp qw(croak carp);
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Relationship::VERSION = '0.2001';
+  $REST::Neo4p::Relationship::VERSION = '0.2111';
 }
 
 sub new {
@@ -60,7 +60,7 @@ REST::Neo4p::Relationship objects represent Neo4j relationships.
 
 Creates the relationship given by the scalar third argument between
 the first argument and second argument, both C<REST::Neo4p::Node>
-objects. An optional third argument is a hashref of I<relationship> 
+objects. An optional fourth argument is a hashref of I<relationship> 
 properties.
 
 =item get_property()

@@ -40,11 +40,11 @@
    "provides" : {
       "REST::Neo4p" : {
          "file" : "lib/REST/Neo4p.pm",
-         "version" : "0.2101"
+         "version" : "0.2112"
       },
       "REST::Neo4p::Agent" : {
          "file" : "lib/REST/Neo4p/Agent.pm",
-         "version" : "0.2020"
+         "version" : "0.2110"
       },
       "REST::Neo4p::Batch" : {
          "file" : "lib/REST/Neo4p/Batch.pm",
@@ -88,7 +88,7 @@
       },
       "REST::Neo4p::Index" : {
          "file" : "lib/REST/Neo4p/Index.pm",
-         "version" : "0.2020"
+         "version" : "0.2111"
       },
       "REST::Neo4p::Node" : {
          "file" : "lib/REST/Neo4p/Node.pm",
@@ -100,11 +100,11 @@
       },
       "REST::Neo4p::Query" : {
          "file" : "lib/REST/Neo4p/Query.pm",
-         "version" : "0.2010"
+         "version" : "0.2110"
       },
       "REST::Neo4p::Relationship" : {
          "file" : "lib/REST/Neo4p/Relationship.pm",
-         "version" : "0.2001"
+         "version" : "0.2111"
       }
    },
    "release_status" : "stable",
@@ -113,5 +113,5 @@
          "http://dev.perl.org/licenses/"
       ]
    },
-   "version" : "0.2101"
+   "version" : "0.2112"
 }

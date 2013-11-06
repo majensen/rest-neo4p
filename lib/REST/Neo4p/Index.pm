@@ -10,7 +10,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Index::VERSION = '0.2020';
+  $REST::Neo4p::Index::VERSION = '0.2111';
 }
 
 my $unsafe = "^A-Za-z0-9\-\._\ ~";
@@ -306,7 +306,7 @@ REST::Neo4p::Index - Neo4j index object
 
  $node_idx = REST::Neo4p::Index->new('node', 'my_node_index');
  $rel_idx = REST::Neo4p::Index->new('relationship', 'my_rel_index');
- $fulltext_idx = REST::Neo4p::Index->new('node', "my_ft_index,
+ $fulltext_idx = REST::Neo4p::Index->new('node', 'my_ft_index',
                                     { type => 'fulltext',
                                       provider => 'lucene' });
  $node_idx->add_entry( $ShaggyNode, 'pet' => 'ScoobyDoo' );
@@ -332,7 +332,7 @@ REST::Neo4p::Index objects represent Neo4j node and relationship indexes.
 
  $node_idx = REST::Neo4p::Index->new('node', 'my_node_index');
  $rel_idx = REST::Neo4p::Index->new('relationship', 'my_rel_index');
- $fulltext_idx = REST::Neo4p::Index->new('node', "my_ft_index,
+ $fulltext_idx = REST::Neo4p::Index->new('node', 'my_ft_index',
                                     { type => 'fulltext',
                                       provider => 'lucene' });
 
@@ -384,8 +384,9 @@ C<find_entries()> is not supported in batch mode.
  $node = $index->create_unique( name => 'fred', 
                                 { name => 'fred', state => 'unshaven'} );
 
- $reln = $index->create_unique( name =. 'married_to',
-                                $node => $wilma_node );
+ $reln = $index->create_unique( name => 'married_to',
+                                $node => $wilma_node,
+                                'MARRIED_TO');
 
 Creates a unique node or relationship on the basis of presence or absence
 of a matching item in the index. 

@@ -19,10 +19,10 @@ name: REST-Neo4p
 provides:
   REST::Neo4p:
     file: lib/REST/Neo4p.pm
-    version: 0.2101
+    version: 0.2112
   REST::Neo4p::Agent:
     file: lib/REST/Neo4p/Agent.pm
-    version: 0.2020
+    version: 0.2110
   REST::Neo4p::Batch:
     file: lib/REST/Neo4p/Batch.pm
     version: 0.2001
@@ -55,7 +55,7 @@ provides:
     version: 0.2020
   REST::Neo4p::Index:
     file: lib/REST/Neo4p/Index.pm
-    version: 0.2020
+    version: 0.2111
   REST::Neo4p::Node:
     file: lib/REST/Neo4p/Node.pm
     version: 0.2100
@@ -64,10 +64,10 @@ provides:
     version: 0.2001
   REST::Neo4p::Query:
     file: lib/REST/Neo4p/Query.pm
-    version: 0.2010
+    version: 0.2110
   REST::Neo4p::Relationship:
     file: lib/REST/Neo4p/Relationship.pm
-    version: 0.2001
+    version: 0.2111
 requires:
   Exception::Class: 1.3
   JSON: 2
@@ -76,4 +76,4 @@ requires:
   URI::Escape: 3.3
 resources:
   license: http://dev.perl.org/licenses/
-version: 0.2101
+version: 0.2112

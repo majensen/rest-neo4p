@@ -3,12 +3,13 @@ package REST::Neo4p::Query;
 use REST::Neo4p::Path;
 use REST::Neo4p::Exceptions;
 use JSON::Streaming::Reader;
-use File::Temp qw(tempfile);
+# use File::Temp qw(tempfile);
+use File::Temp qw(:seekable);
 use Carp qw(croak carp);
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Query::VERSION = '0.2010';
+  $REST::Neo4p::Query::VERSION = '0.2110';
 }
 
 my $BUFSIZE = 4096;
@@ -30,6 +31,7 @@ sub new {
 	  '_tempfile' => ''
 	}, $class;
 }
+sub tmpf { shift->{_tempfile} }
 
 sub execute {
   my $self = shift;
@@ -41,15 +43,16 @@ sub execute {
   $self->{_error} = undef;
   $self->{_decoded_resp} = undef;
   $self->{NAME} = undef;
-  my $temp_fh;
-  ($temp_fh, $self->{_tempfile}) = tempfile();
-  unless ($temp_fh) {
+#  my $temp_fh;
+#  ($temp_fh, $self->{_tempfile}) = tempfile();
+  $self->{_tempfile} = File::Temp->new;
+  unless ($self->tmpf) {
     REST::Neo4p::LocalException->throw("Can't create query result tempfile : $!");
   }
   my $resp;
   eval {
     $agent->post_cypher([], { query => $self->query, params => $self->params },
-		       {':content_file' => $self->{_tempfile}});
+		       {':content_file' => $self->tmpf->filename});
   };
   my $e;
   if ($e = Exception::Class->caught('REST::Neo4p::Neo4jException') ) {
@@ -64,7 +67,7 @@ sub execute {
   # set up iterator
   my $columns_elt;
   my $buf;
-  my $jsonr = JSON::Streaming::Reader->for_stream($temp_fh);
+  my $jsonr = JSON::Streaming::Reader->for_stream($self->tmpf);
   # count items and reset
   while ( my $ret = $jsonr->get_token ) {
     if ($$ret[0] eq 'start_property' && $$ret[1] eq 'columns') {
@@ -118,8 +121,8 @@ sub execute {
       };
     }
   }
-  seek $temp_fh, 0, 0;
-  $jsonr = JSON::Streaming::Reader->for_stream($temp_fh);
+  seek $self->tmpf, 0, 0;
+  $jsonr = JSON::Streaming::Reader->for_stream($self->tmpf);
   while ( my $ret = $jsonr->get_token ) {
     if ($$ret[0] eq 'start_property' && $$ret[1] eq 'columns') {
       $jsonr->skip;
@@ -153,7 +156,7 @@ sub execute {
   }
   $self->{_iterator} = 
     sub {
-      return unless defined $temp_fh;
+      return unless defined $self->tmpf;
       my @ret;
       my $row;
       my ($token_type, @data) = @{$jsonr->get_token};
@@ -163,10 +166,7 @@ sub execute {
 	  last;
 	};
 	/end_array/ && do { # finished
-	  $temp_fh->close;
-	  unlink $self->{_tempfile};
-	  undef $self->{_tempfile};
-	  undef $temp_fh;
+	  delete $self->{_tempfile};
 	  return;
 	};
 	do { # fail
@@ -283,7 +283,7 @@ sub _response_entity {
 
 sub DESTROY {
   my $self = shift;
-  $self->{_tempfile} && unlink $self->{_tempfile};
+  delete $self->{_tempfile};
 }
 
 =head1 NAME

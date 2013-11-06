@@ -25,17 +25,16 @@ sub batch (&@) {
   for ($action) {
     /^discard_objs$/ && do {
       # do in eval to catch an agent error...
-      while (my $tmpf = $agent->execute_batch_chunk) {
-	@errors = _scan_for_errors($tmpf);
-	unlink $tmpf;
+      while (my $tmpfh = $agent->execute_batch_chunk) {
+	@errors = _scan_for_errors($tmpfh);
 	1;
       }
       last;
     };
     /^keep_objs$/ && do {
-      while (my $tmpf = $agent->execute_batch_chunk) {
-	@errors = _scan_for_errors($tmpf);
-	_process_objs($tmpf);
+      while (my $tmpfh = $agent->execute_batch_chunk) {
+	@errors = _scan_for_errors($tmpfh);
+	_process_objs($tmpfh);
       }
       last;
     };
@@ -48,9 +47,9 @@ sub batch (&@) {
 }
 
 sub _scan_for_errors {
-  my $tmpf = shift;
-  open my $fh, $tmpf or REST::Neo4p::LocalException->throw("Problem with temp file $tmpf : $!");
-  my $jsonr = JSON::Streaming::Reader->for_stream($fh);
+  my $tmpfh = shift;
+  $tmpfh->seek(0,0);
+  my $jsonr = JSON::Streaming::Reader->for_stream($tmpfh);
   my $in_response;
   my @errors;
   PARSE :
@@ -77,7 +76,6 @@ sub _scan_for_errors {
 	}
 	1;
       }
-  $fh->close;
   return @errors;
 }
 
@@ -88,9 +86,9 @@ sub _scan_for_errors {
 # TODO: use JSON streaming from file
 
 sub _process_objs {
-  my $tmpf = shift;
-  open my $fh, $tmpf or REST::Neo4p::LocalException->throw("Problem with temp file $tmpf : $!");
-  my $jsonr = JSON::Streaming::Reader->for_stream($fh);
+  my $tmpfh = shift;
+  $tmpfh->seek(0,0);
+  my $jsonr = JSON::Streaming::Reader->for_stream($tmpfh);
   my $in_response;
   PARSE : 
       while ( my $cursor = $jsonr->get_token ) {
@@ -111,8 +109,6 @@ sub _process_objs {
 	  };
 	}
       }
-  $fh->close;
-  unlink $tmpf;
   return;
 }
 
