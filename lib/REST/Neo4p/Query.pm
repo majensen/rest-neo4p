@@ -9,7 +9,7 @@ use Carp qw(croak carp);
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Query::VERSION = '0.2110';
+  $REST::Neo4p::Query::VERSION = '0.2114';
 }
 
 my $BUFSIZE = 4096;
@@ -28,6 +28,7 @@ sub new {
 	  'Statement' => $q_string,
 	  'NUM_OF_PARAMS' => $params ? scalar keys %$params : 0,
 	  'ParamValues' => $params,
+	  'ResponseAsObjects' => 1,
 	  '_tempfile' => ''
 	}, $class;
 }
@@ -190,12 +191,14 @@ sub execute {
 	      ref $e ? $e->rethrow : die $e;
 	    }
 	    my $entity_class = 'REST::Neo4p::'.$entity_type;
-	    push @ret, $entity_class->new_from_json_response($elt);
+	    push @ret, $self->{ResponseAsObjects} ?
+	      $entity_class->new_from_json_response($elt) :
+		$entity_class->simple_from_json_response($elt);
 	    last;
 	  };
 	  /ARRAY/ && do {
 	    for my $ary_elt (@$elt) {
-	      my ($entity_type,$entity_class);
+	      my $entity_type;
 	      eval {
 		$entity_type = _response_entity($ary_elt);
 	      };
@@ -207,8 +210,10 @@ sub execute {
 		push @ret, $ary_elt;
 	      }
 	      else {
-		$entity_class = 'REST::Neo4p::'.$entity_type;
-		push @ret, $entity_class->new_from_json_response($ary_elt);
+		my $entity_class = 'REST::Neo4p::'.$entity_type;
+		push @ret, $self->{ResponseAsObjects} ?
+		  $entity_class->new_from_json_response($ary_elt) :
+		    $entity_class->simple_from_json_response($ary_elt) ;
 	      }
 	    }
 	    last;

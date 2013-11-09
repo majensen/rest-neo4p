@@ -5,7 +5,7 @@ use Carp qw(croak carp);
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Path::VERSION = '0.2001';
+  $REST::Neo4p::Path::VERSION = '0.2120';
 }
 
 sub new {
@@ -54,6 +54,25 @@ sub new_from_json_response {
   return $obj;
 }
 
+sub as_simple {
+  my $self = shift;
+  my $ret;
+  my @n = $self->nodes;
+  my @r = $self->relationships;
+  while (my $n = shift @n) {
+    push @$ret, $n->as_simple;
+    my $r = shift @r;
+    push @$ret, $r->as_simple if defined $r;
+  }
+  return $ret;
+}
+
+sub simple_from_json_response {
+  my $class = shift;
+  my ($decoded_resp) = @_;
+  return $class->new_from_json_response($decoded_resp)->as_simple;
+}
+
 sub nodes { @{shift->{_nodes}} }
 sub relationships { @{shift->{_relationships}} }
 
@@ -99,6 +118,16 @@ Get the nodes in path order.
  @relationships = $path->relationships;
 
 Get the relationships in path order.
+
+=item as_simple()
+
+ $a = $path->as_simple;
+ @simple_nodes = grep { $_->{_node} } @$a;
+ @simple_relns = grep { $_->{_relationship} } @$a;
+
+Get the path as an array of simple node and relationship hashes (see
+L<REST::Neo4p::Node/as_simple()>,
+L<REST::Neo4p::Relationship/as_simple()>).
 
 =back
 

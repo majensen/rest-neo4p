@@ -6,7 +6,7 @@ use Carp qw(croak carp);
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Relationship::VERSION = '0.2111';
+  $REST::Neo4p::Relationship::VERSION = '0.2120';
 }
 
 sub new {
@@ -31,6 +31,34 @@ sub start_node {
 
 sub end_node {
   return REST::Neo4p->get_node_by_id(shift->_entry->{end_id});
+}
+
+sub as_simple {
+  my $self = shift;
+  my $ret;
+  my $props = $self->get_properties;
+  $ret->{_relationship} = $$self;
+  $ret->{_type} = $self->type;
+  $ret->{_start} = ${$self->start_node};
+  $ret->{_end} = ${$self->end_node};
+  $ret->{$_} = $props->{$_} for keys %$props;
+  return $ret;
+}
+
+sub simple_from_json_response {
+  my $class = shift;
+  my ($decoded_resp) = @_;
+  my $ret;
+  # reln id
+  ($ret->{_relationship}) = $decoded_resp->{self} =~ m{.*/([0-9]+)$};
+  # reln type
+  $ret->{_type} = $decoded_resp->{type};
+  # reln properties
+  $ret->{$_} = $decoded_resp->{data}->{$_} for keys %{$decoded_resp->{data}};
+  # start and end nodes (by id)
+  ($ret->{_start}) = $decoded_resp->{start} =~ m{.*/([0-9]+)$};
+  ($ret->{_end}) = $decoded_resp->{end} =~ m{.*/([0-9]+)$};
+  return $ret;
 }
 
 =head1 NAME
@@ -99,6 +127,17 @@ Gets a relationship's type.
 =item Property auto-accessors
 
 See L<REST::Neo4p/Property Auto-accessors>.
+
+=item as_simple()
+
+ $simple_reln = $reln1->as_simple
+ $rel_id = $simple_reln->{_relationship};
+ $value = $simple_reln->{$property_name};
+ $type = $simple_reln->{_type};
+ $start_node_id = $simple_reln->{_start};
+ $end_node_id = $simple_reln->{_end};
+
+Get relationship as a simple hashref.
 
 =back
 

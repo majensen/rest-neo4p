@@ -32,4 +32,6 @@ my $build =  Module::Build->new
     );
 
 $build->notes( test_server => $build->prompt("Server for live tests:", "http://127.0.0.1:7474"));
+$build->notes( user => $build->prompt("Username:", "") );
+$build->notes( pass => $build->prompt("Pass:", "") );
 $build->create_build_script;

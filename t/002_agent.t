@@ -7,8 +7,11 @@ use strict;
 use warnings;
 
 my $build;
+my ($user,$pass);
 eval {
     $build = Module::Build->current;
+    $user = $build->notes('user');
+    $pass = $build->notes('pass');
 };
 
 my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
@@ -24,6 +27,7 @@ is $TEST_SERVER, $ua->server($TEST_SERVER), 'server spec';
 
 my $not_connected;
 eval {
+  $ua->credentials($TEST_SERVER, '',$user,$pass) if defined $user;
   $ua->connect;
 };
 if ( my $e = REST::Neo4p::CommException->caught() ) {

@@ -1,6 +1,6 @@
 #-*-perl-*-
 #$Id$
-use Test::More qw(no_plan);
+use Test::More;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
@@ -11,8 +11,12 @@ my @cleanup;
 use_ok('REST::Neo4p');
 
 my $build;
+my ($user,$pass);
+
 eval {
   $build = Module::Build->current;
+  $user = $build->notes('user');
+  $pass = $build->notes('pass');
 };
 
 my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
@@ -20,7 +24,7 @@ my $num_live_tests = 1;
 my $not_connected;
 
 eval {
-  REST::Neo4p->connect($TEST_SERVER);
+  REST::Neo4p->connect($TEST_SERVER,$user,$pass);
 };
 if ( my $e = REST::Neo4p::CommException->caught() ) {
   $not_connected = 1;
@@ -90,7 +94,34 @@ SKIP : {
       cmp_ok scalar $path->relationships,'>=', 3, 'got all relationships';
   }
 
+  # test responses as simple structs
+  ok $q = REST::Neo4p::Query->new("START n=node($$n1) MATCH (n)-->(x) RETURN x.name, x"), 'node query';
+  $q->{ResponseAsObjects} = 0;
+  ok $q->execute, 'execute (node)';
+  my $ret = $q->fetch;
+  is $$n2, $ret->[1]->{_node}, "right node";
+  is_deeply $n2->as_simple, $ret->[1], 'got wilma (simple)';
+  $DB::single=1;
+
+  ok $q = REST::Neo4p::Query->new("START n=node($$n4) MATCH (n)-[r]-(x) WHERE type(r) = 'pal_of' RETURN r, x.name"), 'relationship query';
+  $q->{ResponseAsObjects} = 0;
+  ok $q->execute, 'execute (relationship)';
+  $ret = $q->fetch;
+  is $$r4, $ret->[0]->{_relationship}, "right reln";
+  is_deeply $r4->as_simple, $ret->[0], 'got pal_of (simple)';
+  1;
+
+  ok $q = REST::Neo4p::Query->new("START n=node($$n5), m=node($$n3) MATCH path = (n)-[:child_of]->()-[:pal_of]->()-[:parent_of]->(m)  RETURN path"), 'path query';
+  $q->{ResponseAsObjects} = 0;
+  ok $q->execute, 'execute (path)';
+  $ret  = $q->fetch;
+  is scalar @{$ret->[0]}, 7, 'got nodes and relationships simple array';
+  1;
+  
+
 }
+
+done_testing;
 
 END {
   CLEANUP : {

@@ -1,7 +1,12 @@
 Revision history for Perl module REST::Neo4p
+0.2120 2013-11-09
+    - Added as_simple to entities; represent entities as simple perl data structs
+    - REST::Neo4p::Query attribute to select whether objects or simple 
+      structs are returned in responses
 
 0.2113 2013-11-09
     - Can add user, pass to REST::Neo4p->connect() args
+    - user, pass options added to Build.PL and propagated to all tests
 
 0.2112 2013-11-05
     - Changes file conforms to CPAN::Changes::Spec (thanks NEILB)
