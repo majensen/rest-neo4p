@@ -367,14 +367,37 @@ scalars are returned as-is.
   }
 
 Returns the HTTP error code and Neo4j server error message if an error
-was encountered on execution. Set C<$query-E<gt>{RaiseError}> to die
-immediately (e.g., to catch the exception in an C<eval> block).
+was encountered on execution. 
+
+=back
+
+=head2 ATTRIBUTES
+
+=over 
+
+=item RaiseError
+
+ $q->{RaiseError} = 1;
+
+Set C<$query-E<gt>{RaiseError}> to die immediately (e.g., to catch the exception in an C<eval> block).
+
+=item ResponseAsObjects
+
+ $q->{ResponseAsObjects} = 0;
+ $plain_perl = $q->fetch;
+
+If set to true (the default), query reponses are returned as
+REST::Neo4p objects.  If false, nodes, relationships and paths are
+returned as simple perl structures.  See
+L<REST::Neo4p::Node/as_simple()>,
+L<REST::Neo4p::Relationship/as_simple()>,
+L<REST::Neo4p::Path/as_simple()> for details.
 
 =back
 
 =head1 SEE ALSO
 
-L<REST::Neo4p>, L<REST::Neo4p::Path>,L<REST::Neo4p::Agent>.
+L<REST::Neo4p>, L<REST::Neo4p::Path>, L<REST::Neo4p::Agent>.
 
 =head1 AUTHOR
 
@@ -384,7 +407,7 @@ L<REST::Neo4p>, L<REST::Neo4p::Path>,L<REST::Neo4p::Agent>.
 
 =head1 LICENSE
 
-Copyright (c) 2012 Mark A. Jensen. This program is free software; you
+Copyright (c) 2012-2013 Mark A. Jensen. This program is free software; you
 can redistribute it and/or modify it under the same terms as Perl
 itself.
 
