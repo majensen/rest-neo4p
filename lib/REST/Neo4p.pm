@@ -12,7 +12,7 @@ use REST::Neo4p::Query;
 use REST::Neo4p::Exceptions;
 
 BEGIN {
-  $REST::Neo4p::VERSION = '0.2112';
+  $REST::Neo4p::VERSION = '0.2113';
 }
 
 our $CREATE_AUTO_ACCESSORS = 0;
@@ -38,8 +38,9 @@ sub agent {
 # connect($host_and_port)
 sub connect {
   my $class = shift;
-  my ($server_address) = @_;
+  my ($server_address, $user, $pass) = @_;
   REST::Neo4p::LocalException->throw("Server address not set\n")  unless $server_address;
+  $class->agent->credentials($server_address,'',$user,$pass) if defined $user;
   return 1 if $class->agent->connect($server_address);
   return;
 }
@@ -301,7 +302,15 @@ L<REST::Neo4p::Constraint>.
 
 =item connect()
 
- REST::Neo4p->connect( $server )
+ REST::Neo4p->connect( $server );
+ REST::Neo4p->connect( $server, $user, $pass );
+
+=item agent()
+
+ REST::Neo4p->agent->credentials( $server, '', $user, $pass);
+ REST::Neo4p->connect($server);
+
+Returns the underlying L<REST::Neo4p::Agent> (which ISA L<LWP::UserAgent>).
 
 =item get_node_by_id()
 

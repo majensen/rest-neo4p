@@ -1,5 +1,8 @@
 Revision history for Perl module REST::Neo4p
 
+0.2113 2013-11-09
+    - Can add user, pass to REST::Neo4p->connect() args
+
 0.2112 2013-11-05
     - Changes file conforms to CPAN::Changes::Spec (thanks NEILB)
 
