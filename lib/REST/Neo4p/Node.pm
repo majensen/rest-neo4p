@@ -98,6 +98,9 @@ sub get_relationships {
 sub set_labels {
   my $self = shift;
   my @labels = @_;
+  unless (REST::Neo4p::_check_version(2)) {
+    REST::Neo4p::VersionMismatchException->throw("set_labels requires neo4j v2.0 or greater");
+  }
   my $agent = $REST::Neo4p::AGENT;
   my $decoded_resp;
   eval {
@@ -117,6 +120,9 @@ sub set_labels {
 sub add_labels {
   my $self = shift;
   my @labels = @_;
+  unless (REST::Neo4p::_check_version(2)) {
+    REST::Neo4p::VersionMismatchException->throw("add_labels requires neo4j v2.0 or greater");
+  }
   my $agent = $REST::Neo4p::AGENT;
   my $decoded_resp;
   eval {
@@ -135,6 +141,9 @@ sub add_labels {
 
 sub get_labels {
   my $self = shift;
+  unless (REST::Neo4p::_check_version(2)) {
+    REST::Neo4p::VersionMismatchException->throw("get_labels requires neo4j v2.0 or greater");
+  }
   my $agent = $REST::Neo4p::AGENT;
   my $decoded_resp;
   eval {
@@ -153,6 +162,9 @@ sub get_labels {
 
 sub drop_labels {
   my $self = shift;
+  unless (REST::Neo4p::_check_version(2)) {
+    REST::Neo4p::VersionMismatchException->throw("drop_labels requires neo4j v2.0 or greater");
+  }
   my @labels = @_;
   return $self unless @labels;
   my $agent = $REST::Neo4p::AGENT;

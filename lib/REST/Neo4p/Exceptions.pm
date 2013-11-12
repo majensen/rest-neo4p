@@ -1,7 +1,7 @@
 #$Id$
 package REST::Neo4p::Exceptions;
 BEGIN {
-  $REST::Neo4p::Exceptions::VERSION = '0.2020';
+  $REST::Neo4p::Exceptions::VERSION = '0.2200';
 }
 use Exception::Class (
   'REST::Neo4p::Exception',
@@ -48,6 +48,10 @@ use Exception::Class (
     isa => 'REST::Neo4p::LocalException',
     description => 'Attempt to call a non-supported inherited method'
    },
+  'REST::Neo4p::TxException' => {
+    isa => 'REST::Neo4p::LocalException',
+    description => 'Problem with transaction building or execution'
+   },
   'REST::Neo4p::AbstractMethodException' => {
     isa => 'REST::Neo4p::LocalException',
     description => 'Attempt to call a subclass-only method from a parent class'
@@ -56,6 +60,11 @@ use Exception::Class (
     isa => 'REST::Neo4p::LocalException',
     message => 'This is a class method only',
     description => 'Attempt to call a class method from an instance'
+   },
+  'REST::Neo4p::VersionMismatchException' => {
+    isa => 'REST::Neo4p::LocalException',
+    message => 'This feature is not supported in your neo4j server version',
+    description => 'Use of features only implemented in a more recent neo4j version'
    },
   'REST::Neo4p::QueryResponseException' => {
     isa => 'REST::Neo4p::LocalException',

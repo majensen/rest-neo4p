@@ -1,5 +1,5 @@
 #$Id#
-use Test::More tests => 24;
+use Test::More tests => 29;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
@@ -30,10 +30,18 @@ if ( my $e = REST::Neo4p::CommException->caught() ) {
   $not_connected = 1;
   diag "Test server unavailable : tests skipped";
 }
+
+
 SKIP : {
   skip 'no local connection to neo4j', $num_live_tests if $not_connected;
-  my ($version) = $REST::Neo4p::AGENT->neo4j_version =~ /(^[0-9]+\.[0-9]+)/;
-  my $VERSION_OK = ($version >= 2.0);
+  my $version = REST::Neo4p->neo4j_version;
+  my ($M,$m,$p,$s) = REST::Neo4p->neo4j_version;
+  ok !REST::Neo4p::_check_version($M+1);
+  ok !REST::Neo4p::_check_version($M,$m+1);
+  ok !REST::Neo4p::_check_version($M,$m,$s+1);
+  ok REST::Neo4p::_check_version($M-1,$m+1);
+  ok REST::Neo4p::_check_version($M-1,$m-1,$s+4);
+  my $VERSION_OK = REST::Neo4p::_check_version(2,0);
   SKIP : {
     skip "Server version $version < 2.0", $num_live_tests unless $VERSION_OK;
     ok my $n1 = REST::Neo4p::Node->new(), 'node 1';

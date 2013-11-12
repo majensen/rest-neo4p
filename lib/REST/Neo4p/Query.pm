@@ -1,5 +1,6 @@
 #$Id$
 package REST::Neo4p::Query;
+use 5.10;
 use REST::Neo4p::Path;
 use REST::Neo4p::Exceptions;
 use JSON::Streaming::Reader;
@@ -9,7 +10,7 @@ use Carp qw(croak carp);
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Query::VERSION = '0.2114';
+  $REST::Neo4p::Query::VERSION = '0.2200';
 }
 
 my $BUFSIZE = 4096;
@@ -52,8 +53,31 @@ sub execute {
   }
   my $resp;
   eval {
-    $agent->post_cypher([], { query => $self->query, params => $self->params },
-		       {':content_file' => $self->tmpf->filename});
+    given ($REST::Neo4p::Q_ENDPOINT) {
+      when ('cypher') {
+	$agent->post_cypher(
+	  [], 
+	  { query => $self->query, params => $self->params },
+	  {':content_file' => $self->tmpf->filename}
+	 );
+      }
+      when ('transaction') {
+	$agent->post_transaction(
+	  [],
+	  { 
+	    statements => [
+	      { statement => $self->query,
+		parameters => $self->params },
+	      {':content_file' => $self->tmpf->filename}
+	     ]
+	   }
+	    
+	 );
+      }
+      default {
+	REST::Neo4p::TxException->throw("Unknown query REST endpoint '$_'");
+      }
+    }
   };
   my $e;
   if ($e = Exception::Class->caught('REST::Neo4p::Neo4jException') ) {
@@ -167,7 +191,7 @@ sub execute {
 	  last;
 	};
 	/end_array/ && do { # finished
-	  delete $self->{_tempfile};
+	  $self->finish;
 	  return;
 	};
 	do { # fail
@@ -284,6 +308,12 @@ sub _response_entity {
   else {
     REST::Neo4p::QueryResponseException->throw("Can't identify object type by JSON response (2)\n");
   }
+}
+
+sub finish {
+  my $self = shift;
+  delete $self->{_tempfile};
+  return 1;
 }
 
 sub DESTROY {

@@ -27,8 +27,8 @@ my $build =  Module::Build->new
        },
       build_recommends => {
 	 'Test::Pod' => 1.0
-	}
-      
+	},
+      perl => 5.010
     );
 
 $build->notes( test_server => $build->prompt("Server for live tests:", "http://127.0.0.1:7474"));

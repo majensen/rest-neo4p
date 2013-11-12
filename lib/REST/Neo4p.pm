@@ -12,11 +12,12 @@ use REST::Neo4p::Query;
 use REST::Neo4p::Exceptions;
 
 BEGIN {
-  $REST::Neo4p::VERSION = '0.2120';
+  $REST::Neo4p::VERSION = '0.2200';
 }
 
 our $CREATE_AUTO_ACCESSORS = 0;
 our $AGENT;
+our $Q_ENDPOINT = 'cypher';
 
 sub agent {
   my $class = shift;
@@ -177,6 +178,73 @@ sub get_indexes {
 sub get_node_indexes { shift->get_indexes('node',@_) }
 sub get_relationship_indexes { shift->get_indexes('relationship',@_) }
 
+sub begin_work {
+  my $self = shift;
+  unless (REST::Neo4p::_check_version(2,0,0,6)) {
+    REST::Neo4p::VersionMismatchException->throw("Transactions are not available in Neo4j server version < 2.0.0-M06");
+  }
+  if ($Q_ENDPOINT eq 'transaction') {
+    REST::Neo4p::TxException->throw("Transaction already initiated");
+  }
+  $Q_ENDPOINT = 'transaction';
+  return 1;
+}
+
+sub commit {
+  my $self = shift;
+  unless (REST::Neo4p::_check_version(2,0,0,6)) {
+    REST::Neo4p::VersionMismatchException->throw("Transactions are not available in Neo4j server version < 2.0.0-M06");
+  }
+  return 1 if ($Q_ENDPOINT eq 'cypher'); # noop, server autocommited
+  unless ($Q_ENDPOINT eq 'transaction') {
+    REST::Neo4p::TxException->throw("Unknown REST endpoint '$Q_ENDPOINT'");
+  }
+
+}
+
+sub rollback {
+  my $self = shift;
+  unless (REST::Neo4p::_check_version(2,0,0,6)) {
+    REST::Neo4p::VersionMismatchException->throw("Transactions are not available in Neo4j server version < 2.0.0-M06");
+  }
+  if ($Q_ENDPOINT eq 'cypher') {
+    REST::Neo4p::TxException->throw("Rollback attempted in auto-commit mode");
+  }
+  unless ($Q_ENDPOINT eq 'transaction') {
+    REST::Neo4p::TxException->throw("Unknown REST endpoint '$Q_ENDPOINT'");
+  }
+
+
+}
+
+sub neo4j_version { 
+  my $v = my $a = shift->agent->{_actions}{neo4j_version};
+  return unless defined $v;
+  my ($major, $minor, $patch, $milestone) =
+    $a =~ /^(?:([0-9]+)\.)(?:([0-9]+)\.)?([0-9]+)?(?:-M([0-9]+))?/;
+  wantarray ? ($major,$minor,$patch,$milestone) : $v;
+}
+
+sub _check_version {
+  my ($major, $minor, $patch, $milestone) = @_;
+  my ($M,$m,$p,$s) = REST::Neo4p->neo4j_version;
+  my ($current, $requested);
+  $current = $requested = 0;
+  for ($M,$m,$p) {
+    $current += $_||0;
+    $current *= 100;
+  }
+  for ($major,$minor,$patch) {
+    $requested += $_||0;
+    $requested *= 100;
+  }
+  if (defined $milestone && defined $s) {
+    $current += $s;
+    $requested += $milestone;
+  }
+  return $requested <= $current;
+}
+
 =head1 NAME
 
 REST::Neo4p - Perl object bindings for a Neo4j database
@@ -311,6 +379,12 @@ L<REST::Neo4p::Constraint>.
  REST::Neo4p->connect($server);
 
 Returns the underlying L<REST::Neo4p::Agent> (which ISA L<LWP::UserAgent>).
+
+=item neo4j_version()
+
+ $version = REST::Neo4p->neo4j_version;
+
+Returns the server's neo4j version number, or undef if not connected.
 
 =item get_node_by_id()
 
