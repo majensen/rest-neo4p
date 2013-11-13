@@ -1,6 +1,6 @@
 #$Id$
+use v5.10;
 package REST::Neo4p::Query;
-use 5.10;
 use REST::Neo4p::Path;
 use REST::Neo4p::Exceptions;
 use JSON::Streaming::Reader;
@@ -9,6 +9,7 @@ use File::Temp qw(:seekable);
 use Carp qw(croak carp);
 use strict;
 use warnings;
+no warnings qw(once);
 BEGIN {
   $REST::Neo4p::Query::VERSION = '0.2200';
 }
@@ -52,17 +53,18 @@ sub execute {
     REST::Neo4p::LocalException->throw("Can't create query result tempfile : $!");
   }
   my $resp;
+  my $endpt = 'post_'.$REST::Neo4p::Q_ENDPOINT;
   eval {
-    given ($REST::Neo4p::Q_ENDPOINT) {
-      when ('cypher') {
-	$agent->post_cypher(
+    given ($endpt) {
+      when (/cypher/) {
+	$resp = $agent->$endpt(
 	  [], 
 	  { query => $self->query, params => $self->params },
 	  {':content_file' => $self->tmpf->filename}
 	 );
       }
-      when ('transaction') {
-	$agent->post_transaction(
+      when (/transaction/) {
+	$resp = $agent->$endpt(
 	  [],
 	  { 
 	    statements => [
@@ -71,7 +73,6 @@ sub execute {
 	      {':content_file' => $self->tmpf->filename}
 	     ]
 	   }
-	    
 	 );
       }
       default {
@@ -79,8 +80,7 @@ sub execute {
       }
     }
   };
-  my $e;
-  if ($e = Exception::Class->caught('REST::Neo4p::Neo4jException') ) {
+  if (my $e = Exception::Class->caught('REST::Neo4p::Neo4jException') ) {
     $self->{_error} = $e;
     $e->rethrow if ($self->{RaiseError});
     return;
@@ -88,96 +88,17 @@ sub execute {
   elsif ($e = Exception::Class->caught()) {
     ref $e ? $e->rethrow : die $e;
   }
-
-  # set up iterator
-  my $columns_elt;
-  my $buf;
-  my $jsonr = JSON::Streaming::Reader->for_stream($self->tmpf);
-  # count items and reset
-  while ( my $ret = $jsonr->get_token ) {
-    if ($$ret[0] eq 'start_property' && $$ret[1] eq 'columns') {
-      $columns_elt = $jsonr->slurp;
-      last;
-    }
-  } 
-  unless ($columns_elt) {
-    REST::Neo4p::LocalException->throw("Can't parse query reponse json (missing 'columns' element)\n");
+  my ($jsonr,$row_count);
+  eval {
+    ($jsonr,$row_count) = $self->_prepare_response;
+  };
+  if (my $e = Exception::Class->caught('REST::Neo4p::LocalException')) {
+    $self->{_error} = $e;
+    $e->rethrow if ($self->{RaiseError});
+    return;
   }
-  my $row_count = 0;
-  my $in_data;
-  while ( my $ret = $jsonr->get_token ) {
-    my ($token_type, @data) = @$ret;
-    for ($token_type) {
-      /start_property/ && do {
-        if ($data[0] && $data[0] eq 'data') {
-	  $in_data = 1;
-	}
-	else {
-	  REST::Neo4p::LocalException->throw("Can't parse query response (data token not found)\n");
-	}
-	last;
-      };
-      /start_array/ && do {
-	if ($in_data) {
-	  # count rows
-	  while ( $ret = $jsonr->get_token ) {
-	    ($token_type, @data) = @$ret;
-	    if ($token_type eq 'start_array') {
-	      $row_count++;
-	      $jsonr->skip;
-	    }
-	    elsif ( $token_type eq 'end_array' ) { # end of the data array
-	      # we're done
-	      1;
-	    }
-	    else {
-#	      REST::Neo4p::LocalException->throw("Can't parse query response (array representing data row expected and not found)\n");
-	      1;
-	    }
-	  }
-	}
-	else {
-	  REST::Neo4p::LocalException->throw("Can't parse query response (start of data array not found)\n");
-	}
-	last;
-      };
-      do {
-	die "Why am I here?";
-      };
-    }
-  }
-  seek $self->tmpf, 0, 0;
-  $jsonr = JSON::Streaming::Reader->for_stream($self->tmpf);
-  while ( my $ret = $jsonr->get_token ) {
-    if ($$ret[0] eq 'start_property' && $$ret[1] eq 'columns') {
-      $jsonr->skip;
-      last;
-    }
-  }
-  $self->{NAME} = $columns_elt;
-  $self->{NUM_OF_FIELDS} = scalar @$columns_elt;
-  # position parser cursor
-  undef $in_data;
-  my $cursor_set;
-  CURSOR :
-      while ( my ($token_type, @data) = @{$jsonr->get_token} ) {
-	TOKEN_TYPE :
-	    for ($token_type) {
-	      /start_property/ && do {
-		$in_data = 1 if ($data[0] && $data[0] eq 'data');
-		last TOKEN_TYPE;
-	      };
-	      /start_array/ && do {
-		if ($in_data) {
-		  $cursor_set = 1;
-		  last CURSOR;
-		}
-		last TOKEN_TYPE;
-	      };
-	    }
-      }
-  unless ($cursor_set) {
-    REST::Neo4p::LocalException->throw("Can't parse query response (start of data array not found)\n");
+  elsif ($e = Exception::Class->caught()) {
+    ref $e ? $e->rethrow : die $e;
   }
   $self->{_iterator} = 
     sub {
@@ -310,6 +231,106 @@ sub _response_entity {
   }
 }
 
+sub _prepare_response {
+  my $self = shift;
+
+  # set up iterator
+  my $columns_elt;
+  my $buf;
+  my $jsonr = JSON::Streaming::Reader->for_stream($self->tmpf);
+
+  # get column names
+  while ( my $ret = $jsonr->get_token ) {
+    if ($$ret[0] eq 'start_property' && $$ret[1] eq 'columns') {
+      $columns_elt = $jsonr->slurp;
+      last;
+    }
+  } 
+  unless ($columns_elt) {
+    REST::Neo4p::LocalException->throw("Can't parse query reponse json (missing 'columns' element)\n");
+  }
+
+  # get number of rows
+  my $row_count = 0;
+  my $in_data;
+  while ( my $ret = $jsonr->get_token ) {
+    my ($token_type, @data) = @$ret;
+    for ($token_type) {
+      /start_property/ && do {
+        if ($data[0] && $data[0] eq 'data') {
+	  $in_data = 1;
+	}
+	else {
+	  REST::Neo4p::LocalException->throw("Can't parse query response (data token not found)\n");
+	}
+	last;
+      };
+      /start_array/ && do {
+	if ($in_data) {
+	  # count rows
+	  while ( $ret = $jsonr->get_token ) {
+	    ($token_type, @data) = @$ret;
+	    if ($token_type eq 'start_array') {
+	      $row_count++;
+	      $jsonr->skip;
+	    }
+	    elsif ( $token_type eq 'end_array' ) { # end of the data array
+	      # we're done
+	      1;
+	    }
+	    else {
+#	      REST::Neo4p::LocalException->throw("Can't parse query response (array representing data row expected and not found)\n");
+	      1;
+	    }
+	  }
+	}
+	else {
+	  REST::Neo4p::LocalException->throw("Can't parse query response (start of data array not found)\n");
+	}
+	last;
+      };
+      do {
+	die "Why am I here?";
+      };
+    }
+  }
+
+  seek $self->tmpf, 0, 0;
+  $jsonr = JSON::Streaming::Reader->for_stream($self->tmpf);
+  while ( my $ret = $jsonr->get_token ) {
+    if ($$ret[0] eq 'start_property' && $$ret[1] eq 'columns') {
+      $jsonr->skip;
+      last;
+    }
+  }
+  $self->{NAME} = $columns_elt;
+  $self->{NUM_OF_FIELDS} = scalar @$columns_elt;
+  # position parser cursor
+  undef $in_data;
+  my $cursor_set;
+  CURSOR :
+      while ( my ($token_type, @data) = @{$jsonr->get_token} ) {
+	TOKEN_TYPE :
+	    for ($token_type) {
+	      /start_property/ && do {
+		$in_data = 1 if ($data[0] && $data[0] eq 'data');
+		last TOKEN_TYPE;
+	      };
+	      /start_array/ && do {
+		if ($in_data) {
+		  $cursor_set = 1;
+		  last CURSOR;
+		}
+		last TOKEN_TYPE;
+	      };
+	    }
+      }
+  unless ($cursor_set) {
+    REST::Neo4p::LocalException->throw("Can't parse query response (start of data array not found)\n");
+  }
+  return ($jsonr, $row_count);
+}
+
 sub finish {
   my $self = shift;
   delete $self->{_tempfile};
@@ -398,6 +419,18 @@ scalars are returned as-is.
 
 Returns the HTTP error code and Neo4j server error message if an error
 was encountered on execution. 
+
+=item finish()
+
+  while (my $row = $q->fetch) {
+    if ($row->[0] eq 'What I needed') {
+      $q->finish();
+      last;
+    }
+  }
+
+Call finish() to unlink the tempfile before all items have been
+fetched.
 
 =back
 

@@ -4,6 +4,9 @@ use Test::More;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
+use lib 'lib';
+use lib 't/lib';
+use Neo4p::Test;
 use strict;
 use warnings;
 no warnings qw(once);
@@ -34,8 +37,10 @@ plan skip_all => "Neo4j server version >= 2.0.0-M02 required, skipping..." unles
   REST::Neo4p::_check_version(2,0,0,2);
 
 SKIP : {
-  skip 'no local connect to neo4j', $num_live_tests if $not_connected;
-  1;
+  skip 'no local connection to neo4j', $num_live_tests if $not_connected;
+  ok my $t = Neo4p::Test->new, 'test graph object';
+  ok $t->create_sample, 'create sample graph';
+  
 }
 
 done_testing;
