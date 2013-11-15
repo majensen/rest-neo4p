@@ -15,8 +15,9 @@ our @EXPORT = qw(batch);
 our @BATCH_ACTIONS = qw(keep_objs discard_objs);
 
 sub batch (&@) {
-  my ($coderef,$action) = @_;
-  my $agent = $REST::Neo4p::AGENT;
+  my ($coderef,$action,$neo4p) = @_;
+  $neo4p ||= 'REST::Neo4p';
+  my $agent = $neo4p->agent;
   my @errors;
   REST::Neo4p::CommException->throw("Not connected\n") unless $agent;
   warn 'Agent already in batch_mode on batch() call' if ($agent->batch_mode);

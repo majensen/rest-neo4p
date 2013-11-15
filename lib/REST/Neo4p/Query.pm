@@ -103,72 +103,23 @@ sub execute {
   $self->{_iterator} = 
     sub {
       return unless defined $self->tmpf;
-      my @ret;
       my $row;
       my ($token_type, @data) = @{$jsonr->get_token};
-      for ($token_type) {
-	/start_array/ && do {
+      given ($token_type) {
+	when (/start_array/) {
 	  $row = $jsonr->slurp;
-	  last;
-	};
-	/end_array/ && do { # finished
+	}
+	when (/end_array/) { # finished
 	  $self->finish;
 	  return;
-	};
-	do { # fail
-	  REST::Neo4p::LocalException->throw("Can't parse query response (unexpected token looking for next row)\n");
-	  last;
-	};
-      }
-      foreach my $elt (@$row) {
-	for (ref($elt)) {
-	  !$_ && do {
-	    push @ret, $elt;
-	    last;
-	  };
-	  /HASH/ && do {
-	    my $entity_type;
-	    eval {
-	      $entity_type = _response_entity($elt);
-	    };
-	    my $e;
-	    if ($e = Exception::Class->caught()) {
-	      ref $e ? $e->rethrow : die $e;
-	    }
-	    my $entity_class = 'REST::Neo4p::'.$entity_type;
-	    push @ret, $self->{ResponseAsObjects} ?
-	      $entity_class->new_from_json_response($elt) :
-		$entity_class->simple_from_json_response($elt);
-	    last;
-	  };
-	  /ARRAY/ && do {
-	    for my $ary_elt (@$elt) {
-	      my $entity_type;
-	      eval {
-		$entity_type = _response_entity($ary_elt);
-	      };
-	      my $e;
-	      if ($e = Exception::Class->caught()) {
-		ref $e ? $e->rethrow : die $e;
-	      }
-	      if ($entity_type eq 'bareword') {
-		push @ret, $ary_elt;
-	      }
-	      else {
-		my $entity_class = 'REST::Neo4p::'.$entity_type;
-		push @ret, $self->{ResponseAsObjects} ?
-		  $entity_class->new_from_json_response($ary_elt) :
-		    $entity_class->simple_from_json_response($ary_elt) ;
-	      }
-	    }
-	    last;
-	  };
-	  do {
-	    REST::Neo4p::QueryResponseException->throw("Can't parse query response (row doesn't make sense)\n");
-	  };
 	}
+	default { # fail
+	  REST::Neo4p::LocalException->throw(
+	    "Can't parse query response (unexpected token looking for next row)\n"
+	   );
+	};
       }
-      return \@ret;
+      return $self->_process_row($row);
     };
   return $row_count;
 }
@@ -331,6 +282,58 @@ sub _prepare_response {
   return ($jsonr, $row_count);
 }
 
+sub _process_row {
+  my $self = shift;
+  my ($row) = @_;
+  my @ret;
+  foreach my $elt (@$row) {
+    given (ref($elt)) {
+      when (!$_)  {
+	push @ret, $elt;
+      }
+      when (/HASH/) {
+	my $entity_type;
+	eval {
+	  $entity_type = _response_entity($elt);
+	};
+	my $e;
+	if ($e = Exception::Class->caught()) {
+	  ref $e ? $e->rethrow : die $e;
+	}
+	my $entity_class = 'REST::Neo4p::'.$entity_type;
+	push @ret, $self->{ResponseAsObjects} ?
+	  $entity_class->new_from_json_response($elt) :
+	    $entity_class->simple_from_json_response($elt);
+	last;
+      }
+      when (/ARRAY/) {
+	for my $ary_elt (@$elt) {
+	  my $entity_type;
+	  eval {
+	    $entity_type = _response_entity($ary_elt);
+	  };
+	  my $e;
+	  if ($e = Exception::Class->caught()) {
+	    ref $e ? $e->rethrow : die $e;
+	  }
+	  if ($entity_type eq 'bareword') {
+	    push @ret, $ary_elt;
+	  }
+	  else {
+	    my $entity_class = 'REST::Neo4p::'.$entity_type;
+	    push @ret, $self->{ResponseAsObjects} ?
+	      $entity_class->new_from_json_response($ary_elt) :
+		$entity_class->simple_from_json_response($ary_elt) ;
+	  }
+	}
+      }
+      default {
+	REST::Neo4p::QueryResponseException->throw("Can't parse query response (row doesn't make sense)\n");
+      }
+    }
+  }
+  return \@ret;
+}
 sub finish {
   my $self = shift;
   delete $self->{_tempfile};
