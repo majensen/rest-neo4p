@@ -32,7 +32,7 @@ if ( my $e = REST::Neo4p::CommException->caught() ) {
 
 SKIP : {
   skip 'no local connection to neo4j', $num_live_tests if $not_connected;
-  my $AGENT = $REST::Neo4p::AGENT;
+  my $AGENT = REST::Neo4p->agent;
   ok $AGENT->{_actions}{node} =~ s/7474/8474/, 'change post port to 8474 (should refuse connection)';
   $REST::Neo4p::AGENT::RETRY_WAIT=1; # speed it up for test
   throws_ok { $AGENT->get_node(1) } 'REST::Neo4p::CommException';

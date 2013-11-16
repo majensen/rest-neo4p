@@ -25,9 +25,9 @@ my @relns = (
 sub new {
   my $class = shift;
   my ($db,$user,$pass) = @_;
-  unless ($REST::Neo4p::AGENT) {
+  unless (REST::Neo4p->connected) {
     eval {
-      REST::Ne4op->agent->credentials($db,'',$user,$pass) if defined $user;
+      REST::Neo4p->agent->credentials($db,'',$user,$pass) if defined $user;
       REST::Neo4p->connect($db);
     };
     if (my $e = Exception::Class->caught) {
@@ -48,11 +48,11 @@ sub new {
 sub nix {shift->{nix}}
 sub rix {shift->{rix}}
 sub uuid {shift->{uuid}}
-sub agent {$REST::Neo4p::AGENT}
+sub agent {REST::Neo4p->agent}
 
 sub create_sample {
   my $self = shift;
-  die "No connection"  unless $REST::Neo4p::AGENT;
+  die "No connection"  unless REST::Neo4p->connected;
   my @node_objs;
   foreach (@nodes) {
     $_->{uuid} = $uuid; # add uniquifier
@@ -71,7 +71,7 @@ sub create_sample {
 
 sub delete_sample {
   my $self = shift;
-  die "No connection"  unless $REST::Neo4p::AGENT;
+  die "No connection"  unless REST::Neo4p->connected;
   my @r = $self->rix->find_entries("hash:*");
   my @n = $self->nix->find_entries("name:*");
   $_->remove for @r, @n;

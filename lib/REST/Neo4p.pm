@@ -18,16 +18,23 @@ BEGIN {
 our $CREATE_AUTO_ACCESSORS = 0;
 our @HANDLES;
 our $HANDLE = 0;
-our $AGENT;
+#our $AGENT;
 
 $HANDLES[0]->{_q_endpoint} = 'cypher';
 
 sub set_handle {
-  my $class;
+  my $class = shift;
   my ($i) = @_;
   REST::Neo4p::LocalException->throw("Nonexistent handle '$i'") unless defined $HANDLES[$i];
-  $AGENT = $HANDLES[$i]->{_agent}; # ?
+#  $AGENT = $HANDLES[$i]->{_agent}; # ?
   $HANDLE=$i;
+}
+
+sub create_and_set_handle {
+  my $class = shift;
+  $HANDLE = @HANDLES;
+  $HANDLES[$HANDLE]->{_agent} = REST::Neo4p::Agent->new;
+  return $HANDLE;
 }
 
 sub new {
@@ -63,9 +70,10 @@ sub handle {
 sub agent {
   my $neo4p = shift;
   return $HANDLES[$neo4p->handle]->{_agent} if ref($neo4p);
-  unless (defined $AGENT) {
+  unless (defined $HANDLES[$HANDLE]->{_agent}) {
     eval {
-      $HANDLES[$HANDLE]->{_agent} = $AGENT = REST::Neo4p::Agent->new();
+#      $HANDLES[$HANDLE]->{_agent} = $AGENT = REST::Neo4p::Agent->new();
+      $HANDLES[$HANDLE]->{_agent} = REST::Neo4p::Agent->new();
     };
     if (my $e = REST::Neo4p::Exception->caught()) {
       # TODO : handle different classes
@@ -75,7 +83,7 @@ sub agent {
       ref $e ? $e->rethrow : die $e;
     }
   }
-  return $AGENT;
+  return $HANDLES[$HANDLE]->{_agent};
 }
 
 # connect($host_and_port)
@@ -85,14 +93,14 @@ sub connect {
   REST::Neo4p::LocalException->throw("Server address not set\n")  unless $server_address;
   $neo4p->agent->credentials($server_address,'',$user,$pass) if defined $user;
   my $connected = $neo4p->agent->connect($server_address);
-  $neo4p->{_connected} = $connected if (ref $neo4p);
-  return $connected;
+  return $neo4p->{_connected} = $connected if (ref $neo4p);
+  return $HANDLES[$HANDLE]->{_connected} = $connected;
 }
 
 sub connected {
   my $neo4p = shift;
-  return !!$AGENT unless ref($neo4p);
-  return !!$neo4p->{_connected};
+  return $neo4p->{_connected} if ref($neo4p);
+  return $HANDLES[$HANDLE]->{_connected};
 }
 # $node = REST::Neo4p->get_node_by_id($id)
 sub get_node_by_id {
@@ -199,10 +207,10 @@ sub get_relationship_types {
 sub get_indexes {
   my $neo4p = shift;
   my ($type) = @_;
-  REST::Neo4p::CommException->throw("Not connected\n") unless $neo4p->connected;
   unless ($type) {
     REST::Neo4p::LocalException->throw("Type argument (node or relationship) required\n");
   }
+  REST::Neo4p::CommException->throw("Not connected\n") unless $neo4p->connected;
   my $decoded_resp;
   eval {
     $decoded_resp = $neo4p->agent->get_data('index',$type);
@@ -297,6 +305,12 @@ sub _check_version {
     $requested += $milestone;
   }
   return $requested <= $current;
+}
+
+sub DESTROY {
+  my $self = shift;
+  delete $HANDLES[$self->handle];
+  return;
 }
 
 =head1 NAME

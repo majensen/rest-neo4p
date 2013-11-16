@@ -125,6 +125,8 @@ sub remove {
   my @url_components = @_;
   my $entity_type = ref $self;
   $entity_type =~ s/.*::(.*)/\L$1\E/;
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
   my $agent = REST::Neo4p->agent;
   eval {
     $agent->delete_data($entity_type, @url_components, $$self);

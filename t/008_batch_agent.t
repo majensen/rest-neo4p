@@ -34,7 +34,7 @@ if ( my $e = REST::Neo4p::CommException->caught() ) {
 
 SKIP : {
   skip 'no local connection to neo4j', $num_live_tests if $not_connected;
-  ok my $agent = $REST::Neo4p::AGENT, 'got agent';
+  ok my $agent = REST::Neo4p->agent, 'got agent';
   throws_ok { $agent->batch_length } 'REST::Neo4p::LocalException', 'not in batch mode ok';
   ok $agent->batch_mode(1), 'set batch mode';
   ok !$agent->batch_length, 'queue empty';

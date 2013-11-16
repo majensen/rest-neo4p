@@ -78,9 +78,9 @@ SKIP : {
   
   ok $R->remove, 'remove relationship';
   ok !REST::Neo4p->get_relationship_by_id($$r12), 'relationship is gone';
-  lives_ok { $REST::Neo4p::AGENT->delete_node($$N) } 'delete node';
+  lives_ok { REST::Neo4p->agent->delete_node($$N) } 'delete node';
 #  ok $REST::Neo4p::AGENT->delete_relationship($$R);
-  lives_ok { $REST::Neo4p::AGENT->delete_node_index($$I) } 'delete node index';
+  lives_ok { REST::Neo4p->agent->delete_node_index($$I) } 'delete node index';
 }
 
 END {
