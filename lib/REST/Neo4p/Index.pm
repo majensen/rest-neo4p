@@ -78,7 +78,8 @@ sub add_entry {
   }
   my %entry_hash = (ref $entry_hash[0] eq 'HASH') ? 
 		      %{$entry_hash[0]} : @entry_hash;
-
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
   my $agent = REST::Neo4p->agent;
   my $rq = "post_".$self->_action;
   my $decoded_resp;
@@ -111,6 +112,8 @@ sub remove_entry {
      );
   }
   my @addl_components;
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
   my $agent = REST::Neo4p->agent;
   my $rq = 'delete_'.$self->_action;
   if (defined $key) {
@@ -146,6 +149,8 @@ sub find_entries {
   my ($key, $value) = @_;
   my ($query) = @_;
   my $decoded_resp;
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
   my $agent = REST::Neo4p->agent;
   my $rq = 'get_'.$self->_action;
   if ($value) { # exact key->value match
@@ -209,6 +214,8 @@ sub create_unique_node {
   unless ( $on_found =~ /^get|fail$/ ) {
     REST::Neo4p::LocalException->throw("on_found parameter (4th arg) must be one of 'get', 'fail'\n");
   }
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
   my $agent = REST::Neo4p->agent;
   my $rq = "post_".$self->_action;
   my $restq = 'uniqueness='.($on_found eq 'get' ? 'get_or_create' : 'create_or_fail');
@@ -253,6 +260,8 @@ sub create_unique_relationship {
   unless ( $on_found =~ /^get|fail$/ ) {
     REST::Neo4p::LocalException->throw("on_found parameter (7th arg) must be one of 'get', 'fail'\n");
   }
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
   my $agent = REST::Neo4p->agent;
   my $rq = "post_".$self->_action;
   my $restq = 'uniqueness='.($on_found eq 'get' ? 'get_or_create' : 'create_or_fail');

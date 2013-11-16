@@ -148,6 +148,8 @@ sub set_property {
   REST::Neo4p::LocalException->throw("Arg must be a hashref\n") unless ref($props) && ref $props eq 'HASH';
   my $entity_type = ref $self;
   $entity_type =~ s/.*::(.*)/\L$1\E/;
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
   my $agent = REST::Neo4p->agent;
   my $suffix = $self->_get_url_suffix('property');
   my @ret;
@@ -179,6 +181,8 @@ sub get_property {
   my @props = @_;
   my $entity_type = ref $self;
   $entity_type =~ s/.*::(.*)/\L$1\E/;
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
   my $agent = REST::Neo4p->agent;
   REST::Neo4p::CommException->throw("Not connected\n") unless $agent;
   my $suffix = $self->_get_url_suffix('property');
@@ -209,6 +213,8 @@ sub get_properties {
   my $self = shift;
   my $entity_type = ref $self;
   $entity_type =~ s/.*::(.*)/\L$1\E/;
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
   my $agent = REST::Neo4p->agent;
   REST::Neo4p::CommException->throw("Not connected\n") unless $agent;
   my $suffix = $self->_get_url_suffix('property');
@@ -252,6 +258,8 @@ sub remove_property {
   my @props = @_;
   my $entity_type = ref $self;
   $entity_type =~ s/.*::(.*)/\L$1\E/;
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
   my $agent = REST::Neo4p->agent;
   REST::Neo4p::CommException->throw("Not connected\n") unless $agent;
   my $suffix = $self->_get_url_suffix('property');

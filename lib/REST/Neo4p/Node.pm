@@ -20,6 +20,8 @@ BEGIN {
 sub relate_to {
   my $self = shift;
   my ($target_node, $rel_type, $rel_props) = @_;
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
   my $agent = REST::Neo4p->agent;
   my $suffix = $self->_get_url_suffix('create_relationship')
     || 'relationships'; # weak workaround
@@ -52,6 +54,8 @@ sub get_relationships {
   my $self = shift;
   my ($direction) = @_;
   $direction ||= 'all';
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
   my $agent = REST::Neo4p->agent;
   my $action;
   for ($direction) {
@@ -101,6 +105,8 @@ sub set_labels {
   unless (REST::Neo4p->_check_version(2)) {
     REST::Neo4p::VersionMismatchException->throw("set_labels requires neo4j v2.0 or greater");
   }
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
   my $agent = REST::Neo4p->agent;
   my $decoded_resp;
   eval {
@@ -123,6 +129,8 @@ sub add_labels {
   unless (REST::Neo4p->_check_version(2)) {
     REST::Neo4p::VersionMismatchException->throw("add_labels requires neo4j v2.0 or greater");
   }
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
   my $agent = REST::Neo4p->agent;
   my $decoded_resp;
   eval {
@@ -144,6 +152,8 @@ sub get_labels {
   unless (REST::Neo4p->_check_version(2)) {
     REST::Neo4p::VersionMismatchException->throw("get_labels requires neo4j v2.0 or greater");
   }
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
   my $agent = REST::Neo4p->agent;
   my $decoded_resp;
   eval {
@@ -167,6 +177,8 @@ sub drop_labels {
   }
   my @labels = @_;
   return $self unless @labels;
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
   my $agent = REST::Neo4p->agent;
   my $decoded_resp;
   eval {
