@@ -37,7 +37,7 @@ sub tmpf { shift->{_tempfile} }
 
 sub execute {
   my $self = shift;
-  my $agent = $REST::Neo4p::AGENT;
+  my $agent = REST::Neo4p->agent;
   REST::Neo4p::CommException->throw("Not connected\n") unless $agent;
   if ($agent->batch_mode) {
     REST::Neo4p::NotSuppException->throw("Query execution not supported in batch mode (yet)\n");

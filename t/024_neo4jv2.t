@@ -3,6 +3,7 @@ use Test::More tests => 29;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
+use REST::Neo4p;
 use strict;
 use warnings;
 no warnings qw(once);
@@ -19,8 +20,6 @@ eval {
 };
 my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
 my $num_live_tests = 23;
-
-use_ok('REST::Neo4p');
 
 my $not_connected;
 eval {

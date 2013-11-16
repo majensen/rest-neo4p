@@ -267,7 +267,6 @@ sub rollback {
     REST::Neo4p::TxException->throw("Unknown REST endpoint '".$neo4p->q_endpoint."'");
   }
 
-
 }
 
 sub neo4j_version {

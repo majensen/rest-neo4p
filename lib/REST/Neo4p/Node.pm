@@ -8,7 +8,7 @@ use Carp qw(croak carp);
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Node::VERSION = '0.2120';
+  $REST::Neo4p::Node::VERSION = '0.2200';
 }
 
 # creation, deletion and property manipulation are delegated
@@ -20,7 +20,7 @@ BEGIN {
 sub relate_to {
   my $self = shift;
   my ($target_node, $rel_type, $rel_props) = @_;
-  my $agent = $REST::Neo4p::AGENT;
+  my $agent = REST::Neo4p->agent;
   my $suffix = $self->_get_url_suffix('create_relationship')
     || 'relationships'; # weak workaround
   my $content = {
@@ -52,7 +52,7 @@ sub get_relationships {
   my $self = shift;
   my ($direction) = @_;
   $direction ||= 'all';
-  my $agent = $REST::Neo4p::AGENT;
+  my $agent = REST::Neo4p->agent;
   my $action;
   for ($direction) {
     /^all$/ && do {
@@ -101,7 +101,7 @@ sub set_labels {
   unless (REST::Neo4p->_check_version(2)) {
     REST::Neo4p::VersionMismatchException->throw("set_labels requires neo4j v2.0 or greater");
   }
-  my $agent = $REST::Neo4p::AGENT;
+  my $agent = REST::Neo4p->agent;
   my $decoded_resp;
   eval {
     $decoded_resp= $agent->put_node([$$self,'labels'],[@labels]);
@@ -123,7 +123,7 @@ sub add_labels {
   unless (REST::Neo4p->_check_version(2)) {
     REST::Neo4p::VersionMismatchException->throw("add_labels requires neo4j v2.0 or greater");
   }
-  my $agent = $REST::Neo4p::AGENT;
+  my $agent = REST::Neo4p->agent;
   my $decoded_resp;
   eval {
     $decoded_resp= $agent->post_node([$$self,'labels'],[@labels]);
@@ -144,7 +144,7 @@ sub get_labels {
   unless (REST::Neo4p->_check_version(2)) {
     REST::Neo4p::VersionMismatchException->throw("get_labels requires neo4j v2.0 or greater");
   }
-  my $agent = $REST::Neo4p::AGENT;
+  my $agent = REST::Neo4p->agent;
   my $decoded_resp;
   eval {
     $decoded_resp = $agent->get_node($$self, 'labels');
@@ -167,7 +167,7 @@ sub drop_labels {
   }
   my @labels = @_;
   return $self unless @labels;
-  my $agent = $REST::Neo4p::AGENT;
+  my $agent = REST::Neo4p->agent;
   my $decoded_resp;
   eval {
     foreach my $label (@labels) {
