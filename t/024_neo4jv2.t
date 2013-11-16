@@ -36,12 +36,12 @@ SKIP : {
   skip 'no local connection to neo4j', $num_live_tests if $not_connected;
   my $version = REST::Neo4p->neo4j_version;
   my ($M,$m,$p,$s) = REST::Neo4p->neo4j_version;
-  ok !REST::Neo4p::_check_version($M+1);
-  ok !REST::Neo4p::_check_version($M,$m+1);
-  ok !REST::Neo4p::_check_version($M,$m,$s+1);
-  ok REST::Neo4p::_check_version($M-1,$m+1);
-  ok REST::Neo4p::_check_version($M-1,$m-1,$s+4);
-  my $VERSION_OK = REST::Neo4p::_check_version(2,0);
+  ok !REST::Neo4p->_check_version($M+1);
+  ok !REST::Neo4p->_check_version($M,$m+1);
+  ok !REST::Neo4p->_check_version($M,$m,$s+1);
+  ok (REST::Neo4p->_check_version($M-1,$m+1));
+  ok (REST::Neo4p->_check_version($M-1,$m-1,$s+4));
+  my $VERSION_OK = REST::Neo4p->_check_version(2,0);
   SKIP : {
     skip "Server version $version < 2.0", $num_live_tests unless $VERSION_OK;
     ok my $n1 = REST::Neo4p::Node->new(), 'node 1';

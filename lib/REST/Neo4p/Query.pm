@@ -4,7 +4,6 @@ package REST::Neo4p::Query;
 use REST::Neo4p::Path;
 use REST::Neo4p::Exceptions;
 use JSON::Streaming::Reader;
-# use File::Temp qw(tempfile);
 use File::Temp qw(:seekable);
 use Carp qw(croak carp);
 use strict;
@@ -53,7 +52,7 @@ sub execute {
     REST::Neo4p::LocalException->throw("Can't create query result tempfile : $!");
   }
   my $resp;
-  my $endpt = 'post_'.$REST::Neo4p::Q_ENDPOINT;
+  my $endpt = 'post_'.REST::Neo4p->q_endpoint;
   eval {
     given ($endpt) {
       when (/cypher/) {

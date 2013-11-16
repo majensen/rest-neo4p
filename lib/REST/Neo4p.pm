@@ -1,16 +1,15 @@
 #$Id$
 use v5.10;
 package REST::Neo4p;
-use strict;
-use warnings;
 use Carp qw(croak carp);
+use lib '../../lib';
 use REST::Neo4p::Agent;
-use REST::Neo4p::Entity;
 use REST::Neo4p::Node;
-use REST::Neo4p::Relationship;
 use REST::Neo4p::Index;
 use REST::Neo4p::Query;
 use REST::Neo4p::Exceptions;
+use strict;
+use warnings;
 
 BEGIN {
   $REST::Neo4p::VERSION = '0.2200';
@@ -34,7 +33,7 @@ sub set_handle {
 sub new {
   my $class = shift;
   my $self;
-  my $self->{_handle} = @HANDLES;
+  $self->{_handle} = @HANDLES;
   eval {
     $HANDLES[$self->{_handle}]->{_agent} = REST::Neo4p::Agent->new;
   };
@@ -50,36 +49,33 @@ sub new {
 }
 
 sub q_endpoint { 
-  my $self = shift;
-  REST::Neo4p::Exception->throw("q_endpoint is an object-only method") unless ref($self);
-  $self->{_q_endpoint}
+  my $neo4p = shift;
+  return $neo4p->{_q_endpoint} if ref($neo4p);
+  return $HANDLES[$HANDLE]->{_q_endpoint};
 }
 
 sub handle {
   my $neo4p = shift;
-  ref($neo4p) ? $neo4p->{_handle} : $HANDLE;
+  return $neo4p->{_handle} if ref($neo4p);
+  return $HANDLE;
 }
 
 sub agent {
   my $neo4p = shift;
-  if (ref $neo4p) { #object
-    return $HANDLES[$neo4p->handle]->{_agent};
-  }
-  else { #class
-    unless (defined $AGENT) {
-      eval {
-	$HANDLES[$HANDLE]->{_agent} = $AGENT = REST::Neo4p::Agent->new();
-      };
-      if (my $e = REST::Neo4p::Exception->caught()) {
-	# TODO : handle different classes
-	$e->rethrow;
-      }
-      elsif ($e = Exception::Class->caught()) {
-	ref $e ? $e->rethrow : die $e;
-      }
+  return $HANDLES[$neo4p->handle]->{_agent} if ref($neo4p);
+  unless (defined $AGENT) {
+    eval {
+      $HANDLES[$HANDLE]->{_agent} = $AGENT = REST::Neo4p::Agent->new();
+    };
+    if (my $e = REST::Neo4p::Exception->caught()) {
+      # TODO : handle different classes
+      $e->rethrow;
     }
-    return $AGENT;
+    elsif ($e = Exception::Class->caught()) {
+      ref $e ? $e->rethrow : die $e;
+    }
   }
+  return $AGENT;
 }
 
 # connect($host_and_port)
@@ -117,14 +113,14 @@ sub get_node_by_id {
 }
 
 sub get_nodes_by_label {
-  my $class = shift;
+  my $neo4p = shift;
   my ($label) = @_;
   REST::Neo4p::CommException->throw("Not connected\n") unless $neo4p->connected;
   my $decoded_resp;
   eval {
 # following line should work, but doesn't yet (self-discovery issue)
 #    $decoded_resp = $AGENT->get_label($label, 'nodes');
-    $decoded_resp = $class->agent->get_data('label',$label,'nodes');
+    $decoded_resp = $neo4p->agent->get_data('label',$label,'nodes');
     1;
   };
   if (my $e = REST::Neo4p::NotFoundException->caught()) {
@@ -143,7 +139,7 @@ sub get_nodes_by_label {
 
 # $reln = REST::Neo4p->get_relationship_by_id($id);
 sub get_relationship_by_id {
-  my $class = shift;
+  my $neo4p = shift;
   my ($id) = @_;
   my $relationship;
   REST::Neo4p::CommException->throw("Not connected\n") unless $neo4p->connected;
@@ -160,7 +156,7 @@ sub get_relationship_by_id {
 }
 
 sub get_index_by_name {
-  my $class = shift;
+  my $neo4p = shift;
   my ($name, $type) = @_;
   if (grep /^$name$/, qw(node relationship)) {
     my $a = $name;
@@ -183,11 +179,11 @@ sub get_index_by_name {
 
 # @all_reln_types = REST::Neo4p->get_relationship_types
 sub get_relationship_types {
-  my $class = shift;
+  my $neo4p = shift;
   REST::Neo4p::CommException->throw("Not connected\n") unless $neo4p->connected;
   my $decoded_json;
   eval {
-    $decoded_json = $class->agent->get_relationship_types();
+    $decoded_json = $neo4p->agent->get_relationship_types();
   };
   my $e;
   if ($e = Exception::Class->caught('REST::Neo4p::Exception')) {
@@ -201,7 +197,7 @@ sub get_relationship_types {
 }
 
 sub get_indexes {
-  my $class = shift;
+  my $neo4p = shift;
   my ($type) = @_;
   REST::Neo4p::CommException->throw("Not connected\n") unless $neo4p->connected;
   unless ($type) {
@@ -209,7 +205,7 @@ sub get_indexes {
   }
   my $decoded_resp;
   eval {
-    $decoded_resp = $AGENT->get_data('index',$type);
+    $decoded_resp = $neo4p->agent->get_data('index',$type);
   };
   my $e;
   if ($e = Exception::Class->caught('REST::Neo4p::Exception')) {
@@ -231,49 +227,52 @@ sub get_node_indexes { shift->get_indexes('node',@_) }
 sub get_relationship_indexes { shift->get_indexes('relationship',@_) }
 
 sub begin_work {
-  my $self = shift;
-  REST::Neo4p::Exception->throw("begin_work is an object-only method") unless ref($self);
-  unless ($self->_check_version(2,0,0,6)) {
+  my $neo4p = shift;
+  unless ($neo4p->_check_version(2,0,0,6)) {
     REST::Neo4p::VersionMismatchException->throw("Transactions are not available in Neo4j server version < 2.0.0-M06");
   }
-  if ($self->q_endpoint eq 'transaction') {
+  if ($neo4p->q_endpoint eq 'transaction') {
     REST::Neo4p::TxException->throw("Transaction already initiated");
   }
-  $self->{_q_endpoint} = 'transaction';
+  if (ref $neo4p) {
+    $neo4p->{_q_endpoint} = 'transaction';
+  }
+  else {
+    $HANDLES[$HANDLE]->{_q_endpoint} = 'transaction';
+  }
   return 1;
 }
 
 sub commit {
-  my $self = shift;
-  REST::Neo4p::Exception->throw("commit is an object-only method") unless ref($self);
-  unless ($self->_check_version(2,0,0,6)) {
+  my $neo4p = shift;
+  unless ($neo4p->_check_version(2,0,0,6)) {
     REST::Neo4p::VersionMismatchException->throw("Transactions are not available in Neo4j server version < 2.0.0-M06");
   }
-  return 1 if ($self->q_endpoint eq 'cypher'); # noop, server autocommited
-  unless ($self->q_endpoint eq 'transaction') {
-    REST::Neo4p::TxException->throw("Unknown REST endpoint '".$self->q_endpoint."'");
+  return 1 if ($neo4p->q_endpoint eq 'cypher'); # noop, server autocommited
+  unless ($neo4p->q_endpoint eq 'transaction') {
+    REST::Neo4p::TxException->throw("Unknown REST endpoint '".$neo4p->q_endpoint."'");
   }
 
 }
 
 sub rollback {
-  my $self = shift;
-  REST::Neo4p::Exception->throw("rollback is an object-only method") unless ref($self);
-  unless ($self->_check_version(2,0,0,6)) {
+  my $neo4p = shift;
+  unless ($neo4p->_check_version(2,0,0,6)) {
     REST::Neo4p::VersionMismatchException->throw("Transactions are not available in Neo4j server version < 2.0.0-M06");
   }
-  if ($self->q_endpoint eq 'cypher') {
+  if ($neo4p->q_endpoint eq 'cypher') {
     REST::Neo4p::TxException->throw("Rollback attempted in auto-commit mode");
   }
-  unless ($self->q_endpoint eq 'transaction') {
-    REST::Neo4p::TxException->throw("Unknown REST endpoint '".$self->q_endpoint."'");
+  unless ($neo4p->q_endpoint eq 'transaction') {
+    REST::Neo4p::TxException->throw("Unknown REST endpoint '".$neo4p->q_endpoint."'");
   }
 
 
 }
 
-sub neo4j_version { 
-  my $v = my $a = shift->agent->{_actions}{neo4j_version};
+sub neo4j_version {
+  my $neo4p = shift;
+  my $v = my $a = $neo4p->agent->{_actions}{neo4j_version};
   return unless defined $v;
   my ($major, $minor, $patch, $milestone) =
     $a =~ /^(?:([0-9]+)\.)(?:([0-9]+)\.)?([0-9]+)?(?:-M([0-9]+))?/;

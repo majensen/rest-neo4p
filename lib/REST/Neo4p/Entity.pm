@@ -27,7 +27,7 @@ sub new {
   }
   my ($properties) = (@_);
   my $url_components = delete $properties->{_addl_components};
-  my $agent = REST::Neo4p::AGENT;
+  my $agent = REST::Neo4p->agent;
   REST::Neo4p::CommException->throw("Not connected\n") unless $agent;
   my $decoded_resp;
   eval {

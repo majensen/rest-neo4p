@@ -34,7 +34,7 @@ if ( my $e = REST::Neo4p::CommException->caught() ) {
 }
 
 plan skip_all => "Neo4j server version >= 2.0.0-M02 required, skipping..." unless
-  REST::Neo4p::_check_version(2,0,0,2);
+  REST::Neo4p->_check_version(2,0,0,2);
 
 SKIP : {
   skip 'no local connection to neo4j', $num_live_tests if $not_connected;

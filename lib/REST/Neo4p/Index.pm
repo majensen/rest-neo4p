@@ -2,7 +2,6 @@
 package REST::Neo4p::Index;
 use base 'REST::Neo4p::Entity';
 use REST::Neo4p::Node;
-use REST::Neo4p::Relationship;
 use REST::Neo4p::Exceptions;
 use Carp qw(croak carp);
 use URI::Escape;
