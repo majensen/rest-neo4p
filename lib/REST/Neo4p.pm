@@ -26,7 +26,6 @@ sub set_handle {
   my $class = shift;
   my ($i) = @_;
   REST::Neo4p::LocalException->throw("Nonexistent handle '$i'") unless defined $HANDLES[$i];
-#  $AGENT = $HANDLES[$i]->{_agent}; # ?
   $HANDLE=$i;
 }
 
@@ -37,39 +36,48 @@ sub create_and_set_handle {
   return $HANDLE;
 }
 
-sub new {
+sub disconnect_handle {
   my $class = shift;
-  my $self;
-  $self->{_handle} = @HANDLES;
-  eval {
-    $HANDLES[$self->{_handle}]->{_agent} = REST::Neo4p::Agent->new;
-  };
-  if (my $e = REST::Neo4p::Exception->caught()) {
-    # TODO : handle different classes
-    $e->rethrow;
-  }
-  elsif ($e = Exception::Class->caught()) {
-    ref $e ? $e->rethrow : die $e;
-  }
-  $HANDLES[$self->{_handle}]->{_q_endpoint} = 'cypher';
-  bless $self, $class;
+  my ($i) = @_;
+  REST::Neo4p::LocalException->throw("Nonexistent handle '$i'") unless defined $HANDLES[$i];
+  delete $HANDLES[$i];
+  return 1;
+}
+
+sub _set_transaction {
+  my $class = shift;
+  my ($tx) = @_;
+  die "Bad transaction id" unless $tx =~ /^[0-9]+$/;
+  return $HANDLES[$HANDLE]->{_transaction} = $tx;
+}
+
+sub _transaction {
+  my $class = shift;
+  return $HANDLES[$HANDLE]->{_transaction};
+}
+
+sub _tx_errors {
+  my $class = shift;
+  return $HANDLES[$HANDLE]->{_tx_errors};
+}
+
+sub _clear_transaction {
+  my $class = shift;
+  delete $HANDLES[$HANDLE]->{_transaction}
 }
 
 sub q_endpoint { 
   my $neo4p = shift;
-  return $neo4p->{_q_endpoint} if ref($neo4p);
   return $HANDLES[$HANDLE]->{_q_endpoint};
 }
 
 sub handle {
   my $neo4p = shift;
-  return $neo4p->{_handle} if ref($neo4p);
   return $HANDLE;
 }
 
 sub agent {
   my $neo4p = shift;
-  return $HANDLES[$neo4p->handle]->{_agent} if ref($neo4p);
   unless (defined $HANDLES[$HANDLE]->{_agent}) {
     eval {
 #      $HANDLES[$HANDLE]->{_agent} = $AGENT = REST::Neo4p::Agent->new();
@@ -93,13 +101,11 @@ sub connect {
   REST::Neo4p::LocalException->throw("Server address not set\n")  unless $server_address;
   $neo4p->agent->credentials($server_address,'',$user,$pass) if defined $user;
   my $connected = $neo4p->agent->connect($server_address);
-  return $neo4p->{_connected} = $connected if (ref $neo4p);
   return $HANDLES[$HANDLE]->{_connected} = $connected;
 }
 
 sub connected {
   my $neo4p = shift;
-  return $neo4p->{_connected} if ref($neo4p);
   return $HANDLES[$HANDLE]->{_connected};
 }
 # $node = REST::Neo4p->get_node_by_id($id)
@@ -242,12 +248,8 @@ sub begin_work {
   if ($neo4p->q_endpoint eq 'transaction') {
     REST::Neo4p::TxException->throw("Transaction already initiated");
   }
-  if (ref $neo4p) {
-    $neo4p->{_q_endpoint} = 'transaction';
-  }
-  else {
-    $HANDLES[$HANDLE]->{_q_endpoint} = 'transaction';
-  }
+  $HANDLES[$HANDLE]->{_q_endpoint} = 'transaction';
+  delete  $HANDLES[$HANDLE]->{_tx_errors};
   return 1;
 }
 
@@ -260,7 +262,24 @@ sub commit {
   unless ($neo4p->q_endpoint eq 'transaction') {
     REST::Neo4p::TxException->throw("Unknown REST endpoint '".$neo4p->q_endpoint."'");
   }
-
+  my $resp;
+  eval {
+    $resp = $neo4p->agent->post_transaction(
+      [$neo4p->_transaction,'commit']
+     );
+  };
+  if (my $e = REST::Neo4p::Exception->caught()) {
+    # TODO : handle different classes
+    $e->rethrow;
+  }
+  elsif ($e = Exception::Class->caught()) {
+    ref $e ? $e->rethrow : die $e;
+  }
+  REST::Neo4p->_clear_transaction;
+  # got response, see if errors
+  $DB::single=1;
+  $HANDLES[$HANDLE]->{_tx_errors} = $resp->{errors};
+  return !(scalar @{$resp->{errors}});
 }
 
 sub rollback {
@@ -274,7 +293,17 @@ sub rollback {
   unless ($neo4p->q_endpoint eq 'transaction') {
     REST::Neo4p::TxException->throw("Unknown REST endpoint '".$neo4p->q_endpoint."'");
   }
-
+  eval {
+    $neo4p->agent->delete_transaction(REST::Neo4p->_transaction);
+  };
+  if (my $e = REST::Neo4p::Exception->caught()) {
+    # TODO : handle different classes
+    $e->rethrow;
+  }
+  elsif ($e = Exception::Class->caught()) {
+    ref $e ? $e->rethrow : die $e;
+  }
+  return $neo4p->_clear_transaction;
 }
 
 sub neo4j_version {

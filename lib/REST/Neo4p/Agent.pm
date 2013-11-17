@@ -232,7 +232,9 @@ sub __do_request {
       unless (!$addl_headers || (ref $addl_headers eq 'HASH')) {
 	REST::Neo4p::LocalException->throw("Arg 3 must be a hashref of additional headers\n");
       }
+      no warnings qw(uninitialized);
       my $url = join('/',$self->{_actions}{$action},@$url_components);
+      use warnings qw(uninitialized);
       if ($self->batch_mode) {
 	$url = ($url_components->[0] =~ /{[0-9]+}/) ? join('/',@$url_components) : $url; # index batch object kludge
 	@_ = ($self, 

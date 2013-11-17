@@ -26,6 +26,7 @@ sub new {
   }
   bless { '_query' => $q_string,
 	  '_params' => $params || {},
+	  '_handle' => REST::Neo4p->handle, # current handle
 	  'Statement' => $q_string,
 	  'NUM_OF_PARAMS' => $params ? scalar keys %$params : 0,
 	  'ParamValues' => $params,
@@ -34,11 +35,15 @@ sub new {
 	}, $class;
 }
 sub tmpf { shift->{_tempfile} }
-
+sub _handle { shift->{_handle} }
 sub execute {
   my $self = shift;
+  # current handle
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
+  REST::Neo4p::CommException->throw("Not connected\n") unless REST::Neo4p->connected;
   my $agent = REST::Neo4p->agent;
-  REST::Neo4p::CommException->throw("Not connected\n") unless $agent;
+
   if ($agent->batch_mode) {
     REST::Neo4p::NotSuppException->throw("Query execution not supported in batch mode (yet)\n");
   }
@@ -64,18 +69,25 @@ sub execute {
       }
       when (/transaction/) {
 	$resp = $agent->$endpt(
-	  [],
+	  [REST::Neo4p->_transaction],
 	  { 
 	    statements => [
 	      { statement => $self->query,
-		parameters => $self->params },
-	      {':content_file' => $self->tmpf->filename}
+		parameters => $self->params }
 	     ]
 	   }
 	 );
+	REST::Neo4p::CommException->throw("No commit url returned") 
+	    unless ($resp->{commit});
+	unless (defined REST::Neo4p->_transaction) {
+	  my ($tx) = $resp->{commit} =~ m|.*/([0-9]+)/commit$|;
+	  REST::Neo4p->_set_transaction($tx);
+	}
       }
       default {
-	REST::Neo4p::TxException->throw("Unknown query REST endpoint '$_'");
+	REST::Neo4p::TxException->throw(
+	  "Unknown query REST endpoint '".REST::Neo4p->q_endpoint."'"
+	 );
       }
     }
   };
@@ -87,6 +99,11 @@ sub execute {
   elsif ($e = Exception::Class->caught()) {
     ref $e ? $e->rethrow : die $e;
   }
+  # transaction query response:
+  if (REST::Neo4p->q_endpoint eq 'transaction') {
+    return 1; # stub
+  }
+  # else, cypher query response:
   my ($jsonr,$row_count);
   eval {
     ($jsonr,$row_count) = $self->_prepare_response;
