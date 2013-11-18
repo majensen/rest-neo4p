@@ -9,6 +9,7 @@ use Carp qw(croak carp);
 use strict;
 use warnings;
 
+our $VERSION;
 BEGIN {
   $REST::Neo4p::Agent::VERSION = '0.2200';
 }
@@ -21,6 +22,7 @@ our $RETRY_WAIT = 5;
 sub new {
   my $class = shift;
   my $self = $class->SUPER::new(@_);
+  $self->agent("Neo4p/$VERSION");
   $self->default_header( 'Accept' => 'application/json' );
   $self->default_header( 'Content-Type' => 'application/json' );
   $self->default_header( 'X-Stream' => 'true' );

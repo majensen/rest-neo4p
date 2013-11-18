@@ -48,7 +48,7 @@ SKIP : {
   my $stmt1 =<<STMT1;
  START n = node:${idx_name}(name = 'I')
  MATCH n-[r:good]-m
- CREATE n-[r:bosom]-m
+ CREATE n-[s:bosom]->m
 STMT1
   
   my $stmt2 =<<STMT2;
@@ -63,20 +63,19 @@ STMT2
   WHERE m-[:prettygood]->u
   SET u.name='Fred',u.uuid='$uuid'
 STMT3
-
-  ok my $q = REST::Neo4p::Query->new($stmt1), 'statement 1';
-  ok $q->execute, 'execute statment 1';
   ok my ($n) = $t->nix->find_entries(name => 'I');
   my @r = $n->get_relationships;
+  is @r, 4, '4 relationships before execute';
+  ok my $q = REST::Neo4p::Query->new($stmt1), 'statement 1';
+  ok my $rc = $q->execute, 'execute statment 1';
   is @r, 4, 'executed, but still only 4 relationships';
   ok $neo4p->commit, 'commit';
   ok !$neo4p->_transaction, 'transaction cleared';
-  is $neo4p->q_endpoint, 'cypher', 'endpt reset';
   @r = $n->get_relationships;
   is @r, 5, 'committed, now 5 relationships';
-  my $r = grep { 
+  my ($r) = grep { 
     $_->type =~ /bosom/i and
-      $_->end_node->get_property('name') eq 'he'
+      $_->end_node->get_property('name') eq 'she'
     } @r;
   1;
   $r->remove;

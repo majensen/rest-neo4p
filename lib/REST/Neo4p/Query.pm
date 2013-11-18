@@ -4,6 +4,7 @@ package REST::Neo4p::Query;
 use REST::Neo4p::Path;
 use REST::Neo4p::Exceptions;
 use JSON::Streaming::Reader;
+use Tie::IxHash;
 use File::Temp qw(:seekable);
 use Carp qw(croak carp);
 use strict;
@@ -24,6 +25,8 @@ sub new {
   unless (!defined $params || ref($params) eq 'HASH') {
     REST::Neo4p::LocalException->throw( "Second argment must be a hashref of query parameters\n" );
   }
+  $q_string =~ s/\s/ /g;
+  ($q_string) = $q_string =~ m/^\s*(.*)\s*$/;
   bless { '_query' => $q_string,
 	  '_params' => $params || {},
 	  '_handle' => REST::Neo4p->handle, # current handle
@@ -68,21 +71,19 @@ sub execute {
 	 );
       }
       when (/transaction/) {
+	# unfortunately, the order of 'statement' and 'parameters'
+	# is strict in the content (2.0.0-M06)
+	tie my %stmt, 'Tie::IxHash';
+	$stmt{statement} = $self->query;
+	$stmt{parameters} = $self->params;
 	$resp = $agent->$endpt(
 	  [REST::Neo4p->_transaction],
 	  { 
-	    statements => [
-	      { statement => $self->query,
-		parameters => $self->params }
-	     ]
+	    statements => [ \%stmt ]
 	   }
 	 );
 	REST::Neo4p::CommException->throw("No commit url returned") 
 	    unless ($resp->{commit});
-	unless (defined REST::Neo4p->_transaction) {
-	  my ($tx) = $resp->{commit} =~ m|.*/([0-9]+)/commit$|;
-	  REST::Neo4p->_set_transaction($tx);
-	}
       }
       default {
 	REST::Neo4p::TxException->throw(
@@ -101,7 +102,7 @@ sub execute {
   }
   # transaction query response:
   if (REST::Neo4p->q_endpoint eq 'transaction') {
-    return 1; # stub
+    return $resp; # stub
   }
   # else, cypher query response:
   my ($jsonr,$row_count);

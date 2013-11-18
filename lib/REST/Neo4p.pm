@@ -250,7 +250,21 @@ sub begin_work {
   }
   $HANDLES[$HANDLE]->{_q_endpoint} = 'transaction';
   delete  $HANDLES[$HANDLE]->{_tx_errors};
-  return 1;
+  my $resp;
+  eval {
+    $resp =  $neo4p->agent->post_transaction([]);
+    REST::Neo4p::Neo4jException->throw($resp->{errors}->[0]->{message}) 
+	if @{$resp->{errors}};
+  };
+  if (my $e = REST::Neo4p::Exception->caught()) {
+    # TODO : handle different classes
+    $e->rethrow;
+  }
+  elsif ($e = Exception::Class->caught()) {
+    ref $e ? $e->rethrow : die $e;
+  }
+  my ($tx) = $resp->{commit} =~ m|.*/([0-9]+)/commit$|;
+  return REST::Neo4p->_set_transaction($tx);
 }
 
 sub commit {
@@ -275,9 +289,8 @@ sub commit {
   elsif ($e = Exception::Class->caught()) {
     ref $e ? $e->rethrow : die $e;
   }
-  REST::Neo4p->_clear_transaction;
+  $neo4p->_clear_transaction;
   # got response, see if errors
-  $DB::single=1;
   $HANDLES[$HANDLE]->{_tx_errors} = $resp->{errors};
   return !(scalar @{$resp->{errors}});
 }
@@ -294,7 +307,7 @@ sub rollback {
     REST::Neo4p::TxException->throw("Unknown REST endpoint '".$neo4p->q_endpoint."'");
   }
   eval {
-    $neo4p->agent->delete_transaction(REST::Neo4p->_transaction);
+    $neo4p->agent->delete_transaction($neo4p->_transaction);
   };
   if (my $e = REST::Neo4p::Exception->caught()) {
     # TODO : handle different classes
