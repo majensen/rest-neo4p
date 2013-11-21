@@ -33,6 +33,12 @@ use Exception::Class (
 		'neo4j_exception', 'neo4j_stacktrace' ],
     description => 'Conflict (409) thrown when fail is specified for create_unique on indexes'
    },
+  'REST::Neo4p::TxQueryException' => 
+    {
+    isa => 'REST::Neo4p::Neo4jException',
+    fields => [qw/error_list message code/],
+    description => 'List of errors returned by query executed within a txn'
+   },
   'REST::Neo4p::QuerySyntaxException' =>
     {
       isa => 'REST::Neo4p::Neo4jException',

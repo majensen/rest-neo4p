@@ -32,7 +32,7 @@ sub new {
 	  '_handle' => REST::Neo4p->handle, # current handle
 	  'Statement' => $q_string,
 	  'NUM_OF_PARAMS' => $params ? scalar keys %$params : 0,
-	  'ParamValues' => $params,
+#	  'ParamValues' => $params,
 	  'ResponseAsObjects' => 1,
 	  '_tempfile' => ''
 	}, $class;
@@ -41,6 +41,12 @@ sub tmpf { shift->{_tempfile} }
 sub _handle { shift->{_handle} }
 sub execute {
   my $self = shift;
+  my @params = @_;
+  my %params;
+  if (@params) {
+    %params = ref $params[0] ? %{$params[0]} : @params;
+    $self->{_params} = \%params;
+  }
   # current handle
   local $REST::Neo4p::HANDLE;
   REST::Neo4p->set_handle($self->_handle);
@@ -50,20 +56,21 @@ sub execute {
   if ($agent->batch_mode) {
     REST::Neo4p::NotSuppException->throw("Query execution not supported in batch mode (yet)\n");
   }
-  $self->{_error} = undef;
-  $self->{_decoded_resp} = undef;
-  $self->{NAME} = undef;
-#  my $temp_fh;
-#  ($temp_fh, $self->{_tempfile}) = tempfile();
-  $self->{_tempfile} = File::Temp->new;
-  unless ($self->tmpf) {
-    REST::Neo4p::LocalException->throw("Can't create query result tempfile : $!");
-  }
+  delete $self->{_error};
+  delete $self->{_error_list};
+  delete $self->{_decoded_resp};
+  delete $self->{NAME};
   my $resp;
   my $endpt = 'post_'.REST::Neo4p->q_endpoint;
   eval {
     given ($endpt) {
       when (/cypher/) {
+	$self->{_tempfile} = File::Temp->new;
+	unless ($self->tmpf) {
+	  REST::Neo4p::LocalException->throw(
+	    "Can't create query result tempfile : $!\n"
+	   );
+	}
 	$resp = $agent->$endpt(
 	  [], 
 	  { query => $self->query, params => $self->params },
@@ -82,22 +89,33 @@ sub execute {
 	    statements => [ \%stmt ]
 	   }
 	 );
-	REST::Neo4p::CommException->throw("No commit url returned") 
+	REST::Neo4p::CommException->throw("No commit url returned\n") 
 	    unless ($resp->{commit});
+	if (my @e = @{$resp->{errors}}) {
+	  REST::Neo4p::TxQueryException->throw( 
+	    error => "Query within transaction returned errors (see error_list)\n",
+	    error_list => \@e, code => '304');
+	}
       }
       default {
 	REST::Neo4p::TxException->throw(
-	  "Unknown query REST endpoint '".REST::Neo4p->q_endpoint."'"
+	  "Unknown query REST endpoint '".REST::Neo4p->q_endpoint."'\n"
 	 );
       }
     }
   };
-  if (my $e = Exception::Class->caught('REST::Neo4p::Neo4jException') ) {
+  if (my $e = REST::Neo4p::Neo4jException->caught ) {
+    $self->{_error} = $e;
+    $e->can('error_list') && ($self->{_error_list} = $e->error_list);
+    $e->rethrow if ($self->{RaiseError});
+    return;
+  }
+  elsif ($e = REST::Neo4p::Exception->caught()) {
     $self->{_error} = $e;
     $e->rethrow if ($self->{RaiseError});
     return;
   }
-  elsif ($e = Exception::Class->caught()) {
+  elsif ( $e = Exception::Class->caught) {
     ref $e ? $e->rethrow : die $e;
   }
   # transaction query response:
@@ -166,6 +184,11 @@ sub errstr {
   return $self->{_error} && ( $self->{_error}->message || $self->{_error}->neo4j_message );
 }
 
+sub err_list {
+  my $self = shift;
+  return $self->{_error} && $self->{_error_list};
+}
+
 
 sub query { shift->{_query} }
 sub params { shift->{_params} }
@@ -186,7 +209,7 @@ sub _response_entity {
 	last;
       };
       do {
-	REST::Neo4p::QueryResponseException->throw("Can't identify object type by JSON response\n");
+	REST::Neo4p::QueryResponseException->throw(message => "Can't identify object type by JSON response\n");
       };
     }
   }
@@ -438,7 +461,9 @@ scalars are returned as-is.
   }
 
 Returns the HTTP error code and Neo4j server error message if an error
-was encountered on execution. 
+was encountered on execution.
+
+=item err_list()
 
 =item finish()
 

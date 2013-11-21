@@ -242,12 +242,13 @@ sub get_relationship_indexes { shift->get_indexes('relationship',@_) }
 
 sub begin_work {
   my $neo4p = shift;
-  unless ($neo4p->_check_version(2,0,0,6)) {
-    REST::Neo4p::VersionMismatchException->throw("Transactions are not available in Neo4j server version < 2.0.0-M06");
+  unless ($neo4p->_check_version(2,0,0,2)) {
+    REST::Neo4p::VersionMismatchException->throw("Transactions are not available in Neo4j server version < 2.0.0-M02\n");
   }
-  if ($neo4p->q_endpoint eq 'transaction') {
-    REST::Neo4p::TxException->throw("Transaction already initiated");
+  if ($neo4p->_transaction) {
+    REST::Neo4p::TxException->throw("Transaction already initiated\n");
   }
+  $HANDLES[$HANDLE]->{_old_endpoint} = $HANDLES[$HANDLE]->{_q_endpoint};
   $HANDLES[$HANDLE]->{_q_endpoint} = 'transaction';
   delete  $HANDLES[$HANDLE]->{_tx_errors};
   my $resp;
@@ -269,13 +270,14 @@ sub begin_work {
 
 sub commit {
   my $neo4p = shift;
-  unless ($neo4p->_check_version(2,0,0,6)) {
-    REST::Neo4p::VersionMismatchException->throw("Transactions are not available in Neo4j server version < 2.0.0-M06");
+  unless ($neo4p->_check_version(2,0,0,2)) {
+    REST::Neo4p::VersionMismatchException->throw("Transactions are not available in Neo4j server version < 2.0.0-M02\n");
   }
   return 1 if ($neo4p->q_endpoint eq 'cypher'); # noop, server autocommited
   unless ($neo4p->q_endpoint eq 'transaction') {
-    REST::Neo4p::TxException->throw("Unknown REST endpoint '".$neo4p->q_endpoint."'");
+    REST::Neo4p::TxException->throw("Unknown REST endpoint '".$neo4p->q_endpoint."'\n");
   }
+  $HANDLES[$HANDLE]->{_q_endpoint} = delete $HANDLES[$HANDLE]->{_old_endpoint};
   my $resp;
   eval {
     $resp = $neo4p->agent->post_transaction(
@@ -297,20 +299,21 @@ sub commit {
 
 sub rollback {
   my $neo4p = shift;
-  unless ($neo4p->_check_version(2,0,0,6)) {
-    REST::Neo4p::VersionMismatchException->throw("Transactions are not available in Neo4j server version < 2.0.0-M06");
+  unless ($neo4p->_check_version(2,0,0,2)) {
+    REST::Neo4p::VersionMismatchException->throw("Transactions are not available in Neo4j server version < 2.0.0-M02\n");
   }
   if ($neo4p->q_endpoint eq 'cypher') {
-    REST::Neo4p::TxException->throw("Rollback attempted in auto-commit mode");
+    REST::Neo4p::TxException->throw("Rollback attempted in auto-commit mode\n");
   }
   unless ($neo4p->q_endpoint eq 'transaction') {
-    REST::Neo4p::TxException->throw("Unknown REST endpoint '".$neo4p->q_endpoint."'");
+    REST::Neo4p::TxException->throw("Unknown REST endpoint '".$neo4p->q_endpoint."'\n");
   }
-  eval {
+  $HANDLES[$HANDLE]->{_q_endpoint} = delete $HANDLES[$HANDLE]->{_old_endpoint};  eval {
     $neo4p->agent->delete_transaction($neo4p->_transaction);
   };
   if (my $e = REST::Neo4p::Exception->caught()) {
     # TODO : handle different classes
+    $DB::single=1;
     $e->rethrow;
   }
   elsif ($e = Exception::Class->caught()) {
@@ -531,6 +534,19 @@ Returns false if index C<$name> does not exist in database.
  @node_indexes = REST::Neo4p->get_node_indexes;
  @relationship_indexes = REST::Neo4p->get_relationship_indexes;
 
+=back
+
+=head2 Transaction Support (Neo4j Server Version 2 only)
+
+Initiate, commit, or rollback L<REST::Neo4p::Query|queries> in transactions.
+
+=over
+
+=item begin_work()
+
+=item commit()
+
+=item rollback()
 
 =back
 
