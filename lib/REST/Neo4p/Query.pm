@@ -433,6 +433,8 @@ Create a new query object. First argument is the Cypher query
 =item execute()
 
  $numrows = $query->execute;
+ $numrows = $query->execute( param1 => 'value1', param2 => 'value2');
+ $numrows = $query->execute( $param_hashref );
 
 Execute the query on the server. Not supported in batch mode.
 

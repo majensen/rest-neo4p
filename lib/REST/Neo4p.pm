@@ -547,6 +547,25 @@ Initiate, commit, or rollback L<REST::Neo4p::Query|queries> in transactions.
 =item commit()
 
 =item rollback()
+ 
+ $q = REST::Neo4p::Query->new(
+   'start n=node(0) match n-[r:pal]->m create r'
+ );
+ $r = REST::Neo4p::Query->new(
+    'start n=node(0) match n-[r:pal]->u create unique u'
+ );
+ REST::Neo4p->begin_work;
+ $q->execute;
+ $r->execute;
+ if ($q->err || $r->err) {
+   REST::Neo4p->rollback;
+ }
+ else {
+   REST::Neo4p->commit;
+   unless (REST::Neo4p->_tx_errors) {
+     print 'all queries successful';
+   }
+ }
 
 =back
 
