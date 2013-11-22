@@ -1,4 +1,6 @@
 Revision history for Perl module REST::Neo4p
+0.2201 2013-11.21
+    - Added get_all_labels as advertised
 0.2200 2013-11-21
     - perl v5.10 required
     - Added initial support for transactions under neo4j server v2.0.0

@@ -1,5 +1,5 @@
 #$Id#
-use Test::More tests => 31;
+use Test::More tests => 35;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
@@ -18,7 +18,7 @@ eval {
     $pass = $build->notes('pass');
 };
 my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
-my $num_live_tests = 26;
+my $num_live_tests = 30;
 
 my $not_connected;
 eval {
@@ -74,7 +74,10 @@ SKIP : {
     ok ((grep {$$_ == $$n2} @mom), 'retrieved node 2..');
     ok (!(grep {$$_ == $$n1} @mom), '..but now not node 1');
     ok $n1->drop_labels('dad'), 'ok to drop a non-existent label';
-
+    ok my @labels = REST::Neo4p->get_all_labels;
+    ok grep(/mom/, @labels), "there's mom";
+    ok grep(/sister/,@labels), "there's sis";
+    ok grep(/aunt/, @labels), "there's auntie";
 
   }
 

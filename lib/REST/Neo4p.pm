@@ -14,7 +14,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::VERSION = '0.2200';
+  $REST::Neo4p::VERSION = '0.2201';
 }
 
 our $CREATE_AUTO_ACCESSORS = 0;
@@ -136,7 +136,6 @@ sub get_nodes_by_label {
   REST::Neo4p::CommException->throw("Not connected\n") unless $neo4p->connected;
   my $decoded_resp;
   if ($value) {
-  $DB::single=1;    
     $value = uri_escape($json->encode($value));
   }
 
@@ -159,6 +158,12 @@ sub get_nodes_by_label {
   }
   return @ret;
 
+}
+
+sub get_all_labels {
+  my $neo4p = shift;
+  REST::Neo4p::CommException->throw("Not connected\n") unless $neo4p->connected;
+  return @{ $neo4p->agent->get_data('labels') };
 }
 
 # $reln = REST::Neo4p->get_relationship_by_id($id);
@@ -559,7 +564,7 @@ Returns false if no nodes with given label in database.
 
 =head2 Transaction Support (Neo4j Server Version 2 only)
 
-Initiate, commit, or rollback L<REST::Neo4p::Query|queries> in transactions.
+Initiate, commit, or rollback L<queries|REST::Neo4p::Query> in transactions.
 
 =over
 
