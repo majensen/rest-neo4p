@@ -219,6 +219,11 @@ sub __do_request {
 	%rest_params = %{ pop @url_components };
       }
       my $url = join('/',$self->{_actions}{$action},@url_components);
+      my @params;
+      while (my ($p,$v) = each %rest_params) {
+	push @params, join('=',$p,$v);
+      }
+      $url.='?'.join('&',@params) if @params;
       if ($self->batch_mode) {
 	$url = ($url_components[0] =~ /{[0-9]+}/) ? $url_components[0] : $url; # index batch object kludge
 
@@ -227,7 +232,7 @@ sub __do_request {
 	      $rq);
 	goto &_add_to_batch_queue; # short circuit to _add_to_batch_queue
       }
-      $resp = $self->$rq($url,%rest_params);
+      $resp = $self->$rq($url);
     }
     when (/post|put/) {
       my ($url_components, $content, $addl_headers) = @args;

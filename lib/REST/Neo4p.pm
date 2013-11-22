@@ -3,6 +3,8 @@ use v5.10;
 package REST::Neo4p;
 use Carp qw(croak carp);
 use lib '../../lib';
+use JSON;
+use URI::Escape;
 use REST::Neo4p::Agent;
 use REST::Neo4p::Node;
 use REST::Neo4p::Index;
@@ -18,6 +20,7 @@ BEGIN {
 our $CREATE_AUTO_ACCESSORS = 0;
 our @HANDLES;
 our $HANDLE = 0;
+my $json = JSON->new->allow_nonref(1);
 #our $AGENT;
 
 $HANDLES[0]->{_q_endpoint} = 'cypher';
@@ -108,6 +111,7 @@ sub connected {
   my $neo4p = shift;
   return $HANDLES[$HANDLE]->{_connected};
 }
+
 # $node = REST::Neo4p->get_node_by_id($id)
 sub get_node_by_id {
   my $neo4p = shift;
@@ -128,13 +132,19 @@ sub get_node_by_id {
 
 sub get_nodes_by_label {
   my $neo4p = shift;
-  my ($label) = @_;
+  my ($label,$prop, $value) = @_;
   REST::Neo4p::CommException->throw("Not connected\n") unless $neo4p->connected;
   my $decoded_resp;
+  if ($value) {
+  $DB::single=1;    
+    $value = uri_escape($json->encode($value));
+  }
+
   eval {
 # following line should work, but doesn't yet (self-discovery issue)
-#    $decoded_resp = $AGENT->get_label($label, 'nodes');
-    $decoded_resp = $neo4p->agent->get_data('label',$label,'nodes');
+#    $decoded_resp = $neo4p->agent->get_label($label, 'nodes');
+    $decoded_resp = $neo4p->agent->get_data('label',$label,'nodes',
+					   $prop ? {$prop => $value} : () );
     1;
   };
   if (my $e = REST::Neo4p::NotFoundException->caught()) {
@@ -505,12 +515,6 @@ Returns the server's neo4j version number, or undef if not connected.
 
 Returns false if node C<$id> does not exist in database.
 
-=item get_nodes_by_label() B<Neo4j Server Version 2.0>
-
- @nodes = REST::Neo4p->get_nodes_by_label( $label );
-
-Returns false if no nodes with given label in database.
-
 =item get_relationship_by_id()
 
  $relationship = REST::Neo4p->get_relationship_by_id( $id );
@@ -533,6 +537,23 @@ Returns false if index C<$name> does not exist in database.
  @all_indexes = REST::Neo4p->get_indexes;
  @node_indexes = REST::Neo4p->get_node_indexes;
  @relationship_indexes = REST::Neo4p->get_relationship_indexes;
+
+=back
+
+=head2 Label Support (Neo4j Server Version 2 only) 
+
+=over
+
+=item get_nodes_by_label()
+
+ @nodes = REST::Neo4p->get_nodes_by_label( $label );
+ @nodes = REST::Neo4p->get_nodes_by_label($label, $property => $value );
+
+Returns false if no nodes with given label in database.
+
+=item get_all_labels()
+
+ @graph_labels = REST::Neo4p->get_all_labels;
 
 =back
 
