@@ -1,4 +1,10 @@
 Revision history for Perl module REST::Neo4p
+0.2200 2013-11-21
+    - perl v5.10 required
+    - Added initial support for transactions under neo4j server v2.0.0
+    - Refactored to support multiple distinct REST::Neo4p connections
+    - Added user/pass to connect method and build script
+    - Added finish() method to REST::Neo4p::Query
 0.2120 2013-11-09
     - Added as_simple to entities; represent entities as simple perl data structs
     - REST::Neo4p::Query attribute to select whether objects or simple 

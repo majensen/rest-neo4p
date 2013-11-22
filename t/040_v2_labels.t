@@ -1,5 +1,5 @@
 #$Id#
-use Test::More tests => 29;
+use Test::More tests => 31;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
@@ -8,7 +8,6 @@ use strict;
 use warnings;
 no warnings qw(once);
 
-#$SIG{__DIE__} = sub { print $_ };
 my @cleanup;
 my $build;
 my ($user,$pass);
@@ -19,7 +18,7 @@ eval {
     $pass = $build->notes('pass');
 };
 my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
-my $num_live_tests = 23;
+my $num_live_tests = 26;
 
 my $not_connected;
 eval {
@@ -32,14 +31,14 @@ if ( my $e = REST::Neo4p::CommException->caught() ) {
 
 
 SKIP : {
-  skip 'no local connection to neo4j', $num_live_tests if $not_connected;
+  skip 'no local connection to neo4j', $num_live_tests+5 if $not_connected;
   my $version = REST::Neo4p->neo4j_version;
   my ($M,$m,$p,$s) = REST::Neo4p->neo4j_version;
   ok !REST::Neo4p->_check_version($M+1);
   ok !REST::Neo4p->_check_version($M,$m+1);
-  ok !REST::Neo4p->_check_version($M,$m,$s+1);
+  ok !REST::Neo4p->_check_version($M,$m,!!$s+1);
   ok (REST::Neo4p->_check_version($M-1,$m+1));
-  ok (REST::Neo4p->_check_version($M-1,$m-1,$s+4));
+  ok (REST::Neo4p->_check_version($M-1,$m-1,!!$s+4));
   my $VERSION_OK = REST::Neo4p->_check_version(2,0);
   SKIP : {
     skip "Server version $version < 2.0", $num_live_tests unless $VERSION_OK;

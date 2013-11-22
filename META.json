@@ -33,6 +33,7 @@
             "JSON" : "2",
             "JSON::Streaming::Reader" : "0.05",
             "LWP::UserAgent" : "6.04",
+            "Tie::IxHash" : "0",
             "URI::Escape" : "3.3"
          }
       }
@@ -40,11 +41,11 @@
    "provides" : {
       "REST::Neo4p" : {
          "file" : "lib/REST/Neo4p.pm",
-         "version" : "0.2120"
+         "version" : "0.2200"
       },
       "REST::Neo4p::Agent" : {
          "file" : "lib/REST/Neo4p/Agent.pm",
-         "version" : "0.2110"
+         "version" : "0.2200"
       },
       "REST::Neo4p::Batch" : {
          "file" : "lib/REST/Neo4p/Batch.pm",
@@ -80,19 +81,19 @@
       },
       "REST::Neo4p::Entity" : {
          "file" : "lib/REST/Neo4p/Entity.pm",
-         "version" : "0.2001"
+         "version" : "0.2200"
       },
       "REST::Neo4p::Exceptions" : {
          "file" : "lib/REST/Neo4p/Exceptions.pm",
-         "version" : "0.2020"
+         "version" : "0.2200"
       },
       "REST::Neo4p::Index" : {
          "file" : "lib/REST/Neo4p/Index.pm",
-         "version" : "0.2111"
+         "version" : "0.2200"
       },
       "REST::Neo4p::Node" : {
          "file" : "lib/REST/Neo4p/Node.pm",
-         "version" : "0.2120"
+         "version" : "0.2200"
       },
       "REST::Neo4p::Path" : {
          "file" : "lib/REST/Neo4p/Path.pm",
@@ -100,11 +101,11 @@
       },
       "REST::Neo4p::Query" : {
          "file" : "lib/REST/Neo4p/Query.pm",
-         "version" : "0.2114"
+         "version" : "0.2200"
       },
       "REST::Neo4p::Relationship" : {
          "file" : "lib/REST/Neo4p/Relationship.pm",
-         "version" : "0.2120"
+         "version" : "0.2200"
       }
    },
    "release_status" : "stable",
@@ -113,5 +114,5 @@
          "http://dev.perl.org/licenses/"
       ]
    },
-   "version" : "0.2120"
+   "version" : "0.2200"
 }

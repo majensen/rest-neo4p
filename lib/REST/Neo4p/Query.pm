@@ -327,11 +327,11 @@ sub _process_row {
   my ($row) = @_;
   my @ret;
   foreach my $elt (@$row) {
-    given (ref($elt)) {
-      when (!$_)  {
+    given ($elt) {
+       when (!ref) {
 	push @ret, $elt;
       }
-      when (/HASH/) {
+      when (ref =~ /HASH/) {
 	my $entity_type;
 	eval {
 	  $entity_type = _response_entity($elt);
@@ -344,9 +344,8 @@ sub _process_row {
 	push @ret, $self->{ResponseAsObjects} ?
 	  $entity_class->new_from_json_response($elt) :
 	    $entity_class->simple_from_json_response($elt);
-	last;
       }
-      when (/ARRAY/) {
+      when (ref =~ /ARRAY/) {
 	for my $ary_elt (@$elt) {
 	  my $entity_type;
 	  eval {
@@ -417,6 +416,10 @@ comes first.
 If your query returns a path, L<C<fetch()>|/fetch()> returns a
 L<REST::Neo4p::Path> object from which you can obtain the Nodes and
 Relationships.
+
+=head2 Transactions
+
+See L<REST::Neo4p/Transaction Support (Neo4p Server Version 2 only)>.
 
 =head1 METHODS
 

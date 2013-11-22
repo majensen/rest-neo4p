@@ -101,8 +101,6 @@ SKIP : {
   my $ret = $q->fetch;
   is $$n2, $ret->[1]->{_node}, "right node";
   is_deeply $n2->as_simple, $ret->[1], 'got wilma (simple)';
-  $DB::single=1;
-
   ok $q = REST::Neo4p::Query->new("START n=node($$n4) MATCH (n)-[r]-(x) WHERE type(r) = 'pal_of' RETURN r, x.name"), 'relationship query';
   $q->{ResponseAsObjects} = 0;
   ok $q->execute, 'execute (relationship)';
