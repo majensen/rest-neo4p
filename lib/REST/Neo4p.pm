@@ -14,7 +14,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::VERSION = '0.2201';
+  $REST::Neo4p::VERSION = '0.2210';
 }
 
 our $CREATE_AUTO_ACCESSORS = 0;
@@ -36,6 +36,7 @@ sub create_and_set_handle {
   my $class = shift;
   $HANDLE = @HANDLES;
   $HANDLES[$HANDLE]->{_agent} = REST::Neo4p::Agent->new;
+  $HANDLES[$HANDLE]->{_q_endpoint} = 'cypher';
   return $HANDLE;
 }
 
@@ -67,6 +68,19 @@ sub _tx_errors {
 sub _clear_transaction {
   my $class = shift;
   delete $HANDLES[$HANDLE]->{_transaction}
+}
+
+sub _set_autocommit {
+  my $class = shift;
+  return $HANDLES[$HANDLE]->{_q_endpoint} = 'cypher';
+}
+
+sub _clear_autocommit {
+  my $class = shift;
+  if ($class->_check_version(2,0,0,2)) {
+    return $HANDLES[$HANDLE]->{_q_endpoint} = 'transaction';
+  }
+  return;
 }
 
 sub q_endpoint { 

@@ -373,6 +373,7 @@ sub _process_row {
   }
   return \@ret;
 }
+
 sub finish {
   my $self = shift;
   delete $self->{_tempfile};
