@@ -10,7 +10,7 @@ use warnings;
 
 # base class for nodes, relationships, indexes...
 BEGIN {
-  $REST::Neo4p::Entity::VERSION = '0.2200';
+  $REST::Neo4p::Entity::VERSION = '0.2220';
 }
 
 our $ENTITY_TABLE = {};
@@ -419,6 +419,22 @@ sub _create_accessors {
     shift->set_property( {$prop_name => $_[0]} );
   };
 }
+
+package REST::Neo4p::Simple;
+use base 'REST::Neo4p::Entity';
+use strict;
+use warnings;
+no warnings qw/once/;
+BEGIN {
+  $REST::Neo4p::Simple::VERSION = '0.2220';
+}
+
+sub new { $_[1] }
+
+*new_from_json_response = \&new;
+*simple_from_json_response = \&new;
+
+1;
 
 =head1 NAME
 

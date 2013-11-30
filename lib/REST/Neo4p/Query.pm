@@ -11,7 +11,7 @@ use strict;
 use warnings;
 no warnings qw(once);
 BEGIN {
-  $REST::Neo4p::Query::VERSION = '0.2200';
+  $REST::Neo4p::Query::VERSION = '0.2220';
 }
 
 my $BUFSIZE = 4096;
@@ -60,18 +60,18 @@ sub execute {
   delete $self->{_error_list};
   delete $self->{_decoded_resp};
   delete $self->{NAME};
-  my $resp;
+#  my $resp;
   my $endpt = 'post_'.REST::Neo4p->q_endpoint;
+  $self->{_tempfile} = File::Temp->new;
+  unless ($self->tmpf) {
+    REST::Neo4p::LocalException->throw(
+      "Can't create query result tempfile : $!\n"
+     );
+  }
   eval {
     given ($endpt) {
       when (/cypher/) {
-	$self->{_tempfile} = File::Temp->new;
-	unless ($self->tmpf) {
-	  REST::Neo4p::LocalException->throw(
-	    "Can't create query result tempfile : $!\n"
-	   );
-	}
-	$resp = $agent->$endpt(
+	$agent->$endpt(
 	  [], 
 	  { query => $self->query, params => $self->params },
 	  {':content_file' => $self->tmpf->filename}
@@ -83,15 +83,23 @@ sub execute {
 	tie my %stmt, 'Tie::IxHash';
 	$stmt{statement} = $self->query;
 	$stmt{parameters} = $self->params;
-	$resp = $agent->$endpt(
+	$agent->$endpt(
 	  [REST::Neo4p->_transaction],
 	  { 
 	    statements => [ \%stmt ]
-	   }
+	   },
+	  {':content_file' => $self->tmpf->filename}
 	 );
-	REST::Neo4p::CommException->throw("No commit url returned\n") 
-	    unless ($resp->{commit});
-	if (my @e = @{$resp->{errors}}) {
+	my $jsonr = JSON::Streaming::Reader->for_stream($self->tmpf);
+	my $errors;
+	while (my $ret = $jsonr->get_token) {
+	  if ($$ret[0] eq 'start_property' && $$ret[1] eq 'errors') {
+	    $errors = $jsonr->slurp;
+	    last;
+	  }
+	}
+	$self->tmpf->seek(0,0);
+	if (my @e = @$errors) {
 	  REST::Neo4p::TxQueryException->throw( 
 	    error => "Query within transaction returned errors (see error_list)\n",
 	    error_list => \@e, code => '304');
@@ -118,11 +126,6 @@ sub execute {
   elsif ( $e = Exception::Class->caught) {
     ref $e ? $e->rethrow : die $e;
   }
-  # transaction query response:
-  if (REST::Neo4p->q_endpoint eq 'transaction') {
-    return $resp; # stub
-  }
-  # else, cypher query response:
   my ($jsonr,$row_count);
   eval {
     ($jsonr,$row_count) = $self->_prepare_response;
@@ -141,7 +144,14 @@ sub execute {
       my $row;
       my ($token_type, @data) = @{$jsonr->get_token};
       given ($token_type) {
-	when (/start_array/) {
+	when (/start_array/) { # return from cypher endpt
+	  $row = $jsonr->slurp;
+	}
+	when (/start_object/) { # return from transaction endpt
+	  my ($tok,$key) = @{$jsonr->get_token};
+	  unless ($key eq 'row') {
+	    REST::Neo4p::LocalException->throw("Can't parse query response (expecting row property in object)");
+	  }
 	  $row = $jsonr->slurp;
 	}
 	when (/end_array/) { # finished
@@ -199,18 +209,16 @@ sub _response_entity {
     return 'bareword';
   }
   elsif (defined $resp->{self}) {
-    for ($resp->{self}) {
-      m|data/node| && do {
+    given ($resp->{self}) {
+      when (m|data/node|) {
 	return 'Node';
-	last;
-      };
-      m|data/relationship| && do {
+      }
+      when (m|data/relationship|) {
 	return 'Relationship';
-	last;
-      };
-      do {
+      }
+      default {
 	REST::Neo4p::QueryResponseException->throw(message => "Can't identify object type by JSON response\n");
-      };
+      }
     }
   }
   elsif (defined $resp->{start} && defined $resp->{end}
@@ -218,7 +226,8 @@ sub _response_entity {
     return 'Path';
   }
   else {
-    REST::Neo4p::QueryResponseException->throw("Can't identify object type by JSON response (2)\n");
+    return 'Simple';
+#    REST::Neo4p::QueryResponseException->throw("Can't identify object type by JSON response (2)\n");
   }
 }
 
@@ -328,7 +337,7 @@ sub _process_row {
   my @ret;
   foreach my $elt (@$row) {
     given ($elt) {
-       when (!ref) {
+       when (!ref) { #bareword
 	push @ret, $elt;
       }
       when (ref =~ /HASH/) {
@@ -346,6 +355,7 @@ sub _process_row {
 	    $entity_class->simple_from_json_response($elt);
       }
       when (ref =~ /ARRAY/) {
+	my $array;
 	for my $ary_elt (@$elt) {
 	  my $entity_type;
 	  eval {
@@ -356,15 +366,19 @@ sub _process_row {
 	    ref $e ? $e->rethrow : die $e;
 	  }
 	  if ($entity_type eq 'bareword') {
-	    push @ret, $ary_elt;
+	    push @$array, $ary_elt;
 	  }
 	  else {
 	    my $entity_class = 'REST::Neo4p::'.$entity_type;
-	    push @ret, $self->{ResponseAsObjects} ?
+	    push @$array, $self->{ResponseAsObjects} ?
 	      $entity_class->new_from_json_response($ary_elt) :
 		$entity_class->simple_from_json_response($ary_elt) ;
 	  }
 	}
+	# guess whether to flatten response:
+	# if more than one row element, don't flatten, 
+	# return an array reference in the response
+	push @ret, @$row > 1 ? $array : @$array;
       }
       default {
 	REST::Neo4p::QueryResponseException->throw("Can't parse query response (row doesn't make sense)\n");
@@ -421,6 +435,15 @@ Relationships.
 =head2 Transactions
 
 See L<REST::Neo4p/Transaction Support (Neo4p Server Version 2 only)>.
+
+NOTE: Rows returned from the Neo4j transaction endpoint are not
+completely specified database objects (see
+L<http://docs.neo4j.org/chunked/2.0.0-RC1/rest-api-transactional.html>). Fetches
+on transactional queries will return an array of simple Perl
+structures (hashes and arrays) that correspond to the row as returned
+in JSON by the server, rather than as REST::Neo4p objects. This is
+regardless of the setting of the
+L<REST::Neo4p::Query/ResponseAsObjects|ResponseAsObjects> attribute.
 
 =head1 METHODS
 
@@ -498,7 +521,7 @@ Set C<$query-E<gt>{RaiseError}> to die immediately (e.g., to catch the exception
 =item ResponseAsObjects
 
  $q->{ResponseAsObjects} = 0;
- $plain_perl = $q->fetch;
+ $row_as_plain_perl = $q->fetch;
 
 If set to true (the default), query reponses are returned as
 REST::Neo4p objects.  If false, nodes, relationships and paths are

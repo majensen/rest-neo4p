@@ -1,5 +1,14 @@
 Revision history for Perl module REST::Neo4p
-0.2201 2013-11.21
+0.2220 2013-11-29
+    - added as_simple methods to entities
+    - modified REST::Neo4p::Query to return simplified row structures
+      in transaction mode (to handle the limited content returned by 
+      Neo4j (as of 2.0.0-RC1) in this mode
+    - when a row contains multiple elements, at least one of which is
+      an array, fetch will return the array(s) as array refs. Rows with
+      containing a single array are still flattened (the array itself 
+      is returned)
+0.2201 2013-11-21
     - Added get_all_labels as advertised
 0.2200 2013-11-21
     - perl v5.10 required

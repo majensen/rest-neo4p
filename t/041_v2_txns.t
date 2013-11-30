@@ -1,5 +1,5 @@
 #$Id$
-use Test::More tests => 28;
+use Test::More tests => 29;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
@@ -22,7 +22,7 @@ eval {
 };
 
 my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
-my $num_live_tests = 28;
+my $num_live_tests = 29;
 my $not_connected;
 eval {
   REST::Neo4p->connect($TEST_SERVER,$user,$pass);
@@ -82,7 +82,6 @@ STMT3
   $w->{RaiseError} = 1;
   ($m) = $t->nix->find_entries(name => 'he');
   is scalar $m->get_relationships, 1, 'he has 1 relationship';
-  $DB::single=1;
   ok $neo4p->begin_work, 'begin transaction';
   ok $rc = $q->execute(name => 'she'), 'exec stmt 2';
   ok $rc = $w->execute, 'exec stmt 3';
@@ -94,6 +93,8 @@ STMT3
   ok $neo4p->begin_work, 'begin transaction';
   ok $rc = $q->execute(name => 'she'), 'exec stmt 2';
   ok $rc = $w->execute, 'exec stmt 3';
+  my $row = $w->fetch;
+  is_deeply $row, [ { name => 'Fred', uuid => $uuid }, 'Fred' ], 'check simple txn row return';
   ok $neo4p->commit, 'commit';
   is scalar($m->get_relationships), 2, 'now he has 2 relationships';  
   $_->remove for $n->get_relationships;
