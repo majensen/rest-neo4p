@@ -1,4 +1,6 @@
 Revision history for Perl module REST::Neo4p
+0.2221 2013-12-01
+    - pod fixes
 0.2220 2013-11-29
     - added as_simple methods to entities
     - modified REST::Neo4p::Query to return simplified row structures

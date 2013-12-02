@@ -11,7 +11,7 @@ use strict;
 use warnings;
 no warnings qw(once);
 BEGIN {
-  $REST::Neo4p::Query::VERSION = '0.2220';
+  $REST::Neo4p::Query::VERSION = '0.2221';
 }
 
 my $BUFSIZE = 4096;
@@ -443,7 +443,7 @@ on transactional queries will return an array of simple Perl
 structures (hashes and arrays) that correspond to the row as returned
 in JSON by the server, rather than as REST::Neo4p objects. This is
 regardless of the setting of the
-L<REST::Neo4p::Query/ResponseAsObjects|ResponseAsObjects> attribute.
+L<ResponseAsObjects|REST::Neo4p::Query/ResponseAsObjects> attribute.
 
 =head1 METHODS
 
