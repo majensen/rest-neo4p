@@ -1,4 +1,6 @@
 Revision history for Perl module REST::Neo4p
+0.2222 2013-12-03
+    - describe class methods _tx_results() and _tx_errors()
 0.2221 2013-12-01
     - pod fixes
 0.2220 2013-11-29

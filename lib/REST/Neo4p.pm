@@ -14,14 +14,13 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::VERSION = '0.2221';
+  $REST::Neo4p::VERSION = '0.2222';
 }
 
 our $CREATE_AUTO_ACCESSORS = 0;
 our @HANDLES;
 our $HANDLE = 0;
 my $json = JSON->new->allow_nonref(1);
-#our $AGENT;
 
 $HANDLES[0]->{_q_endpoint} = 'cypher';
 
@@ -64,10 +63,20 @@ sub _tx_errors {
   my $class = shift;
   return $HANDLES[$HANDLE]->{_tx_errors};
 }
+sub _tx_results {
+  my $class = shift;
+  return $HANDLES[$HANDLE]->{_tx_results};
+}
 
 sub _clear_transaction {
   my $class = shift;
-  delete $HANDLES[$HANDLE]->{_transaction}
+  delete $HANDLES[$HANDLE]->{_transaction};
+}
+
+sub _reset_transaction {
+  my $class = shift;
+  delete $HANDLES[$HANDLE]->{_tx_errors};
+  delete $HANDLES[$HANDLE]->{_tx_results};
 }
 
 sub _set_autocommit {
@@ -279,7 +288,7 @@ sub begin_work {
   }
   $HANDLES[$HANDLE]->{_old_endpoint} = $HANDLES[$HANDLE]->{_q_endpoint};
   $HANDLES[$HANDLE]->{_q_endpoint} = 'transaction';
-  delete  $HANDLES[$HANDLE]->{_tx_errors};
+  $neo4p->_reset_transaction;
   my $resp;
   eval {
     $resp =  $neo4p->agent->post_transaction([]);
@@ -321,7 +330,7 @@ sub commit {
     ref $e ? $e->rethrow : die $e;
   }
   $neo4p->_clear_transaction;
-  # got response, see if errors
+  $HANDLES[$HANDLE]->{_tx_results} = $resp->{results};  
   $HANDLES[$HANDLE]->{_tx_errors} = $resp->{errors};
   return !(scalar @{$resp->{errors}});
 }
@@ -348,6 +357,7 @@ sub rollback {
   elsif ($e = Exception::Class->caught()) {
     ref $e ? $e->rethrow : die $e;
   }
+  $neo4p->_reset_transaction;
   return $neo4p->_clear_transaction;
 }
 
@@ -602,10 +612,21 @@ Initiate, commit, or rollback L<queries|REST::Neo4p::Query> in transactions.
  }
  else {
    REST::Neo4p->commit;
+   $results = REST::Neo4p->_tx_results;
    unless (REST::Neo4p->_tx_errors) {
      print 'all queries successful';
    }
  }
+
+=item _tx_results(), _tx_errors()
+
+These fields contain decoded JSON responses from the server following
+a commit.  C<_tx_errors> is an arrayref of statement errors during
+commit. C<_tx_results> is an arrayref of columns-data hashes as
+described at
+L<Neo4j:Transactional HTTP endpoint|http://docs.neo4j.org/chunked/2.0.0-RC1/rest-api-transactional.html>.
+
+These fields are cleared by C<begin_work()> and C<rollback()>.
 
 =back
 
