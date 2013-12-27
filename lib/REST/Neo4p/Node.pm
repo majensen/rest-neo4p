@@ -8,7 +8,7 @@ use Carp qw(croak carp);
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Node::VERSION = '0.2200';
+  $REST::Neo4p::Node::VERSION = '0.2230';
 }
 
 # creation, deletion and property manipulation are delegated
@@ -276,10 +276,17 @@ Sets values of properties on nodes and relationships.
 
 =item get_properties()
 
- $props = $relationship->get_properties;
+ $props = $node->get_properties;
  print "'Sup, Al." if ($props->{name} eq 'Al');
 
 Get all the properties of a node or relationship as a hashref.
+
+=item remove_property()
+
+ $node->remove_property('name');
+ $node->remove_property(@property_names);
+
+Remove properties from node.
 
 =item relate_to()
 

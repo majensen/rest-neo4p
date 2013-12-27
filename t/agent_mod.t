@@ -38,7 +38,7 @@ SKIP : {
       REST::Neo4p->connect('http://www.zzyxx.foo:7474');
     };
     if ( my $e = REST::Neo4p::CommException->caught() ) {
-      like $e->message, qr/timeout/, 'timed out ok';
+      like $e->message, qr/timeout|Bad hostname/, 'timed out ok';
     }
     is $agent1, $agent2, 'same agent';
 

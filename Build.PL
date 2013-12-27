@@ -15,7 +15,8 @@ my $build =  Module::Build->new
 	'URI::Escape' => 3.3,
 	'LWP::UserAgent' => 6.04,
 	'Exception::Class' => 1.3,
-	'Tie::IxHash' => 0
+	'Tie::IxHash' => 0,
+	'Encode' => 2.40
        },
       configure_requires => {
 	'Module::Build' => 0
