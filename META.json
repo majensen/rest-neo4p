@@ -41,11 +41,11 @@
    "provides" : {
       "REST::Neo4p" : {
          "file" : "lib/REST/Neo4p.pm",
-         "version" : "0.2222"
+         "version" : "0.2230"
       },
       "REST::Neo4p::Agent" : {
          "file" : "lib/REST/Neo4p/Agent.pm",
-         "version" : "0.2200"
+         "version" : "0.2230"
       },
       "REST::Neo4p::Batch" : {
          "file" : "lib/REST/Neo4p/Batch.pm",
@@ -81,7 +81,7 @@
       },
       "REST::Neo4p::Entity" : {
          "file" : "lib/REST/Neo4p/Entity.pm",
-         "version" : "0.2220"
+         "version" : "0.2230"
       },
       "REST::Neo4p::Exceptions" : {
          "file" : "lib/REST/Neo4p/Exceptions.pm",
@@ -93,7 +93,7 @@
       },
       "REST::Neo4p::Node" : {
          "file" : "lib/REST/Neo4p/Node.pm",
-         "version" : "0.2200"
+         "version" : "0.2230"
       },
       "REST::Neo4p::Path" : {
          "file" : "lib/REST/Neo4p/Path.pm",
@@ -105,7 +105,7 @@
       },
       "REST::Neo4p::Relationship" : {
          "file" : "lib/REST/Neo4p/Relationship.pm",
-         "version" : "0.2200"
+         "version" : "0.2230"
       },
       "REST::Neo4p::Simple" : {
          "file" : "lib/REST/Neo4p/Entity.pm",
@@ -118,5 +118,5 @@
          "http://dev.perl.org/licenses/"
       ]
    },
-   "version" : "0.2222"
+   "version" : "0.2230"
 }

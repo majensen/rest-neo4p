@@ -11,12 +11,12 @@ use warnings;
 
 our $VERSION;
 BEGIN {
-  $REST::Neo4p::Agent::VERSION = '0.2200';
+  $REST::Neo4p::Agent::VERSION = '0.2230';
 }
 
 our $AUTOLOAD;
 our $JOB_CHUNK = 1024;
-our $JSON = JSON->new()->allow_nonref(1);
+our $JSON = JSON->new()->allow_nonref(1)->utf8;
 our $RQ_RETRIES = 3;
 our $RETRY_WAIT = 5;
 sub new {

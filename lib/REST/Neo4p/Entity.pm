@@ -10,7 +10,7 @@ use warnings;
 
 # base class for nodes, relationships, indexes...
 BEGIN {
-  $REST::Neo4p::Entity::VERSION = '0.2220';
+  $REST::Neo4p::Entity::VERSION = '0.2230';
 }
 
 our $ENTITY_TABLE = {};
@@ -263,6 +263,7 @@ sub remove_property {
   my $agent = REST::Neo4p->agent;
   REST::Neo4p::CommException->throw("Not connected\n") unless $agent;
   my $suffix = $self->_get_url_suffix('property');
+  $suffix =~ s|/[^/]*$||; # strip the '{key}' placeholder
   foreach (@props) {
     eval {
       $agent->delete_data($entity_type,$$self,$suffix,$_);
