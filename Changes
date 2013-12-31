@@ -1,4 +1,9 @@
 Revision history for Perl module REST::Neo4p
+0.2231 2013-12-31
+    - added env vars to build script to allow non-interactive builds
+      (thanks Gavin)
+    - fixed guard code that prevented legitimate 0 value in index 
+      creation (thanks Kevin)
 0.2230 2013-12-26
     - fixed UTF-8 encoding issue (thanks Andrii)
     - documented remove_property method in Node and Relationship

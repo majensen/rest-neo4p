@@ -9,7 +9,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Index::VERSION = '0.2200';
+  $REST::Neo4p::Index::VERSION = '0.2231';
 }
 
 my $unsafe = "^A-Za-z0-9\-\._\ ~";
@@ -208,7 +208,8 @@ sub create_unique_node {
   unless ($self->type eq 'node') {
     REST::Neo4p::LocalException->throw("Can't create node on a non-node index\n");
   }
-  unless ($key && $value && $properties && (ref $properties eq 'HASH')) {
+  unless (defined $key && defined $value && 
+	    defined $properties && (ref $properties eq 'HASH')) {
     REST::Neo4p::LocalException->throw("Args required: key => value, hashref_of_properties\n");
   }
   unless ( $on_found =~ /^get|fail$/ ) {
@@ -249,9 +250,11 @@ sub create_unique_relationship {
   unless ($self->type eq 'relationship') {
     REST::Neo4p::LocalException->throw("Can't create relationship on a non-relationship index\n");
   }
-  unless ($key && $value && $from_node && $to_node && $rel_type &&
-	    (ref $from_node eq 'REST::Neo4p::Node') &&
-	      (ref $to_node eq 'REST::Neo4p::Node') ) {
+  unless (defined $key && defined $value && 
+	    defined $from_node && defined $to_node && 
+	      defined $rel_type &&
+		(ref $from_node eq 'REST::Neo4p::Node') &&
+		  (ref $to_node eq 'REST::Neo4p::Node') ) {
     REST::Neo4p::LocalException->throw("Args required: key => value, from_node => to_node, rel_type\n");
   }
   unless (!defined $properties || (ref $properties eq 'HASH')) {
