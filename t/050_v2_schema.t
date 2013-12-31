@@ -1,16 +1,17 @@
 #$Id#
-use Test::More qw/no_plan/;
+use Test::More tests => 29;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
 use REST::Neo4p;
 use REST::Neo4p::Schema;
+use REST::Neo4p::Query;
 use strict;
 use warnings;
 no warnings qw(once);
 
-my $test_label = '79ed3b3a_515d_4f2b_89dc_9d1f0868b50c';
-my @cleanup;
+my $test_label =  'L79ed3b3a_515d_4f2b_89dc_9d1f0868b50c';
+my ($n1, $n2);
 my $build;
 my ($user,$pass);
 
@@ -20,7 +21,7 @@ eval {
     $pass = $build->notes('pass');
 };
 my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
-my $num_live_tests = 1;
+my $num_live_tests = 29;
 
 my $not_connected;
 eval {
@@ -43,16 +44,49 @@ SKIP : {
     is $schema->_handle, REST::Neo4p->handle, 'handle correct';
     isa_ok $schema->_agent, 'REST::Neo4p::Agent';
     ok $schema->create_index($test_label,'name'), 'create name index on test label';
-    is_deeply ['name'],[$schema->get_indexes($test_label)], 'name index listed';
+    is_deeply [$schema->get_indexes($test_label)],['name'], 'name index listed';
     ok $schema->create_index($test_label => 'number'), 'create number index on test label';
-    is_deeply [qw/name number/], [$schema->get_indexes($test_label)], 'both indexes now listed';
+    is_deeply [sort $schema->get_indexes($test_label)], [sort qw/name number/], 'both indexes now listed';
     ok $schema->create_index($test_label, 'street', 'city'), 'create multiple indexes in single call';
-    is_deeply [qw/name number street city/], [$schema->get_indexes($test_label)], 'both indexes now listed';
+    is_deeply [sort $schema->get_indexes($test_label)], [sort qw/name number street city/], 'both indexes now listed';
     for (qw/name number street city/) {
-      ok $schema->drop_index($test_label, $_), "drop index on '$_'";
+      eval {
+	ok $schema->drop_index($test_label, $_), "drop index on '$_'";
+      };
+      if (my $e = REST::Neo4p::Exception->caught) {
+	diag $e->message || $e->neo4j_message;
+      }
+      elsif ($e = Exception::Class->caught) {
+	die $e;
+      }
     }
     ok !$schema->get_indexes($test_label), 'indexes gone';
+    ok $schema->create_unique_constraint($test_label, 'name'), 'create unique name constraint';
+    ok $schema->create_unique_constraint($test_label, 'street', 'city'), 'create multiple contraints';
+    is_deeply [sort $schema->get_constraints($test_label)], [sort qw/name street city/], 'all constraints now listed';
+    ok $n1 = REST::Neo4p::Node->new(), 'create node';
+    ok $n1->set_labels($test_label), 'set label on node';
+    ok $n1->set_property({name => 'Fred'}), 'set name property on node';
+    ok $n2 =  REST::Neo4p::Node->new(), 'create second node';
+    ok $n2->set_labels($test_label), 'set label on second node';
+    ok $n2->set_property({name => 'Wilma'}), 'set name property on node';
+# The following should work; instead it hangs the server-
+#    throws_ok { $n2->set_property({ name => "Fred" }) } qr/conflict/i, 'setting non-unique name property throws';
+    my $q = REST::Neo4p::Query->new("MATCH (n:$test_label) WHERE n.name = 'Wilma' SET n.name = 'Fred'");
+    $q->execute;
+    like $q->errstr, qr/already exists.*and property/, 'cypher query to set Wilma to Fred (non-unique) fails ok';
+    1;
+    is $n2->get_property('name'), 'Wilma', 'name property not modified on second node';
+    ok $schema->drop_unique_constraint($test_label, qw/name street city/), 'drop all constraints';
+    ok $n2->set_property({name=>"Fred"}), 'constraint lifted, can set label';
+    is $n2->get_property('name'), 'Fred', 'property now set';
     1;
   }
 
 }
+
+END {
+  $n1 && $n1->remove;
+  $n2 && $n2->remove;
+}
+

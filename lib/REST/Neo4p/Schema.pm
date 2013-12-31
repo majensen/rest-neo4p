@@ -2,6 +2,7 @@
 use v5.10;
 package REST::Neo4p::Schema;
 use REST::Neo4p::Exceptions;
+use Carp qw/carp/;
 use strict;
 use warnings;
 
@@ -70,31 +71,43 @@ sub get_indexes {
 
 sub drop_index {
   my $self = shift;
-  my ($label,$name) = @_;
-  REST::Neo4p::LocalException->throw("Arg 1 must be a label and arg 2 a property name\n") unless (defined $label && defined $name);
-  eval {
-    $self->_agent->delete_data(qw/schema index/, $label, $name);
-  };
-  if (my $e = REST::Neo4p::NotFoundException->caught) {
-    return;
-  }
-  elsif ($e = Exception::Class->caught()) {
-    ref $e ? $e->rethrow : die $e;
+  my ($label,@names) = @_;
+  REST::Neo4p::LocalException->throw("Arg 1 must be a label and arg 2 a property name\n") unless (defined $label && @names);
+  foreach (@names) {
+    eval {
+      $self->_agent->delete_data(qw/schema index/, $label, $_);
+    };
+    if (my $e = REST::Neo4p::NotFoundException->caught) {
+      1; #ignore if not found
+    }
+    elsif ($e = Exception::Class->caught()) {
+      ref $e ? $e->rethrow : die $e;
+    }
   }
   return 1;
+}
+
+sub create_unique_constraint {
+  my $self = shift;
+  my ($label, @props) = @_;
+  return $self->create_constraint($label, \@props, 'uniqueness');
 }
 
 sub create_constraint {
   my $self = shift;
   my ($label, $property, $c_type) = @_;
   $c_type ||= 'uniqueness';
-  REST::Neo4p::LocalException->throw("Arg 1 must be a label and arg 2..n a property name\n") unless (defined $label && @props);
+  REST::Neo4p::LocalException->throw("Arg 1 must be a label and arg 2 a property name or arrayref\n") unless (defined $label && defined $property);
+  my @props = ref $property ? @$property : ($property);
   foreach (@props) {
     my $content = { property_keys => [$_] };
     eval {
-      $self->_agent->post_data([qw/schema constraint/,$c_type,$label], $content);
+      $self->_agent->post_data([qw/schema constraint/,$label,$c_type], $content);
     };
     if (my $e = REST::Neo4p::ConflictException->caught) {
+      if ($e->neo4j_message =~ qr/constraint cannot be created/) {
+	carp $e->neo4j_message;
+      }
       1; # ignore, already present
     }
     elsif ($e = Exception::Class->caught()) {
@@ -106,14 +119,49 @@ sub create_constraint {
 
 sub get_constraints {
   my $self = shift;
-  my ($label, $property, $c_type) = @_;
+  my ($label, $c_type) = @_;
   $c_type ||= 'uniqueness';
+  REST::Neo4p::LocalException->throw("Arg 1 must be a label\n") unless defined $label;
+  eval {
+    $self->_agent->get_data(qw/schema constraint/, $label, $c_type);
+  };
+  if (my $e = REST::Neo4p::NotFoundException->caught) {
+    return;
+  }
+  elsif ($e = Exception::Class->caught()) {
+    ref $e ? $e->rethrow : die $e;
+  }
+  my @ret;
+  foreach (@{$self->_agent->decoded_content}) {
+    push @ret, $_->{property_keys}[0];
+  }
+  return @ret;
+}
+
+sub drop_unique_constraint {
+  my $self = shift;
+  my ($label, @props) = @_;
+  return $self->drop_constraint($label, \@props, 'uniqueness');
 }
 
 sub drop_constraint {
   my $self = shift;
-  my ($label,$property,$c_type) = @_;
+  my ($label, $property, $c_type) = @_;
   $c_type ||= 'uniqueness';
+  REST::Neo4p::LocalException->throw("Arg 1 must be a label and arg 2 a property name or arrayref\n") unless (defined $label && defined $property);
+  my @props = ref $property ? @$property : ($property);
+  foreach (@props) {
+    eval {
+      $self->_agent->delete_data(qw/schema constraint/,$label,$c_type,$_);
+    };
+    if (my $e = REST::Neo4p::NotFoundException->caught) {
+      1; # ignore, not initially present
+    }
+    elsif ($e = Exception::Class->caught()) {
+      ref $e ? $e->rethrow : die $e;
+    }
+  }
+  return 1;
 }
 
 =head1 NAME
@@ -121,8 +169,23 @@ sub drop_constraint {
 REST::Neo4p::Schema - Label-based indexes and constraints
 
 =head1 SYNOPSIS
+ 
+ REST::Neo4p->connect($server);
+ $schema = REST::Neo4p::Schema->new;
+ $schema->create_index('Person','name');
+ 
 
 =head1 DESCRIPTION
+
+L<http://neo4j.org|Neo4j> v2.0 provides a way to schematize the graph
+on the basis of node labels, associated indexes, and property
+uniqueness constraints. C<REST::Neo4p::Schema> allows access to this
+system via the Neo4j REST API. Use a C<Schema> object to create, list,
+and drop indexes and constraints.
+
+Note that as of v2.0.0, the Neo4j server can only create indexes on
+single properties within a label, and only uniqueness constraints on
+single properties.
 
 =head1 METHODS
 
@@ -130,15 +193,48 @@ REST::Neo4p::Schema - Label-based indexes and constraints
 
 =item create_index()
 
+ $schema->create_index('Label', 'property');
+ $schema->create_index('Label', @properties);
+
+The second example is convenience for creating multiple single indexes
+on each of a list of properties. It does not create a compound index
+on the set of properties. Returns TRUE.
+
 =item get_indexes()
+
+ @properties = $schema->get_indexes('Label');
+
+Get a list properties on which an index exists for a given label.
 
 =item drop_index()
 
-=item create_constraint()
+ $schema->drop_index('Label','property');
+ $schema->drop_index('Label', @properties);
+
+Remove indexes on given property or properties for a given label.
+
+=item create_unique_constraint()
+
+ $schema->create_unique_constraint('Label', 'property');
+ $schema->create_unique_constraint('Label', @properties);
+
+Create uniqueness constraints on a given property or properties for a
+given label.
 
 =item get_constraints()
 
-=item drop_constraint()
+ @properties = $schema->get_constraints('Label');
+
+Get a list of properties for which (uniqueness) constraints exist for
+a given label.
+
+=item drop_unique_constraint()
+
+ $schema->drop_unique_constraint('Label', 'property');
+ $schema->drop_unique_constraint('Label', @properties);
+
+Remove uniqueness constraints on given property or properties for a
+given label.
 
 =back
 
