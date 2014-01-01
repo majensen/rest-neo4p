@@ -1,4 +1,3 @@
-#-*-perl-*-
 #$Id$
 use Test::More qw(no_plan);
 use Test::Exception;
@@ -54,6 +53,11 @@ SKIP : {
     lives_ok { $q->execute } 'no throw with RaiseError cleared';
     is $q->err, 400, 'but err code captured in err()';
     isa_ok $q->{_error},'REST::Neo4p::QuerySyntaxException';
+    diag 'rt91682';
+    $q->{_error} = REST::Neo4p::LocalException->new();
+    lives_ok { $q->err } 'LocalException->code works';
+    $q->{_error} = REST::Neo4p::TxException->new();
+    lives_ok { $q->err } 'TxException->code works';
     ok my $i = REST::Neo4p::Index->new('node','zzyxx'), 'create index';
     throws_ok { $i->get_property('foo') } 'REST::Neo4p::NotSuppException', 'not supported ok';
     throws_ok { $i->set_property(foo => 'bar') } 'REST::Neo4p::NotSuppException', 'not supported ok (2)';

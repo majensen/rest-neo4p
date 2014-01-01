@@ -1,12 +1,13 @@
 #$Id$
 package REST::Neo4p::Exceptions;
 BEGIN {
-  $REST::Neo4p::Exceptions::VERSION = '0.2200';
+  $REST::Neo4p::Exceptions::VERSION = '0.2232';
 }
 use Exception::Class (
   'REST::Neo4p::Exception',
   'REST::Neo4p::LocalException' => {
     isa => 'REST::Neo4p::Exception',
+    fields => [ 'code' ],
     description => 'REST::Neo4p code-local error'
    },
   'REST::Neo4p::Neo4jException' => {
@@ -82,7 +83,7 @@ use Exception::Class (
     fields => ['args']
    },
   'REST::Neo4p::ConstraintSpecException' => {
-    ias => 'REST::Neo4p::LocalException',
+    isa => 'REST::Neo4p::LocalException',
     description => 'Constraint specification syntax incorrect',
   }
    );

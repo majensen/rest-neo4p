@@ -1,4 +1,7 @@
 Revision history for Perl module REST::Neo4p
+0.2232 2013-12-31
+    - added 'code' to auto fields of REST::Neo4p::LocalException
+      (thanks Andrii)
 0.2231 2013-12-31
     - added env vars to build script to allow non-interactive builds
       (see Build.PL - thanks Gavin)
