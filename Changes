@@ -1,4 +1,6 @@
 Revision history for Perl module REST::Neo4p
+0.2233 2014-01-02
+    - adjusted breaking test
 0.2232 2013-12-31
     - added 'code' to auto fields of REST::Neo4p::LocalException
       (thanks Andrii)

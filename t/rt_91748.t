@@ -18,7 +18,7 @@ eval {
     $pass = $build->notes('pass');
 };
 my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
-my $num_live_tests = 1;
+my $num_live_tests = 2;
 
 my $not_connected;
 eval {
@@ -37,6 +37,6 @@ SKIP : {
 }
 
 END {
-  $n->remove;
-  $index->remove;
+  $n && $n->remove;
+  $index && $index->remove;
 }
