@@ -1,6 +1,5 @@
 #$Id$
-use Test::More qw/no_plan/;
-use Test::Exception;
+use Test::More tests => 6;
 use Module::Build;
 use lib '../lib';
 use REST::Neo4p;
@@ -11,8 +10,7 @@ no warnings qw(once);
 
 my $build;
 my ($user,$pass);
-my $test_index = '828e55b1_d050_41e9_8d9e_68c25f72275c';
-my ($dealerNode, $index);
+my $dealerNode;
 eval {
     $build = Module::Build->current;
     $user = $build->notes('user');
@@ -54,5 +52,4 @@ SKIP : {
 
 END {
   $dealerNode && $dealerNode->remove;
-  $index && $index->remove;
 }
