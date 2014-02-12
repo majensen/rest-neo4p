@@ -15,8 +15,8 @@ BEGIN {
 sub new {
   REST::Neo4p::CommException->throw("Not connected\n") unless
       REST::Neo4p->connected;
-  unless (REST::Neo4p->_check_version(2,0,0)) {
-    REST::Neo4p::VersionMismatchException->throw("Schema indexes and constraints are not available in Neo4j server version < 2.0.0\n");
+  unless (REST::Neo4p->_check_version(2,0,1)) {
+    REST::Neo4p::VersionMismatchException->throw("REST endpoint indexes and constraints are buggy in Neo4j server version < 2.0.1\n");
   }
   my $class = shift;
   my $self = {
@@ -185,7 +185,10 @@ and drop indexes and constraints.
 
 Note that as of v2.0.0, the Neo4j server can only create indexes on
 single properties within a label, and only uniqueness constraints on
-single properties.
+single properties. v2.0.1 is required for this module, which is
+dependent on a bug fix in that release.
+
+
 
 =head1 METHODS
 
@@ -250,7 +253,7 @@ L<REST::Neo4p>, L<REST::Neo4p::Index>, L<REST::Neo4p::Query>
 
 =head1 LICENSE
 
-Copyright (c) 2013 Mark A. Jensen. This program is free software; you
+Copyright (c) 2012-2014 Mark A. Jensen. This program is free software; you
 can redistribute it and/or modify it under the same terms as Perl
 itself.
 

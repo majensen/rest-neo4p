@@ -10,7 +10,7 @@ use warnings;
 
 # base class for nodes, relationships, indexes...
 BEGIN {
-  $REST::Neo4p::Entity::VERSION = '0.2230';
+  $REST::Neo4p::Entity::VERSION = '0.2240';
 }
 
 our $ENTITY_TABLE = {};
@@ -427,7 +427,7 @@ use strict;
 use warnings;
 no warnings qw/once/;
 BEGIN {
-  $REST::Neo4p::Simple::VERSION = '0.2220';
+  $REST::Neo4p::Simple::VERSION = '0.2240';
 }
 
 sub new { $_[1] }
@@ -469,7 +469,7 @@ L<REST::Neo4p::Index>.
 
 =head1 LICENSE
 
-Copyright (c) 2012-2013 Mark A. Jensen. This program is free software; you
+Copyright (c) 2012-2014 Mark A. Jensen. This program is free software; you
 can redistribute it and/or modify it under the same terms as Perl
 itself.
 
