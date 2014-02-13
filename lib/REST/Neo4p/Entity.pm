@@ -137,7 +137,7 @@ sub remove {
   elsif ($e = Exception::Class->caught()) {
     ref $e ? $e->rethrow : die $e;
   }
-  $self->DESTROY;
+  $self->_deregister;
   return 1;
 }
 # set_property( { prop1 => $val1, prop2 => $val2, ... } )
@@ -394,17 +394,21 @@ sub _handle {
   return;
 }
 
+sub _deregister {
+  my $self = shift;
+  my $entity_type = ref $self;
+  $entity_type =~ s/.*::(.*)/\L$1\E/;
+  foreach (sort keys %{$ENTITY_TABLE->{$entity_type}{$$self}}) {
+    delete $ENTITY_TABLE->{$entity_type}{$$self}{$_};
+  }
+  delete $ENTITY_TABLE->{$entity_type}{$$self};
+}
+
 sub DESTROY {
   my $self = shift;
   my $entity_type = ref $self;
   $entity_type =~ s/.*::(.*)/\L$1\E/;
-  foreach (keys %{$ENTITY_TABLE->{$entity_type}{$$self}}) {
-    delete $ENTITY_TABLE->{$entity_type}{$$self}{$_};
-  }
-
-  delete $ENTITY_TABLE->{$entity_type}{$$self};
-
-  return;
+  $self->_deregister if $ENTITY_TABLE->{$entity_type}{$$self}{entity_type};
 }
 
 sub _create_accessors {

@@ -5,7 +5,6 @@ use Module::Build;
 use lib '../lib';
 use REST::Neo4p;
 use REST::Neo4p::Schema;
-use REST::Neo4p::Query;
 use strict;
 use warnings;
 no warnings qw(once);
@@ -36,9 +35,9 @@ if ( my $e = REST::Neo4p::CommException->caught() ) {
 SKIP : {
   skip 'no local connection to neo4j', $num_live_tests if $not_connected;
   my $version = REST::Neo4p->neo4j_version;
-  my $VERSION_OK = REST::Neo4p->_check_version(2,0);
+  my $VERSION_OK = REST::Neo4p->_check_version(2,0,1);
   SKIP : {
-    skip "Server version $version < 2.0", $num_live_tests unless $VERSION_OK;
+    skip "Server version $version < 2.0.1", $num_live_tests unless $VERSION_OK;
     ok my $schema = REST::Neo4p::Schema->new, 'new Schema object';
     isa_ok $schema, 'REST::Neo4p::Schema';
     is $schema->_handle, REST::Neo4p->handle, 'handle correct';
@@ -71,10 +70,10 @@ SKIP : {
     ok $n2->set_labels($test_label), 'set label on second node';
     ok $n2->set_property({name => 'Wilma'}), 'set name property on node';
 # The following should work; instead it hangs the server-
-#    throws_ok { $n2->set_property({ name => "Fred" }) } qr/conflict/i, 'setting non-unique name property throws';
-    my $q = REST::Neo4p::Query->new("MATCH (n:$test_label) WHERE n.name = 'Wilma' SET n.name = 'Fred'");
-    $q->execute;
-    like $q->errstr, qr/already exists.*and property/, 'cypher query to set Wilma to Fred (non-unique) fails ok';
+    throws_ok { $n2->set_property({ name => "Fred" }) } 'REST::Neo4p::ConflictException', 'setting non-unique name property throws conflict exception';
+#    my $q = REST::Neo4p::Query->new("MATCH (n:$test_label) WHERE n.name = 'Wilma' SET n.name = 'Fred'");
+#    $q->execute;
+#    like $q->errstr, qr/already exists.*and property/, 'cypher query to set Wilma to Fred (non-unique) fails ok';
     1;
     is $n2->get_property('name'), 'Wilma', 'name property not modified on second node';
     ok $schema->drop_unique_constraint($test_label, qw/name street city/), 'drop all constraints';

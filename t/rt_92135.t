@@ -45,7 +45,6 @@ SKIP : {
     isa_ok $dealerNode, 'REST::Neo4p::Node';
     ok grep (/Dealer/,$dealerNode->get_labels), 'node label is set after batch run';
     is $dealerNode->get_property('source'), $source, 'source property is set after batch';
-
   }
   }
 
