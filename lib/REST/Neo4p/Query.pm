@@ -11,7 +11,7 @@ use strict;
 use warnings;
 no warnings qw(once);
 BEGIN {
-  $REST::Neo4p::Query::VERSION = '0.2221';
+  $REST::Neo4p::Query::VERSION = '0.2240';
 }
 
 my $BUFSIZE = 4096;
@@ -544,7 +544,7 @@ L<REST::Neo4p>, L<REST::Neo4p::Path>, L<REST::Neo4p::Agent>.
 
 =head1 LICENSE
 
-Copyright (c) 2012-2013 Mark A. Jensen. This program is free software; you
+Copyright (c) 2012-2014 Mark A. Jensen. This program is free software; you
 can redistribute it and/or modify it under the same terms as Perl
 itself.
 

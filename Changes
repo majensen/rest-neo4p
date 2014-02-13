@@ -1,4 +1,9 @@
 Revision history for Perl module REST::Neo4p
+0.2240 2014-02-13
+    - added Schema.pm which provides access to new Neo4j index creation 
+      and uniqueness constraints (v2.0.1 server and greater) (thanks Andrii)
+    - fixed an object destruction bug that was causing segfaults in certain
+      circumstances (thanks Alexey)
 0.2233 2014-01-02
     - adjusted breaking test
 0.2232 2013-12-31

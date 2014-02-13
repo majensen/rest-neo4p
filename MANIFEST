@@ -15,6 +15,7 @@ lib/REST/Neo4p/Node.pm
 lib/REST/Neo4p/Path.pm
 lib/REST/Neo4p/Query.pm
 lib/REST/Neo4p/Relationship.pm
+lib/REST/Neo4p/Schema.pm
 LICENSE
 Makefile.PL
 MANIFEST
@@ -41,6 +42,7 @@ t/023_constrain_synopsis.t
 t/030_idx_escape.t
 t/040_v2_labels.t
 t/041_v2_txns.t
+t/050_v2_schema.t
 t/098_pod.t
 t/099_error.t
 t/agent_mod.t
@@ -53,4 +55,5 @@ t/rt_81128.t
 t/rt_90072.t
 t/rt_91640.t
 t/rt_91748.t
+t/rt_92135.t
 Todo

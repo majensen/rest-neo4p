@@ -1,7 +1,7 @@
 #$Id$
 package REST::Neo4p::Exceptions;
 BEGIN {
-  $REST::Neo4p::Exceptions::VERSION = '0.2232';
+  $REST::Neo4p::Exceptions::VERSION = '0.2240';
 }
 use Exception::Class (
   'REST::Neo4p::Exception',
@@ -190,7 +190,7 @@ L<REST::Neo4p>, L<Exception::Class>
 
 =head1 LICENSE
 
-Copyright (c) 2012-2013 Mark A. Jensen. This program is free software; you
+Copyright (c) 2012-2014 Mark A. Jensen. This program is free software; you
 can redistribute it and/or modify it under the same terms as Perl
 itself.
 
