@@ -11,7 +11,7 @@ use strict;
 use warnings;
 no warnings qw(once);
 BEGIN {
-  $REST::Neo4p::Query::VERSION = '0.2240';
+  $REST::Neo4p::Query::VERSION = '0.2241';
 }
 
 #my $BUFSIZE = 4096;
@@ -444,8 +444,45 @@ L<C<execute()>|/execute()> captures the Neo4j query response in a temp
 file. L<C<fetch()>|/fetch()> iterates over the JSON in the response using
 L<JSON::Streaming::Reader|JSON::Streaming::Reader>. So go ahead and
 make those 100 meg queries. The tempfile is unlinked after the
-iterator runs out of rows, or upon object destruction, which ever
+iterator runs out of rows, or upon object destruction, whichever
 comes first.
+
+=head2 Parameters
+
+C<REST::Neo4p::Query> understands Cypher L<query
+parameters|http://docs.neo4j.org/chunked/stable/cypher-parameters.html>. These
+are represented in Cypher as simple tokens surrounded by curly braces.
+
+ MATCH (n) WHERE n.first_name = {name} RETURN n
+
+Here, C<{name}> is the named parameter. A single query object can be executed
+multiple times with different parameter values:
+
+ my $q = REST::Neo4p::Query->new(
+           'MATCH (n) WHERE n.first_name = {name} RETURN n'
+         );
+ foreach (@names) {
+   $q->execute($_);
+   while ($row = $q->fetch) {
+    ...process
+   }
+ }
+
+This is very highly recommended over creating multiple query objects like so:
+
+ foreach (@names) {
+   my $q = REST::Neo4p::Query->new(
+             "MATCH (n) WHERE n.first_name = '$_' RETURN n"
+           );
+   $q->execute;
+   ...
+ }
+
+As with any database engine, a large amount of overhead is saved by
+planning a parameterized query once. In addition, the REST side of the
+Neo4j server currently (Feb 2014) will balk at handling 1000s of
+individual queries in a row. Parameterizing queries gets around this
+issue.
 
 =head2 Paths
 
@@ -550,6 +587,12 @@ returned as simple perl structures.  See
 L<REST::Neo4p::Node/as_simple()>,
 L<REST::Neo4p::Relationship/as_simple()>,
 L<REST::Neo4p::Path/as_simple()> for details.
+
+=item Statement
+
+ $stmt = $q->{Statement};
+
+Get the Cypher statement associated with the query object.
 
 =back
 

@@ -10,7 +10,7 @@ use base qw(Exporter);
 no warnings qw(once);
 
 BEGIN {
-  $REST::Neo4p::Batch::VERSION = '0.2240';
+  $REST::Neo4p::Batch::VERSION = '0.2241';
 }
 
 our @EXPORT = qw(batch);

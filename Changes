@@ -1,4 +1,7 @@
 Revision history for Perl module REST::Neo4p
+0.2241 2014-02-17
+    - added exception handling for empty json query response bodies
+    - fixed json row parser for transaction json return format
 0.2240 2014-02-13
     - added Schema.pm which provides access to new Neo4j index creation 
       and uniqueness constraints (v2.0.1 server and greater) (thanks Andrii)

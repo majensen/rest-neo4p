@@ -5,7 +5,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Constraint::Property::VERSION = '0.2240';
+  $REST::Neo4p::Constraint::Property::VERSION = '0.2241';
 }
 
 sub new_from_constraint_hash {
