@@ -251,14 +251,17 @@ sub __do_request {
       }
       $content = $JSON->encode($content) if $content;
       $resp  = $self->$rq($url, 'Content-Type' => 'application/json', Content=> $content, %$addl_headers);
+#      $DB::single=1;
+      1;
     }
   }
   # exception handling
   # rt80471...
-  eval {
-    $self->{_decoded_content} = $JSON->decode($resp->content);
-  };
-  undef $self->{_decoded_content} if $@;
+  if (length $resp->content) {
+    if ($resp->header('Content_Type') =~ /json/) {
+      $self->{_decoded_content} = $JSON->decode($resp->content);
+    }
+  }
   unless ($resp->is_success) {
     if ( $self->{_decoded_content} ) {
       my %error_fields = (

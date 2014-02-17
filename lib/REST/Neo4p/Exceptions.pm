@@ -77,6 +77,10 @@ use Exception::Class (
     isa => 'REST::Neo4p::LocalException',
     description => 'Problem parsing the response to a cypher query (prob. a bug)'
    },
+  'REST::Neo4p::EmptyQueryResponseException' => {
+    isa => 'REST::Neo4p::LocalException',
+    description => 'The server response body was empty; connection problem?'
+   },
   'REST::Neo4p::ConstraintException' => {
     isa => 'REST::Neo4p::LocalException',
     description => 'Application-level database constraint violated',

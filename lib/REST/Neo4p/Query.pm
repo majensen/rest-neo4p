@@ -14,7 +14,7 @@ BEGIN {
   $REST::Neo4p::Query::VERSION = '0.2240';
 }
 
-my $BUFSIZE = 4096;
+#my $BUFSIZE = 4096;
 
 sub new {
   my $class = shift;
@@ -90,19 +90,22 @@ sub execute {
 	   },
 	  {':content_file' => $self->tmpf->filename}
 	 );
-	my $jsonr = JSON::Streaming::Reader->for_stream($self->tmpf);
-	my $errors;
-	while (my $ret = $jsonr->get_token) {
-	  if ($$ret[0] eq 'start_property' && $$ret[1] eq 'errors') {
-	    $errors = $jsonr->slurp;
-	    last;
+	if (-s $self->tmpf->filename) {
+	  my $jsonr = JSON::Streaming::Reader->for_stream($self->tmpf);
+	  my $errors;
+	  while (my $ret = $jsonr->get_token) {
+	    if ($$ret[0] eq 'start_property' && $$ret[1] eq 'errors') {
+	      $errors = $jsonr->slurp;
+	      last;
+	    }
 	  }
-	}
-	$self->tmpf->seek(0,0);
-	if (my @e = @$errors) {
-	  REST::Neo4p::TxQueryException->throw( 
-	    error => "Query within transaction returned errors (see error_list)\n",
-	    error_list => \@e, code => '304');
+	  $self->tmpf->seek(0,0);
+	  $DB::single=1 if !defined $errors;
+	  if (my @e = @$errors) {
+	    REST::Neo4p::TxQueryException->throw( 
+	      error => "Query within transaction returned errors (see error_list)\n",
+	      error_list => \@e, code => '304');
+	  }
 	}
       }
       default {
@@ -233,12 +236,14 @@ sub _response_entity {
 
 sub _prepare_response {
   my $self = shift;
-
+  if (-z $self->tmpf->filename) {
+    REST::Neo4p::EmptyQueryResponseException->throw("Server response body is zero length\n");
+  }
   # set up iterator
   my $columns_elt;
   my $buf;
   my $jsonr = JSON::Streaming::Reader->for_stream($self->tmpf);
-
+  my $endpt = REST::Neo4p->q_endpoint;
   # get column names
   while ( my $ret = $jsonr->get_token ) {
     if ($$ret[0] eq 'start_property' && $$ret[1] eq 'columns') {
@@ -255,32 +260,48 @@ sub _prepare_response {
   my $in_data;
   while ( my $ret = $jsonr->get_token ) {
     my ($token_type, @data) = @$ret;
-    for ($token_type) {
-      /start_property/ && do {
+    given ($token_type) {
+      when ('start_property') {
         if ($data[0] && $data[0] eq 'data') {
 	  $in_data = 1;
 	}
 	else {
 	  REST::Neo4p::LocalException->throw("Can't parse query response (data token not found)\n");
 	}
-	last;
-      };
-      /start_array/ && do {
+      }
+      when ('start_array') {
 	if ($in_data) {
 	  # count rows
+	  # cypher endpoint: data is an array of arrays (each a row)
+	  # transactional endpoint: data is an array of hashes (each a row)
 	  while ( $ret = $jsonr->get_token ) {
 	    ($token_type, @data) = @$ret;
-	    if ($token_type eq 'start_array') {
-	      $row_count++;
-	      $jsonr->skip;
-	    }
-	    elsif ( $token_type eq 'end_array' ) { # end of the data array
-	      # we're done
-	      1;
-	    }
-	    else {
-#	      REST::Neo4p::LocalException->throw("Can't parse query response (array representing data row expected and not found)\n");
-	      1;
+	    given ($token_type) {
+	      when ('start_array') {
+		if ($endpt =~ /cypher/) {
+		  $row_count++;
+		  $jsonr->skip;
+		}
+		1;
+	      }
+	      when ('start_object') {
+		my ($tok,$key) = @{$jsonr->get_token};
+#		$DB::single=1;
+		unless ($key eq 'row') {
+		  REST::Neo4p::LocalException->throw("Can't parse query response (expecting row property in object)");
+		}
+		  $row_count++;
+		  $jsonr->skip;
+	      }
+	      when ('end_array' ) { # end of the data array
+		# we're done
+		$in_data = 0;
+		last;
+	      }
+	      default {
+		#	      REST::Neo4p::LocalException->throw("Can't parse query response (array representing data row expected and not found)\n");
+		1;
+	      }
 	    }
 	  }
 	}
@@ -288,10 +309,10 @@ sub _prepare_response {
 	  REST::Neo4p::LocalException->throw("Can't parse query response (start of data array not found)\n");
 	}
 	last;
-      };
-      do {
+      }
+      default {
 	die "Why am I here?";
-      };
+      }
     }
   }
 
