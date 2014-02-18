@@ -1,7 +1,7 @@
 #$Id$
 use v5.10;
 package REST::Neo4p::Agent;
-use base LWP::UserAgent;
+#use base LWP::UserAgent;
 use REST::Neo4p::Exceptions;
 use File::Temp qw(tempfile);
 use JSON;
@@ -9,6 +9,7 @@ use Carp qw(croak carp);
 use strict;
 use warnings;
 
+our @ISA;
 our $VERSION;
 BEGIN {
   $REST::Neo4p::Agent::VERSION = '0.2242';
@@ -21,6 +22,11 @@ our $RQ_RETRIES = 3;
 our $RETRY_WAIT = 5;
 sub new {
   my $class = shift;
+  my %args = @_;
+  my $mod = delete $args{agent_module} // 'LWP';
+  $mod = join('::','REST::Neo4p::Agent',$mod);
+  push @ISA, $mod;
+  eval "require $mod;1" or REST::Neo4p::LocalException->throw("Module $mod is not available\n");
   my $self = $class->SUPER::new(@_);
   $self->agent("Neo4p/$VERSION");
   $self->default_header( 'Accept' => 'application/json' );
