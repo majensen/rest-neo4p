@@ -5,12 +5,13 @@ use JSON::Streaming::Reader;
 require REST::Neo4p;
 
 use base qw(Exporter);
-#use strict;
-#use warnings;
+use strict;
+use warnings;
 no warnings qw(once);
 
 BEGIN {
-  $REST::Neo4p::Batch::VERSION = '0.2241';
+  $REST::Neo4p::Batch::VERSION = '0.2242';
+  $REST::Neo4p::Batch::VERSION = '0.2242';
 }
 
 our @EXPORT = qw(batch);
