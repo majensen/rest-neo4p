@@ -80,7 +80,7 @@ sub _do {
 	delete $args[$_];
 	last;
       }
-      my $tx = $self->build_tx($rq => $url => { @{$self->{_default_headers}}, @args } => 
+      $tx = $self->build_tx($rq => $url => { @{$self->{_default_headers}}, @args } => 
 				 json => $content);
     }
     default {

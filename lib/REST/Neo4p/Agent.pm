@@ -255,7 +255,7 @@ sub __do_request {
 	      $rq, $content, $addl_headers);
 	goto &_add_to_batch_queue;
       }
-      $content = $JSON->encode($content) if $content;
+      $content = $JSON->encode($content) if $content && $self->isa('LWP::UserAgent');
       $resp  = $self->$rq($url, 'Content-Type' => 'application/json', Content=> $content, %$addl_headers);
 #      $DB::single=1;
       1;

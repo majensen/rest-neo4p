@@ -20,7 +20,8 @@ BEGIN {
 our $CREATE_AUTO_ACCESSORS = 0;
 our @HANDLES;
 our $HANDLE = 0;
-our $AGENT_MODULE = 'LWP';
+#our $AGENT_MODULE = 'LWP';
+our $AGENT_MODULE = 'Mojo::UserAgent';
 my $json = JSON->new->allow_nonref(1);
 
 $HANDLES[0]->{_q_endpoint} = 'cypher';
