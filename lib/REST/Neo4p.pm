@@ -14,12 +14,13 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::VERSION = '0.2242';
+  $REST::Neo4p::VERSION = '0.2250';
 }
 
 our $CREATE_AUTO_ACCESSORS = 0;
 our @HANDLES;
 our $HANDLE = 0;
+our $AGENT_MODULE = 'LWP';
 my $json = JSON->new->allow_nonref(1);
 
 $HANDLES[0]->{_q_endpoint} = 'cypher';
@@ -34,7 +35,7 @@ sub set_handle {
 sub create_and_set_handle {
   my $class = shift;
   $HANDLE = @HANDLES;
-  $HANDLES[$HANDLE]->{_agent} = REST::Neo4p::Agent->new;
+  $HANDLES[$HANDLE]->{_agent} = REST::Neo4p::Agent->new(agent_module => $AGENT_MODULE);
   $HANDLES[$HANDLE]->{_q_endpoint} = 'cypher';
   return $HANDLE;
 }
@@ -106,7 +107,7 @@ sub agent {
   my $neo4p = shift;
   unless (defined $HANDLES[$HANDLE]->{_agent}) {
     eval {
-      $HANDLES[$HANDLE]->{_agent} = REST::Neo4p::Agent->new();
+      $HANDLES[$HANDLE]->{_agent} = REST::Neo4p::Agent->new(agent_module => $AGENT_MODULE);
     };
     if (my $e = REST::Neo4p::Exception->caught()) {
       # TODO : handle different classes

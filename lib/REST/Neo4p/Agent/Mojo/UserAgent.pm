@@ -66,7 +66,9 @@ sub _do {
   my $self = shift;
   my ($rq, $url, @args) = @_;
   my ($tx, $content);
-  $self->max_redirects || $self->max_redirects(2);
+  # neo4j wants to redirect .../data to .../data/
+  # and mojo doesn't want to redirect at all...
+  $self->max_redirects || $self->max_redirects(2); 
   given ($rq) {
     when (/get|delete/i) {
       $tx = $self->build_tx($rq => $url => { @{$self->{_default_headers}} });
