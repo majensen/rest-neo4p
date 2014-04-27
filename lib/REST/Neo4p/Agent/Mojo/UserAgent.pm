@@ -27,7 +27,9 @@ sub agent {
 sub credentials {
   my $self = shift;
   my ($srv, $realm, $user, $pwd) = @_;
-  REST::Neo4p::NotImplException->throw("basic auth (credentials) not implemented yet\n");
+  $self->{_user} = $user;
+  $self->{_pwd} = $pwd;
+  return;
 }
 
 sub default_header {
@@ -65,21 +67,35 @@ sub post { shift->_do('POST',@_) }
 sub _do {
   my $self = shift;
   my ($rq, $url, @args) = @_;
-  my ($tx, $content);
+  my ($tx, $content, $content_file);
   # neo4j wants to redirect .../data to .../data/
   # and mojo doesn't want to redirect at all...
   $self->max_redirects || $self->max_redirects(2); 
+  if (length $self->{_user} && length $self->{_pwd}) {
+    $url =~ s|(https?://)|${1}$$self{_user}:$$self{_pwd}@|;
+  }
   given ($rq) {
     when (/get|delete/i) {
       $tx = $self->build_tx($rq => $url => { @{$self->{_default_headers}} });
     }
     when (/post|put/i) {
-      for (0..$#args) {
-	next unless $args[$_] eq 'Content';
-	$content = delete $args[$_+1];
-	delete $args[$_];
-	last;
+      my @rm;
+      for my $i (0..$#args) {
+	given ($args[$i]) {
+	  when ('Content') {
+	    $content = $args[$i+1];
+	    push @rm, $i, $i+1;
+	  }
+	  when (':content_file') {
+	    $content_file = $args[$i+1];
+	    push @rm, $i, $i+1;
+	  }
+	  default {
+	    1;
+	  }
+	}
       }
+      delete @args[@rm];
       $tx = $self->build_tx($rq => $url => { @{$self->{_default_headers}}, @args } => 
 				 json => $content);
     }
@@ -88,6 +104,10 @@ sub _do {
     }
   }
   $tx = $self->start($tx);
+  if (defined $content_file) {
+    $tx->res->content->asset->move_to($content_file);
+    $tx->res->body('');
+  }
   http_response($tx);
 }
 
