@@ -57,6 +57,8 @@ sub http_response {
   return $resp;
 }
 
+sub timeout { shift->connect_timeout(@_) }
+
 sub get { shift->_do('GET',@_) }
 sub delete { shift->_do('DELETE',@_) }
 sub put { shift->_do('PUT',@_) }
@@ -95,7 +97,9 @@ sub _do {
 	}
       }
       delete @args[@rm];
-      $tx = $self->build_tx($rq => $url => { @{$self->{_default_headers}}, @args } => json => $content);
+      my @bricks = ($rq => $url => { @{$self->{_default_headers}}, @args});
+      push @bricks, json => $content if defined $content;
+      $tx = $self->build_tx(@bricks);
       if (defined $content_file) {
 	open my $fh, ">", $content_file;
 	$tx->res->content->unsubscribe('read')->on(

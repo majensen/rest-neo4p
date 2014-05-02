@@ -12,6 +12,7 @@ use warnings;
 no warnings qw(once);
 my @cleanup;
 
+#$SIG{__DIE__} = sub { print $_[0] };
 my $build;
 my ($user,$pass);
 

@@ -23,7 +23,7 @@ our $RETRY_WAIT = 5;
 sub new {
   my $class = shift;
   my %args = @_;
-  my $mod = delete $args{agent_module} // 'LWP';
+  my $mod = delete $args{agent_module} // 'LWP::UserAgent';
   $mod = join('::','REST::Neo4p::Agent',$mod);
   push @ISA, $mod;
   eval "require $mod;1" or REST::Neo4p::LocalException->throw("Module $mod is not available\n");
@@ -258,7 +258,6 @@ sub __do_request {
       }
       $content = $JSON->encode($content) if $content && $self->isa('LWP::UserAgent');
       $resp  = $self->$rq($url, 'Content-Type' => 'application/json', Content=> $content, %$addl_headers);
-#      $DB::single=1;
       1;
     }
   }
@@ -295,7 +294,7 @@ sub __do_request {
     }
     else { # couldn't parse the content as JSON...
       
-      my $xclass = ($resp->code == 404) ? 'REST::Neo4p::NotFoundException' : 'REST::Neo4p::CommException';
+      my $xclass = ($resp->code && ($resp->code == 404)) ? 'REST::Neo4p::NotFoundException' : 'REST::Neo4p::CommException';
       $xclass->throw( 
 	code => $resp->code,
 	message => $resp->message
