@@ -52,7 +52,9 @@ sub batch (&@) {
 
 sub _scan_for_errors {
   my $tmpfh = shift;
+
   $tmpfh->seek(0,0);
+#  open $tmpfh;
   my $jsonr = JSON::Streaming::Reader->for_stream($tmpfh);
   my $in_response;
   my @errors;
@@ -92,6 +94,7 @@ sub _scan_for_errors {
 sub _process_objs {
   my $tmpfh = shift;
   $tmpfh->seek(0,0);
+#  open $tmpfh;
   my $jsonr = JSON::Streaming::Reader->for_stream($tmpfh);
   my $in_response;
   PARSE : 

@@ -55,6 +55,7 @@ sub batch_length{
 }
 
 sub connect {
+
   my $self = shift;
   my ($server) = @_;
   $self->{__server} = $server if defined $server;

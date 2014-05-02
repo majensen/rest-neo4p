@@ -35,8 +35,6 @@ sub credentials {
 sub default_header {
   my $self = shift;
   my ($hdr, $value) = @_;
-  $hdr = lc $hdr;
-  $hdr =~ tr/-/_/;
   push @{$self->{_default_headers}}, $hdr, $value;
   return;
 }
@@ -74,6 +72,7 @@ sub _do {
   if (length $self->{_user} && length $self->{_pwd}) {
     $url =~ s|(https?://)|${1}$$self{_user}:$$self{_pwd}@|;
   }
+
   given ($rq) {
     when (/get|delete/i) {
       $tx = $self->build_tx($rq => $url => { @{$self->{_default_headers}} });
@@ -96,18 +95,23 @@ sub _do {
 	}
       }
       delete @args[@rm];
-      $tx = $self->build_tx($rq => $url => { @{$self->{_default_headers}}, @args } => 
-				 json => $content);
+      $tx = $self->build_tx($rq => $url => { @{$self->{_default_headers}}, @args } => json => $content);
+      if (defined $content_file) {
+	open my $fh, ">", $content_file;
+	$tx->res->content->unsubscribe('read')->on(
+	  read => sub { $fh->syswrite($_[1]) }
+	 );
+      }
     }
     default {
       REST::Neo4p::NotImplException->throw("Method $rq not implemented in ".__PACKAGE__."\n");
     }
   }
   $tx = $self->start($tx);
-  if (defined $content_file) {
-    $tx->res->content->asset->move_to($content_file);
-    $tx->res->body('');
-  }
+  # if (defined $content_file) {
+  #   $tx->res->content->asset->move_to($content_file);
+  #   $tx->res->body('');
+  # }
   http_response($tx);
 }
 

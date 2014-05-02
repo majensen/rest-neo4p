@@ -7,6 +7,7 @@ use lib '../lib';
 use strict;
 use warnings;
 no warnings qw(once);
+$SIG{__DIE__} = sub { print $_[0] };
 
 my $build;
 my ($user,$pass);
@@ -30,8 +31,6 @@ if ( my $e = REST::Neo4p::CommException->caught() ) {
   diag "Test server unavailable : tests skipped";
 }
 
-
-
 SKIP : {
   skip 'no local connection to neo4j', $num_live_tests if $not_connected;
   ok my $agent = REST::Neo4p->agent, 'got agent';
@@ -44,7 +43,9 @@ SKIP : {
   is $agent->batch_length, 3, 'batch length';
   is @{$agent->{__batch_queue}}, 3, 'actual queue array length';
   my $response_content_handle;
-  lives_ok { $response_content_handle = $agent->execute_batch } ;
+  lives_ok { 
+      $response_content_handle = $agent->execute_batch 
+  } ;
   ok -e $response_content_handle->filename, 'got responses in tmpfile';
   is $agent->batch_length, 0, 'queue length reset to 0';
   ok !defined $agent->{__batch_queue}, 'queue reset';
