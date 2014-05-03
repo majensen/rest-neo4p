@@ -48,6 +48,12 @@ sub protocols_allowed {
 
 sub http_response {
   my ($tx) = @_;
+  # kludge : if 400 error, pull the tmp file content back into response
+  # body 
+  if ($tx->res->is_status_class(400) && $tx->res->content->asset->is_file ) {
+    $DB::single=1;
+    $tx->res->body($tx->res->content->asset->slurp);
+  }
   my $resp = HTTP::Response->new(
     $tx->res->code,
     $tx->res->message // $tx->res->default_message,
@@ -112,10 +118,10 @@ sub _do {
     }
   }
   $tx = $self->start($tx);
-  # if (defined $content_file) {
-  #   $tx->res->content->asset->move_to($content_file);
-  #   $tx->res->body('');
-  # }
+  if ($content_file) {
+    $tx->res->content->asset(Mojo::Asset::File->new);
+    $tx->res->content->asset->path($content_file);
+  }
   http_response($tx);
 }
 
