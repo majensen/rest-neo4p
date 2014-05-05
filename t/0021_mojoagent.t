@@ -24,6 +24,7 @@ isa_ok($ua, 'REST::Neo4p::Agent');
 
 is $TEST_SERVER, $ua->server($TEST_SERVER), 'server spec';
 
+
 my $not_connected;
 eval {
     $ua->credentials($TEST_SERVER, '',$user,$pass) if (defined $user && length $user > 0);

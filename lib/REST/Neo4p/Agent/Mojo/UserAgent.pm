@@ -39,7 +39,7 @@ sub default_header {
   return;
 }
 
-sub add_header { $self->{_default_headers}->{$_[0]} = $_[1] }
+sub add_header { shift->{_default_headers}->{$_[0]} = $_[1] }
 sub remove_header { delete shift->{_default_headers}->{$_[0]} }
 
 sub protocols_allowed {
@@ -80,7 +80,7 @@ sub _do {
   # neo4j wants to redirect .../data to .../data/
   # and mojo doesn't want to redirect at all...
   $self->max_redirects || $self->max_redirects(2); 
-  if (length $self->{_user} && length $self->{_pwd}) {
+  if (length($self->{_user}) && length($self->{_pwd})) {
     $url =~ s|(https?://)|${1}$$self{_user}:$$self{_pwd}@|;
   }
 
@@ -110,9 +110,9 @@ sub _do {
       push @bricks, json => $content if defined $content;
       $tx = $self->build_tx(@bricks);
       if (defined $content_file) {
-	open my $fh, ">", $content_file;
+	open my $cfh, ">", $content_file;
 	$tx->res->content->unsubscribe('read')->on(
-	  read => sub { $fh->syswrite($_[1]) }
+	  read => sub { $cfh->syswrite($_[1]) }
 	 );
       }
     }

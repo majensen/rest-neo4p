@@ -19,7 +19,7 @@ my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474
 use_ok('REST::Neo4p::Agent');
 
 
-ok my $ua = REST::Neo4p::Agent->new();
+ok my $ua = REST::Neo4p::Agent->new(agent_module=>'LWP::UserAgent');
 isa_ok($ua, 'LWP::UserAgent');
 isa_ok($ua, 'REST::Neo4p::Agent');
 

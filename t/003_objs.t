@@ -6,6 +6,8 @@ use lib '../lib';
 use strict;
 use warnings;
 
+$SIG{__DIE__} = sub { print $_[0] };
+
 no warnings qw(once);
 my $build;
 my ($user,$pass);
@@ -22,6 +24,7 @@ my $num_live_tests = 34;
 use_ok('REST::Neo4p');
 
 my $not_connected;
+
 eval {
   REST::Neo4p->connect($TEST_SERVER,$user,$pass);
 };

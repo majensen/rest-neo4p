@@ -244,7 +244,7 @@ sub __do_request {
 	      $rq, $content, $addl_headers);
 	goto &_add_to_batch_queue;
       }
-      $content = $JSON->encode($content) if $content && $self->isa('LWP::UserAgent');
+      $content = $JSON->encode($content) if $content && !$self->isa('Mojo::UserAgent');
       $resp  = $self->$rq($url, 'Content-Type' => 'application/json', Content=> $content, %$addl_headers);
       1;
     }
