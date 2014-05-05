@@ -1,3 +1,4 @@
+#$Id$
 use v5.10;
 package REST::Neo4p::Agent::Mojo::UserAgent;
 use base Mojo::UserAgent;
@@ -11,7 +12,6 @@ BEGIN {
   $REST::Neo4p::Agent::Mojo::UserAgent::VERSION = 0.2250;
 }
 
-our $AUTOLOAD;
 our @default_headers;
 our @protocols_allowed;
 
@@ -38,6 +38,9 @@ sub default_header {
   push @{$self->{_default_headers}}, $hdr, $value;
   return;
 }
+
+sub add_header { $self->{_default_headers}->{$_[0]} = $_[1] }
+sub remove_header { delete shift->{_default_headers}->{$_[0]} }
 
 sub protocols_allowed {
   my $self = shift;

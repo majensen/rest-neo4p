@@ -23,7 +23,8 @@ our $RETRY_WAIT = 5;
 sub new {
   my $class = shift;
   my %args = @_;
-  my $mod = delete $args{agent_module} // 'LWP::UserAgent';
+  my $mod = delete $args{agent_module};
+  die "No user agent module specified" unless $mod;
   $mod = join('::','REST::Neo4p::Agent',$mod);
   push @ISA, $mod;
   eval "require $mod;1" or REST::Neo4p::LocalException->throw("Module $mod is not available\n");
@@ -155,21 +156,8 @@ sub location { shift->{_location} }
 
 sub available_actions { keys %{shift->{_actions}} }
 
-sub no_stream {
-  my $self = shift;
-  my $default_headers = $self->default_headers;
-  $default_headers->remove_header('X-Stream');
-  $self->default_headers($default_headers);
-}
-
-sub stream {
-  my $self = shift;
-  my $default_headers = $self->default_headers;
-  unless ($default_headers->header('X-Stream')) {
-    $default_headers->header('X-Stream' => 'true');
-  }
-  $self->default_headers($default_headers);
-}
+sub no_stream { shift->remove_header('X-Stream') }
+sub stream { shift->add_header('X-Stream' => 'true') }
 
 # autoload getters for discovered neo4j rest urls
 
@@ -277,14 +265,16 @@ sub __do_request {
 	neo4j_stacktrace =>  $self->{_decoded_content}->{stacktrace}
        );
       my $xclass;
-      if ($resp->code == 404) {
-	$xclass = 'REST::Neo4p::NotFoundException';
-      }
-      elsif ($resp->code == 409) {
-	$xclass = 'REST::Neo4p::ConflictException';
-      }
-      else {
-	$xclass = 'REST::Neo4p::Neo4jException';
+      given ($resp->code) {
+	when (404) {
+	  $xclass = 'REST::Neo4p::NotFoundException';
+	}
+	when (409) {
+	  $xclass = 'REST::Neo4p::ConflictException';
+	}
+	default {
+	  $xclass = 'REST::Neo4p::Neo4jException';
+	}
       }
       if ( $error_fields{neo4j_exception} && 
 	     ($error_fields{neo4j_exception} =~ /^Syntax/ )) {
@@ -293,8 +283,8 @@ sub __do_request {
       $xclass->throw(%error_fields);
     }
     else { # couldn't parse the content as JSON...
-      
-      my $xclass = ($resp->code && ($resp->code == 404)) ? 'REST::Neo4p::NotFoundException' : 'REST::Neo4p::CommException';
+      my $xclass = ($resp->code && ($resp->code == 404)) ? 
+	'REST::Neo4p::NotFoundException' : 'REST::Neo4p::CommException';
       $xclass->throw( 
 	code => $resp->code,
 	message => $resp->message
