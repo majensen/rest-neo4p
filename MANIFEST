@@ -1,7 +1,17 @@
 Build.PL
 Changes
+LICENSE
+MANIFEST
+META.json
+META.yml
+Makefile.PL
+README
+Todo
 lib/REST/Neo4p.pm
 lib/REST/Neo4p/Agent.pm
+lib/REST/Neo4p/Agent/HTTP/Thin.pm
+lib/REST/Neo4p/Agent/LWP/UserAgent.pm
+lib/REST/Neo4p/Agent/Mojo/UserAgent.pm
 lib/REST/Neo4p/Batch.pm
 lib/REST/Neo4p/Constrain.pm
 lib/REST/Neo4p/Constraint.pm
@@ -16,12 +26,6 @@ lib/REST/Neo4p/Path.pm
 lib/REST/Neo4p/Query.pm
 lib/REST/Neo4p/Relationship.pm
 lib/REST/Neo4p/Schema.pm
-LICENSE
-Makefile.PL
-MANIFEST
-META.json
-META.yml
-README
 t/001_load.t
 t/002_agent.t
 t/003_objs.t
@@ -45,9 +49,9 @@ t/041_v2_txns.t
 t/050_v2_schema.t
 t/098_pod.t
 t/099_error.t
+t/Neo4p.pm
 t/agent_mod.t
 t/lib/Neo4p/Test.pm
-t/Neo4p.pm
 t/rt_80150.t
 t/rt_80196.t
 t/rt_80471.t
@@ -56,4 +60,3 @@ t/rt_90072.t
 t/rt_91640.t
 t/rt_91748.t
 t/rt_92135.t
-Todo
