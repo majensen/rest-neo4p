@@ -13,6 +13,7 @@ use_ok('REST::Neo4p');
 my $build;
 my ($user,$pass);
 
+$SIG{__DIE__} = sub { print $_[0] };
 eval {
   $build = Module::Build->current;
   $user = $build->notes('user');

@@ -10,6 +10,7 @@ no warnings qw(once);
 my @cleanup;
 use_ok('REST::Neo4p');
 
+$SIG{__DIE__} = sub { if (ref $_[0]) { $_[0]->rethrow } else { print $_[0] }};
 my $build;
 my ($user,$pass);
 

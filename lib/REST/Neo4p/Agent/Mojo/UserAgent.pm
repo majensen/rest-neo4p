@@ -83,7 +83,6 @@ sub _do {
   if (length($self->{_user}) && length($self->{_pwd})) {
     $url =~ s|(https?://)|${1}$$self{_user}:$$self{_pwd}@|;
   }
-
   given ($rq) {
     when (/get|delete/i) {
       $tx = $self->build_tx($rq => $url => { @{$self->{_default_headers}} });
