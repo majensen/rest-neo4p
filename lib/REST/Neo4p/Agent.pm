@@ -25,18 +25,17 @@ sub new {
   my $mod = delete $args{agent_module};
   die "No user agent module specified" unless $mod;
   $mod = join('::','REST::Neo4p::Agent',$mod);
-  push @ISA, $mod;
   eval "require $mod;1" or REST::Neo4p::LocalException->throw("Module $mod is not available\n");
-  my $self = $class->SUPER::new(@_);
+  my $self = $mod->new(@_);
   $self->agent("Neo4p/$VERSION");
   $self->default_header( 'Accept' => 'application/json' );
   $self->default_header( 'Content-Type' => 'application/json' );
   $self->default_header( 'X-Stream' => 'true' );
   $self->protocols_allowed( ['http','https'] );
-  bless $self, $class;
+  return $self;
 }
 
-sub server {
+sub server_url {
   my $self = shift;
   $self->{__server} = shift if @_;
   return $self->{__server};
@@ -59,10 +58,10 @@ sub connect {
   my $self = shift;
   my ($server) = @_;
   $self->{__server} = $server if defined $server;
-  unless ($self->server) {
+  unless ($self->server_url) {
     REST::Neo4p::Exception->throw("Server not set\n");
    }
-  my $resp = $self->get($self->server);
+  my $resp = $self->get($self->server_url);
   unless ($resp->is_success) {
     REST::Neo4p::CommException->throw( code => $resp->code,
 				       message => $resp->message );
@@ -303,7 +302,7 @@ REST::Neo4p::Agent - LWP client interacting with Neo4j
 =head1 SYNOPSIS
 
  $agent = REST::Neo4p::Agent->new();
- $agent->server('http://127.0.0.1:7474');
+ $agent->server_url('http://127.0.0.1:7474');
  unless ($agent->connect) {
   print STDERR "Didn't find the server\n";
  }
@@ -382,9 +381,9 @@ Returns a new agent. The C<agent_module> parameter may be set to
 to select the underlying user agent class. Additional arguments are
 passed to the user agent constructor.
 
-=item server()
+=item server_url()
 
- $agent->server("http://127.0.0.1:7474");
+ $agent->server_url("http://127.0.0.1:7474");
 
 Sets the server address and port.
 

@@ -1,7 +1,7 @@
 #$Id$
 use v5.10;
 package REST::Neo4p::Agent::Mojo::UserAgent;
-use base Mojo::UserAgent;
+use base qw/Mojo::UserAgent REST::Neo4p::Agent/;
 use REST::Neo4p::Exceptions;
 use Carp qw/carp/;
 use HTTP::Response;

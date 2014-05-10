@@ -6,9 +6,9 @@ use lib '../lib';
 use REST::Neo4p::Exceptions;
 use strict;
 use warnings;
-$SIG{__DIE__} = sub { print $_[0] };
-#LWP::UserAgent
+
 my @agent_modules = qw/
+LWP::UserAgent
 Mojo::UserAgent
 HTTP::Thin
 /;
@@ -25,7 +25,6 @@ my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474
 
 use_ok('REST::Neo4p::Agent');
 
-
 foreach my $mod (@agent_modules) {
     my $ua;
     my $mod_available = 1;
@@ -39,11 +38,11 @@ foreach my $mod (@agent_modules) {
 	ref $e ? $e->rethrow : die $e;
     }
     SKIP : {
-	skip "Module $mod not available, skipping...", 6 unless $mod_available;
+	skip "Module $mod not available, skipping...", 14 unless $mod_available;
 	isa_ok($ua, $mod);
 	isa_ok($ua, 'REST::Neo4p::Agent');
 	
-	is $TEST_SERVER, $ua->server($TEST_SERVER), 'server spec';
+	is $TEST_SERVER, $ua->server_url($TEST_SERVER), 'server spec';
 
 	my $not_connected;
 	eval {
@@ -56,15 +55,13 @@ foreach my $mod (@agent_modules) {
 	}
 	
 	SKIP : {
-	    skip 'no local connection to neo4j',3 if $not_connected;
+	    skip 'no local connection to neo4j',11 if $not_connected;
 	    is $ua->node, join('/',$TEST_SERVER, qw(db data node)), 
 	    'node url looks good';
 	    my ($version) = $ua->neo4j_version =~ /(^[0-9]+\.[0-9]+)/;
 	    cmp_ok $version, '>=', 1.8, 'Neo4j version >= 1.8 as required';
 	    like $ua->relationship_types, qr/^http.*types/, 
 	    'relationship types url';
-	    
-	    $DB::single=1;
 	    ok $ua->post_node( [],{hyrax => 'rock badger' } ), 'create sample node';
 	    isa_ok $ua->raw_response, 'HTTP::Response';
 	    my $s = $ua->decoded_content->{self};

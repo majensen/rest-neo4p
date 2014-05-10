@@ -1,6 +1,6 @@
 #$Id$
 package REST::Neo4p::Agent::LWP::UserAgent;
-use base LWP::UserAgent;
+use base qw/LWP::UserAgent REST::Neo4p::Agent/;
 use strict;
 use warnings;
 BEGIN {

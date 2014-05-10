@@ -1,7 +1,7 @@
 #$Id$
 use v5.10;
 package REST::Neo4p::Agent::HTTP::Thin;
-use base HTTP::Thin;
+use base qw/HTTP::Thin REST::Neo4p::Agent/;
 use URI::Escape;
 use REST::Neo4p::Exceptions;
 use strict;
