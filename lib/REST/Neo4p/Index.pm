@@ -386,7 +386,7 @@ B<CAUTION>: This method removes the index from the database and destroys the obj
 In the first form, an exact match is sought. In the second (i.e., when
 a single string argument is passed), the argument is interpreted as a
 query string and passed to the index as such. The Neo4j default is
-L<Lucene|http://lucene.apache.org/core/old_versioned_docs/versions/3_5_0/queryparsersyntax.html>.
+L<Lucene|http://lucene.apache.org/core/3_5_0/queryparsersyntax.html>.
 
 C<find_entries()> is not supported in batch mode.
 

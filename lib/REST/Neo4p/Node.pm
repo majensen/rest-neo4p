@@ -366,9 +366,7 @@ L<REST::Neo4p>, L<REST::Neo4p::Relationship>, L<REST::Neo4p::Index>.
 
     Mark A. Jensen
     CPAN ID: MAJENSEN
-    TCGA DCC
-    mark -dot- jensen -at- nih -dot- gov
-    http://tcga-data.nci.nih.gov
+    majensen -at- cpan -dot- org
 
 =head1 LICENSE
 

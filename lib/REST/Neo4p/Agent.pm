@@ -312,17 +312,17 @@ See examples under L</METHODS> below.
 =head1 DESCRIPTION
 
 The agent's job is to encapsulate and connect to the REST service URLs
-of a running neo4j server. It also stores the discovered URLs for
-various actions.  and provides those URLs as getters from the agent
+of a running Neo4j server. It also stores the discovered URLs for
+various actions and provides those URLs as getters from the agent
 object. The getter names are the keys in the JSON objects returned by
 the server. See
-L<http://docs.neo4j.org/chunked/milestone/rest-api.html> for more
+L<the Neo4j docs|http://docs.neo4j.org/chunked/stable/rest-api.html> for more
 details.
 
 API and HTTP errors are distinguished and thrown by
 L<Exception::Class> subclasses. See L<REST::Neo4p::Exceptions>.
 
-A REST::Neo4p::Agent instance is created as a subclass of your choice 
+A REST::Neo4p::Agent instance is created as a subclass of a choice
 of HTTP user agents:
 
 =over
@@ -348,19 +348,23 @@ sec. These can be adjusted by setting the package variables
 to the desired values.
 
 According to the Neo4j recommendation, the agent requests streamed
-responses by default (i.e.,
+responses by default; i.e.,
 
- X-Stream:true
+ X-Stream: true
 
-is a default header. This can be removed by calling
+is a default header for requests. The server responds to requests with
+chunked content, which is handled correctly by any of the underlying
+user agents.
+
+Streaming can be stopped by calling
 
  $agent->no_stream
 
-and added back with 
+and started with
 
  $agent->stream
 
-For batch API experimental features, see L</Batch Mode>.
+For batch API features, see L</Batch Mode>.
 
 =head1 METHODS
 

@@ -177,7 +177,7 @@ REST::Neo4p::Schema - Label-based indexes and constraints
 
 =head1 DESCRIPTION
 
-L<http://neo4j.org|Neo4j> v2.0 provides a way to schematize the graph
+L<Neo4j|http://neo4j.org> v2.0 provides a way to schematize the graph
 on the basis of node labels, associated indexes, and property
 uniqueness constraints. C<REST::Neo4p::Schema> allows access to this
 system via the Neo4j REST API. Use a C<Schema> object to create, list,

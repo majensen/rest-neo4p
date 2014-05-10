@@ -18,6 +18,10 @@ my $build =  Module::Build->new
 	'Tie::IxHash' => 0,
 	perl => 5.010
        },
+      recommends => {
+	'Mojo::UserAgent' => 0,
+	'HTTP::Thin' => 0
+       },
       configure_requires => {
 	'Module::Build' => 0
        },
@@ -28,7 +32,9 @@ my $build =  Module::Build->new
 	'List::MoreUtils' => 0
        },
       build_recommends => {
-	 'Test::Pod' => 1.0
+	 'Test::Pod' => 1.0,
+	 'Mojo::UserAgent' => 0,
+	 'HTTP::Thin' => 0
 	},
       perl => 5.010
     );
@@ -36,4 +42,5 @@ my $build =  Module::Build->new
 $build->notes( test_server => $ENV{REST_NEO4P_TEST_SERVER} // $build->prompt("Server for live tests:", "http://127.0.0.1:7474"));
 $build->notes( user => $ENV{REST_NEO4P_TEST_USER} // $build->prompt("Username:", "") );
 $build->notes( pass => $ENV{REST_NEO4P_TEST_PASS} // $build->prompt("Pass:", "") );
+$build->notes( agent_module => $ENV{REST_NEO4P_AGENT_MODULE} // $build->prompt("Backend agent module for live tests","LWP::UserAgent");
 $build->create_build_script;

@@ -492,11 +492,11 @@ Relationships.
 
 =head2 Transactions
 
-See L<REST::Neo4p/Transaction Support (Neo4p Server Version 2 only)>.
+See L<REST::Neo4p/Transaction Support (Neo4j Server Version 2 only)>.
 
 NOTE: Rows returned from the Neo4j transaction endpoint are not
 completely specified database objects (see
-L<http://docs.neo4j.org/chunked/2.0.0-RC1/rest-api-transactional.html>). Fetches
+L<Neo4j docs|http://docs.neo4j.org/chunked/stable/rest-api-transactional.html>). Fetches
 on transactional queries will return an array of simple Perl
 structures (hashes and arrays) that correspond to the row as returned
 in JSON by the server, rather than as REST::Neo4p objects. This is
@@ -598,7 +598,7 @@ Get the Cypher statement associated with the query object.
 
 =head1 SEE ALSO
 
-L<REST::Neo4p>, L<REST::Neo4p::Path>, L<REST::Neo4p::Agent>.
+L<DBD::Neo4p>, L<REST::Neo4p>, L<REST::Neo4p::Path>, L<REST::Neo4p::Agent>.
 
 =head1 AUTHOR
 
