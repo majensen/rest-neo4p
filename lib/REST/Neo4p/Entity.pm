@@ -432,7 +432,6 @@ use warnings;
 no warnings qw/once/;
 BEGIN {
   $REST::Neo4p::Simple::VERSION = '0.2250';
-  $REST::Neo4p::Simple::VERSION = '0.2250';
 }
 
 sub new { $_[1] }

@@ -11,7 +11,6 @@ no warnings qw(once);
 
 BEGIN {
   $REST::Neo4p::Batch::VERSION = '0.2250';
-  $REST::Neo4p::Batch::VERSION = '0.2250';
 }
 
 our @EXPORT = qw(batch);
