@@ -2,6 +2,8 @@ Revision history for Perl module REST::Neo4p
 0.2250 2014-05-10
     - refactored Agent to support multiple backend user agent pkgs
       (thanks DBI guys)
+    - added raw_response() to Agent to return the last HTTP::Response
+    - corrected decoded_response() to decoded_content() in Agent pod
 
 0.2241 2014-02-17
     - added exception handling for empty json query response bodies

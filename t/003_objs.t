@@ -6,7 +6,7 @@ use lib '../lib';
 use strict;
 use warnings;
 
-$SIG{__DIE__} = sub { print $_[0] };
+#$SIG{__DIE__} = sub { print $_[0] };
 
 no warnings qw(once);
 my $build;

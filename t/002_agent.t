@@ -1,10 +1,17 @@
 #-*-perl-*-
-#$Id$
-use Test::More tests => 8;
+#$Id: 002_agent.t 416 2014-05-05 04:13:30Z maj $
+use Test::More;
 use Module::Build;
 use lib '../lib';
+use REST::Neo4p::Exceptions;
 use strict;
 use warnings;
+$SIG{__DIE__} = sub { print $_[0] };
+#LWP::UserAgent
+my @agent_modules = qw/
+Mojo::UserAgent
+HTTP::Thin
+/;
 
 my $build;
 my ($user,$pass);
@@ -19,26 +26,65 @@ my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474
 use_ok('REST::Neo4p::Agent');
 
 
-ok my $ua = REST::Neo4p::Agent->new(agent_module=>'LWP::UserAgent');
-isa_ok($ua, 'LWP::UserAgent');
-isa_ok($ua, 'REST::Neo4p::Agent');
+foreach my $mod (@agent_modules) {
+    my $ua;
+    my $mod_available = 1;
+    eval {
+	$ua = REST::Neo4p::Agent->new(agent_module=>$mod);
+    };
+    if ( my $e = REST::Neo4p::LocalException->caught ) {
+	$mod_available = 0 if ($e->message =~ /is not available/);
+    }
+    elsif ($e = Exception::Class->caught) {
+	ref $e ? $e->rethrow : die $e;
+    }
+    SKIP : {
+	skip "Module $mod not available, skipping...", 6 unless $mod_available;
+	isa_ok($ua, $mod);
+	isa_ok($ua, 'REST::Neo4p::Agent');
+	
+	is $TEST_SERVER, $ua->server($TEST_SERVER), 'server spec';
 
-is $TEST_SERVER, $ua->server($TEST_SERVER), 'server spec';
+	my $not_connected;
+	eval {
+	    $ua->credentials($TEST_SERVER, '',$user,$pass) if defined $user;
+	    $ua->connect;
+	};
+	if ( my $e = REST::Neo4p::CommException->caught() ) {
+	    $not_connected = 1;
+	    diag "Test server unavailable : tests skipped";
+	}
+	
+	SKIP : {
+	    skip 'no local connection to neo4j',3 if $not_connected;
+	    is $ua->node, join('/',$TEST_SERVER, qw(db data node)), 
+	    'node url looks good';
+	    my ($version) = $ua->neo4j_version =~ /(^[0-9]+\.[0-9]+)/;
+	    cmp_ok $version, '>=', 1.8, 'Neo4j version >= 1.8 as required';
+	    like $ua->relationship_types, qr/^http.*types/, 
+	    'relationship types url';
+	    
+	    $DB::single=1;
+	    ok $ua->post_node( [],{hyrax => 'rock badger' } ), 'create sample node';
+	    isa_ok $ua->raw_response, 'HTTP::Response';
+	    my $s = $ua->decoded_content->{self};
+	    (my $id) = $s =~ /([0-9]+)$/;
+	    like $ua->raw_response->header('Content-Type'), qr/stream=true/,
+	      'server acknowledges streaming (expected default)';
+	    $ua->get_node($id);
+	    like $ua->raw_response->header('Content-Type'), qr/stream=true/,
+	      'server acknowledges streaming (expected default)';
+	    ok $ua->no_stream, 'set no streaming';
+	    $ua->get_node($id);
+	    unlike $ua->raw_response->header('Content-Type'), qr/stream=true/,
+	      'server acknowledges no streaming';
+	    $ua->delete_node($id);
+	    isa_ok $ua->raw_response, 'HTTP::Response';
+	    unlike $ua->raw_response->header('Content-Type'), qr/stream=true/,'server acknowledges no streaming';
 
-my $not_connected;
-eval {
-  $ua->credentials($TEST_SERVER, '',$user,$pass) if defined $user;
-  $ua->connect;
-};
-if ( my $e = REST::Neo4p::CommException->caught() ) {
-  $not_connected = 1;
-  diag "Test server unavailable : tests skipped";
+	}
+    }
 }
 
-SKIP : {
-  skip 'no local connection to neo4j',3 if $not_connected;
-    is $ua->node, join('/',$TEST_SERVER, qw(db data node)), 'node url looks good';
-  my ($version) = $ua->neo4j_version =~ /(^[0-9]+\.[0-9]+)/;
-  cmp_ok $version, '>=', 1.8, 'Neo4j version >= 1.8 as required';
-    like $ua->relationship_types, qr/^http.*types/, 'relationship types url';
-}
+done_testing;
+

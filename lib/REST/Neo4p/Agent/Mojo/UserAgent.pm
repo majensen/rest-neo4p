@@ -39,9 +39,13 @@ sub default_header {
   return;
 }
 
-sub add_header { shift->{_default_headers}->{$_[0]} = $_[1] }
-sub remove_header { delete shift->{_default_headers}->{$_[0]} }
-
+sub add_header { push @{$_[0]->{_default_headers}}, @_[1,2] }
+sub remove_header { 
+  my $a = $_[0]->{_default_headers};
+  my $i;
+  for (0..$#$a) { if ($$a[$_] eq $_[1]) { $i=$_; last; } }
+  splice @$a,$i,2 if defined $i;
+}
 sub protocols_allowed {
   my $self = shift;
   my ($protocols) = @_;

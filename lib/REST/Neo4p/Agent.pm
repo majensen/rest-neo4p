@@ -147,6 +147,7 @@ sub execute_batch {
 
 sub execute_batch_chunk { shift->execute_batch($JOB_CHUNK) }
 
+sub raw_response { shift->{_raw_response} }
 # contains a reference to the returned content, as decoded by JSON
 sub decoded_content { shift->{_decoded_content} }
 # contains the url representation of the node returned in the Location:
@@ -202,7 +203,7 @@ sub AUTOLOAD {
 sub __do_request {
   my $self = shift;
   my ($rq, $action, @args) = @_;
-  $self->{_errmsg} = $self->{_location} = $self->{_decoded_content} = undef;
+  $self->{_errmsg} = $self->{_location} = $self->{_raw_response} = $self->{_decoded_content} = undef;
   my $resp;
   given ($rq) {
     when (/get|delete/) {
@@ -226,7 +227,7 @@ sub __do_request {
 	      $rq);
 	goto &_add_to_batch_queue; # short circuit to _add_to_batch_queue
       }
-      $resp = $self->$rq($url);
+      $resp = $self->{_raw_response} = $self->$rq($url);
     }
     when (/post|put/) {
       my ($url_components, $content, $addl_headers) = @args;
@@ -244,7 +245,7 @@ sub __do_request {
 	goto &_add_to_batch_queue;
       }
       $content = $JSON->encode($content) if $content && !$self->isa('Mojo::UserAgent');
-      $resp  = $self->$rq($url, 'Content-Type' => 'application/json', Content=> $content, %$addl_headers);
+      $resp  = $self->{_raw_response} = $self->$rq($url, 'Content-Type' => 'application/json', Content=> $content, %$addl_headers);
       1;
     }
   }
@@ -488,13 +489,20 @@ Makes a DELETE request to the REST endpoint mapped to {action}. Arguments
 are additional URL components (without slashes). If the final argument
 is a hashref, it will be sent in the request as (encoded) JSON content.
 
-=item decoded_response()
+=item decoded_content()
 
- $decoded_json = $agent->decoded_response;
+ $decoded_json = $agent->decoded_content;
 
 Returns the response content of the last agent request, as decoded by
 L<JSON|JSON>. It is generally a reference, but can be a scalar if a
 bareword was returned by the server.
+
+=item raw_response()
+
+ $resp = $agent->raw_response
+
+Returns the L<HTTP::Response> object returned by the last request made
+by the backend user agent.
 
 =item no_stream()
 
