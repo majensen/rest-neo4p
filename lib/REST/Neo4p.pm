@@ -515,6 +515,18 @@ This is a mixin that is not I<use>d automatically by REST::Neo4p. For
 details and examples, see L<REST::Neo4p::Constrain> and
 L<REST::Neo4p::Constraint>.
 
+=head1 USER AGENT
+
+The backend user agent can be selected by setting the package variable
+C<$REST::Neo4p::AGENT_MODULE> to one of the following
+
+ LWP::UserAgent
+ Mojo::UserAgent
+ HTTP::Thin
+
+The L<REST::Neo4p::Agent> created will be a subclass of the selected
+backend agent. It can be accessed with L<agent()>.
+
 =head1 CLASS METHODS
 
 =over
@@ -529,7 +541,7 @@ L<REST::Neo4p::Constraint>.
  REST::Neo4p->agent->credentials( $server, '', $user, $pass);
  REST::Neo4p->connect($server);
 
-Returns the underlying L<REST::Neo4p::Agent> (which ISA L<LWP::UserAgent>).
+Returns the underlying L<REST::Neo4p::Agent> object.
 
 =item neo4j_version()
 

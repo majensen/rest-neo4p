@@ -1,7 +1,6 @@
 #$Id$
 use v5.10;
 package REST::Neo4p::Agent;
-#use base LWP::UserAgent;
 use REST::Neo4p::Exceptions;
 use File::Temp qw(tempfile);
 use JSON;
@@ -323,8 +322,20 @@ details.
 API and HTTP errors are distinguished and thrown by
 L<Exception::Class> subclasses. See L<REST::Neo4p::Exceptions>.
 
-REST::Neo4p::Agent is a subclass of L<LWP::UserAgent|LWP::UserAgent>
-and inherits its capabilities.
+A REST::Neo4p::Agent instance is created as a subclass of your choice 
+of HTTP user agents:
+
+=over
+
+=item * L<LWP::UserAgent> (default)
+
+=item * L<Mojo::UserAgent>
+
+=item * L<HTTP::Thin> (L<HTTP::Tiny> with L<HTTP::Response> responses)
+
+=back
+
+REST::Neo4p::Agent responses are always L<HTTP::Response> objects.
 
 REST::Neo4p::Agent will retry requests that fail with
 L<REST::Neo4p::CommException|REST::Neo4p::Exceptions>. The default
@@ -358,9 +369,17 @@ For batch API experimental features, see L</Batch Mode>.
 =item new()
 
  $agent = REST::Neo4p::Agent->new();
+ $agent = REST::Neo4p::Agent->new( agent_module => 'HTTP::Thin');
  $agent = REST::Neo4p::Agent->new("http://127.0.0.1:7474");
 
-Returns a new agent. Accepts optional server address arg.
+Returns a new agent. The C<agent_module> parameter may be set to
+
+ LWP::UserAgent (default)
+ Mojo::UserAgent
+ HTTP::Thin
+
+to select the underlying user agent class. Additional arguments are
+passed to the user agent constructor.
 
 =item server()
 
@@ -411,7 +430,7 @@ methods to make requests directly.
 
  $version = $agent->neo4j_version;
 
-Returns the version of the connected Neo4j server.
+Returns the version string of the connected Neo4j server.
 
 =item available_actions()
 
