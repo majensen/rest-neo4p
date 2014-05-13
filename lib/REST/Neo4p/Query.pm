@@ -11,7 +11,7 @@ use strict;
 use warnings;
 no warnings qw(once);
 BEGIN {
-  $REST::Neo4p::Query::VERSION = '0.2250';
+  $REST::Neo4p::Query::VERSION = '0.2251';
 }
 
 #my $BUFSIZE = 4096;
@@ -69,6 +69,7 @@ sub execute {
      );
   }
   eval {
+    use experimental qw/smartmatch/;
     given ($endpt) {
       when (/cypher/) {
 	$agent->$endpt(
@@ -143,6 +144,7 @@ sub execute {
   }
   $self->{_iterator} = 
     sub {
+      use experimental qw/smartmatch/;
       return unless defined $self->tmpf;
       my $row;
       my ($token_type, @data) = @{$jsonr->get_token};
@@ -208,6 +210,7 @@ sub params { shift->{_params} }
 
 sub _response_entity {
   my ($resp) = @_;
+  use experimental qw/smartmatch/;
   if ( ref($resp) eq '' ) { #handle arrays of barewords
     return 'bareword';
   }
@@ -235,6 +238,7 @@ sub _response_entity {
 }
 
 sub _prepare_response {
+  use experimental qw/smartmatch/;
   my $self = shift;
   if (-z $self->tmpf->filename) {
     REST::Neo4p::EmptyQueryResponseException->throw("Server response body is zero length\n");
@@ -355,6 +359,7 @@ sub _prepare_response {
 sub _process_row {
   my $self = shift;
   my ($row) = @_;
+  use experimental qw/smartmatch/;
   my @ret;
   foreach my $elt (@$row) {
     given ($elt) {

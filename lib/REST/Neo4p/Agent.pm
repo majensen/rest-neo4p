@@ -11,7 +11,7 @@ use warnings;
 our @ISA;
 our $VERSION;
 BEGIN {
-  $REST::Neo4p::Agent::VERSION = '0.2250';
+  $REST::Neo4p::Agent::VERSION = '0.2251';
 }
 
 our $AUTOLOAD;
@@ -26,7 +26,8 @@ sub new {
   die "No user agent module specified" unless $mod;
   $mod = join('::','REST::Neo4p::Agent',$mod);
   eval "require $mod;1" or REST::Neo4p::LocalException->throw("Module $mod is not available\n");
-  my $self = $mod->new(@_);
+  my @args = %args;
+  my $self = $mod->new(@args);
   $self->agent("Neo4p/$VERSION");
   $self->default_header( 'Accept' => 'application/json' );
   $self->default_header( 'Content-Type' => 'application/json' );
@@ -202,6 +203,7 @@ sub AUTOLOAD {
 sub __do_request {
   my $self = shift;
   my ($rq, $action, @args) = @_;
+  use experimental qw/smartmatch/;
   $self->{_errmsg} = $self->{_location} = $self->{_raw_response} = $self->{_decoded_content} = undef;
   my $resp;
   given ($rq) {

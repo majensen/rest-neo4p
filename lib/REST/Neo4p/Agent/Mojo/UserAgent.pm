@@ -9,7 +9,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Agent::Mojo::UserAgent::VERSION = 0.2250;
+  $REST::Neo4p::Agent::Mojo::UserAgent::VERSION = 0.2251;
 }
 
 our @default_headers;
@@ -61,9 +61,12 @@ sub http_response {
     $DB::single=1;
     $tx->res->body($tx->res->content->asset->slurp);
   }
+  unless (defined $tx->res->code) {
+      $tx->res->code(598) if $tx->res->error;
+  }
   my $resp = HTTP::Response->new(
     $tx->res->code,
-    $tx->res->message // $tx->res->default_message,
+    $tx->res->message // $tx->res->default_message // $tx->res->error,
     [%{$tx->res->headers->to_hash}],
     $tx->res->body
    );
@@ -80,6 +83,7 @@ sub post { shift->_do('POST',@_) }
 sub _do {
   my $self = shift;
   my ($rq, $url, @args) = @_;
+  use experimental qw/smartmatch/;
   my ($tx, $content, $content_file);
   # neo4j wants to redirect .../data to .../data/
   # and mojo doesn't want to redirect at all...

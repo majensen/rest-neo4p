@@ -9,7 +9,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Index::VERSION = '0.2250';
+  $REST::Neo4p::Index::VERSION = '0.2251';
 }
 
 my $unsafe = "^A-Za-z0-9\-\._\ ~";

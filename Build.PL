@@ -16,6 +16,7 @@ my $build =  Module::Build->new
 	'LWP::UserAgent' => 6.04,
 	'Exception::Class' => 1.3,
 	'Tie::IxHash' => 0,
+	'experimental' => 0,
 	perl => 5.010
        },
       recommends => {
