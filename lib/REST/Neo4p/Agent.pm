@@ -297,7 +297,7 @@ sub DESTROY {}
 
 =head1 NAME
 
-REST::Neo4p::Agent - LWP client interacting with Neo4j
+REST::Neo4p::Agent - HTTP client interacting with Neo4j
 
 =head1 SYNOPSIS
 

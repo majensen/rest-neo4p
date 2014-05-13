@@ -36,9 +36,9 @@ SKIP : {
   my ($M,$m,$p,$s) = REST::Neo4p->neo4j_version;
   ok !REST::Neo4p->_check_version($M+1);
   ok !REST::Neo4p->_check_version($M,$m+1);
-  ok !REST::Neo4p->_check_version($M,$m,!!$p+1);
+  ok !REST::Neo4p->_check_version($M,$m,($p//0)+1);
   ok (REST::Neo4p->_check_version($M-1,$m+1));
-  ok (REST::Neo4p->_check_version($M-1,$m-1,!!$p+4));
+  ok (REST::Neo4p->_check_version($M-1,$m-1,($p//0)+4));
   my $VERSION_OK = REST::Neo4p->_check_version(2,0);
   SKIP : {
     skip "Server version $version < 2.0", $num_live_tests unless $VERSION_OK;
