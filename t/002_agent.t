@@ -73,12 +73,10 @@ foreach my $mod (@agent_modules) {
 	      'server acknowledges streaming (expected default)';
 	    ok $ua->no_stream, 'set no streaming';
 	    $ua->get_node($id);
+	    isa_ok $ua->raw_response, 'HTTP::Response';
 	    unlike $ua->raw_response->header('Content-Type'), qr/stream=true/,
 	      'server acknowledges no streaming';
 	    $ua->delete_node($id);
-	    isa_ok $ua->raw_response, 'HTTP::Response';
-	    unlike $ua->raw_response->header('Content-Type'), qr/stream=true/,'server acknowledges no streaming';
-
 	}
     }
 }
