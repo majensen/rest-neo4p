@@ -80,6 +80,5 @@ foreach my $mod (@agent_modules) {
 	}
     }
 }
-
 done_testing;
 
