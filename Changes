@@ -1,4 +1,6 @@
 Revision history for Perl module REST::Neo4p
+0.2251 2014-05-16
+    - softpedal the smartmatch backpedal with experimental (thx Chisel)
 0.2250 2014-05-10
     - refactored Agent to support multiple backend user agent pkgs
       (thanks DBI guys)
