@@ -1,7 +1,6 @@
 #$Id$#
 package REST::Neo4p::Index;
 use base 'REST::Neo4p::Entity';
-use REST::Neo4p::Node;
 use REST::Neo4p::Exceptions;
 use Carp qw(croak carp);
 use URI::Escape;
@@ -9,7 +8,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Index::VERSION = '0.2251';
+  $REST::Neo4p::Index::VERSION = '0.2252';
 }
 
 my $unsafe = "^A-Za-z0-9\-\._\ ~";

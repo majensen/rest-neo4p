@@ -1,6 +1,6 @@
 #-*-perl-*-
 #$Id$
-use Test::More qw(no_plan);
+use Test::More;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
@@ -15,6 +15,9 @@ eval {
 };
 
 use_ok ('REST::Neo4p::Constraint');
+use_ok ('REST::Neo4p::Constraint::Property');
+use_ok ('REST::Neo4p::Constraint::Relationship');
+use_ok ('REST::Neo4p::Constraint::RelationshipType');
 
 my ($person_pc, $pet_pc, $reln_pc, $reln_c, $reln_c2, $reln_tc);
 
@@ -138,3 +141,4 @@ ok !(values %$REST::Neo4p::Constraint::CONSTRAINT_TABLE), 'constraint table vaca
 load_constraints($serialized);
 is_deeply [sort @tags], [sort map { $_->tag } values %$REST::Neo4p::Constraint::CONSTRAINT_TABLE], 'constraints reloaded';
 
+done_testing;
