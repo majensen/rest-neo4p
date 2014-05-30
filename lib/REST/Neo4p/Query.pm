@@ -467,7 +467,7 @@ multiple times with different parameter values:
            'MATCH (n) WHERE n.first_name = {name} RETURN n'
          );
  foreach (@names) {
-   $q->execute($_);
+   $q->execute(name => $_);
    while ($row = $q->fetch) {
     ...process
    }
