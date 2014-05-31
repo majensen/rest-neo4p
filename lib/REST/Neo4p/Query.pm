@@ -11,7 +11,7 @@ use strict;
 use warnings;
 no warnings qw(once);
 BEGIN {
-  $REST::Neo4p::Query::VERSION = '0.2251';
+  $REST::Neo4p::Query::VERSION = '0.2252';
 }
 
 #my $BUFSIZE = 4096;
@@ -467,7 +467,7 @@ multiple times with different parameter values:
            'MATCH (n) WHERE n.first_name = {name} RETURN n'
          );
  foreach (@names) {
-   $q->execute($_);
+   $q->execute(name => $_);
    while ($row = $q->fetch) {
     ...process
    }
