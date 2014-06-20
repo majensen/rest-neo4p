@@ -2,8 +2,8 @@
 use v5.10;
 package REST::Neo4p::Agent;
 use REST::Neo4p::Exceptions;
-use File::Temp qw(tempfile);
 use JSON;
+use File::Temp;
 use Carp qw(croak carp);
 use strict;
 use warnings;
@@ -127,7 +127,6 @@ sub execute_batch {
     REST::Neo4p::LocalException->throw("Agent not in batch mode; can't execute batch\n");
   }
   return unless ($self->batch_length);
-#  my ($tfh, $tfname) = tempfile;
   my $tfh = File::Temp->new;
   $self->batch_mode(0);
   my @chunk;
