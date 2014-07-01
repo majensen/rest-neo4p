@@ -59,5 +59,6 @@ t/rt_91640.t
 t/rt_91748.t
 t/rt_92135.t
 t/rt_96478.t
+t/rt_96847.t
 META.yml
 META.json
