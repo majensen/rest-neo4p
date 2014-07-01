@@ -11,7 +11,7 @@ use strict;
 use warnings;
 no warnings qw(once);
 BEGIN {
-  $REST::Neo4p::Query::VERSION = '0.2252';
+  $REST::Neo4p::Query::VERSION = '0.2253';
 }
 
 #my $BUFSIZE = 4096;
@@ -416,14 +416,12 @@ sub _process_row {
 
 sub finish {
   my $self = shift;
+  delete $self->{_iterator};
   delete $self->{_tempfile};
   return 1;
 }
 
-sub DESTROY {
-  my $self = shift;
-  delete $self->{_tempfile};
-}
+sub DESTROY { shift->finish }
 
 =head1 NAME
 

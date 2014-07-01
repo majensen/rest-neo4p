@@ -9,7 +9,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Agent::Mojo::UserAgent::VERSION = 0.2252;
+  $REST::Neo4p::Agent::Mojo::UserAgent::VERSION = 0.2253;
 }
 
 our @default_headers;

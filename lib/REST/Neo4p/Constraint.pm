@@ -31,7 +31,7 @@ my $regex_to_json = sub {
 };
 
 BEGIN {
-  $REST::Neo4p::Constraint::VERSION = '0.2252';
+  $REST::Neo4p::Constraint::VERSION = '0.2253';
 }
 
 # valid constraint types
