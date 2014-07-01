@@ -1,7 +1,8 @@
 Revision history for Perl module REST::Neo4p
 0.2253 2014-06-30
     - fixed Query memory leak and added Chisel's test (thx Chisel)
-
+    - direct creation of a REST::Neo4p::Agent has a default backend agent
+      (thx Steve)
 0.2252 2014-05-16
     - softpedal the smartmatch backpedal with experimental (thx Chisel)
     - require 5.10.1+

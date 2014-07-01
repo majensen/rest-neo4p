@@ -22,7 +22,7 @@ our $RETRY_WAIT = 5;
 sub new {
   my $class = shift;
   my %args = @_;
-  my $mod = delete $args{agent_module};
+  my $mod = delete $args{agent_module} || 'LWP::UserAgent';
   die "No user agent module specified" unless $mod;
   $mod = join('::','REST::Neo4p::Agent',$mod);
   eval "require $mod;1" or REST::Neo4p::LocalException->throw("Module $mod is not available\n");
