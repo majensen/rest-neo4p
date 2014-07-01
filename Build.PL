@@ -31,11 +31,11 @@ my $build =  Module::Build->new
 	'Test::More' => 0,
 	'Test::Exception' => 0,
 	'Test::NoWarnings' => 0,
-	'Test::Memory::Usage' => 0,
 	'List::MoreUtils' => 0
        },
       build_recommends => {
 	 'Test::Pod' => 1.0,
+         'Test::Memory::Usage' => 0,
 	 'Mojo::UserAgent' => 0,
 	 'HTTP::Thin' => 0
 	},

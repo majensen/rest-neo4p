@@ -8,8 +8,6 @@ use warnings;
 no warnings qw(once);
 #$SIG{__DIE__} = sub { if (ref $_[0]) { $_[0]->rethrow } else { print $_[0] }};
 
-# Test::Memory::Usage doesn't seem to play nice with skip_all...
-if ($ENV{REST_NEO4P_AUTHOR_TESTS}) {
 
   my $build;
   my ($user,$pass);
@@ -32,6 +30,8 @@ if ($ENV{REST_NEO4P_AUTHOR_TESTS}) {
   }
 
   my $i;
+# Test::Memory::Usage doesn't seem to play nice with skip_all...
+if ($ENV{REST_NEO4P_AUTHOR_TESTS} && !$not_connected) {
 
   use Test::Memory::Usage;
   memory_usage_start;
