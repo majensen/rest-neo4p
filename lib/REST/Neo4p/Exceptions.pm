@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Exceptions::VERSION = '0.2253';
+  $REST::Neo4p::Exceptions::VERSION = '0.2254';
 }
 use Exception::Class (
   'REST::Neo4p::Exception',
