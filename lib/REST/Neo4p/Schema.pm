@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Schema::VERSION = '0.2253';
+  $REST::Neo4p::Schema::VERSION = '0.3000';
 }
 
 #require 'REST::Neo4p';

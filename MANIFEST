@@ -21,10 +21,12 @@ lib/REST/Neo4p/Exceptions.pm
 lib/REST/Neo4p/Index.pm
 lib/REST/Neo4p/Node.pm
 lib/REST/Neo4p/Path.pm
+lib/REST/Neo4p/ParseStream.pm
 lib/REST/Neo4p/Query.pm
 lib/REST/Neo4p/Relationship.pm
 lib/REST/Neo4p/Schema.pm
-t/001_load.t
+t/0010_load.t
+t/0011_parse.t
 t/002_agent.t
 t/003_objs.t
 t/0041_idx_create_unique.t
@@ -45,8 +47,10 @@ t/030_idx_escape.t
 t/040_v2_labels.t
 t/041_v2_txns.t
 t/050_v2_schema.t
+t/097_parse_errors.t
 t/098_pod.t
 t/099_error.t
+t/ErrJ.pm
 t/Neo4p.pm
 t/agent_mod.t
 t/lib/Neo4p/Test.pm
@@ -59,6 +63,9 @@ t/rt_91640.t
 t/rt_91748.t
 t/rt_92135.t
 t/rt_96478.t
-t/rt_96847.t
+t/samples/batch-response.txt
+t/samples/null-txn-response.txt
+t/samples/qry-response.txt
+t/samples/txn-response.txt
 META.yml
 META.json

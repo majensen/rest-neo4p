@@ -11,7 +11,8 @@ my $build =  Module::Build->new
       license => 'perl',
       requires => {
 	'JSON' => 2.0,
-	'JSON::Streaming::Reader' => 0.05,
+	'JSON::XS' => 2.0,
+	'HOP::Stream' => 0,
 	'URI::Escape' => 3.3,
 	'LWP::UserAgent' => 6.04,
 	'Exception::Class' => 1.3,
@@ -31,7 +32,10 @@ my $build =  Module::Build->new
 	'Test::More' => 0,
 	'Test::Exception' => 0,
 	'Test::NoWarnings' => 0,
-	'List::MoreUtils' => 0
+	'Mock::Quick' => 0,
+	'List::MoreUtils' => 0,
+	experimental => 0
+
        },
       build_recommends => {
 	 'Test::Pod' => 1.0,

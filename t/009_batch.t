@@ -1,6 +1,6 @@
 #-*-perl-*-
 #$Id$
-use Test::More qw(no_plan);
+use Test::More;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
@@ -52,7 +52,7 @@ SKIP : {
   ok !REST::Neo4p->agent->batch_mode, 'agent not now in batch mode';
   ok $idx = REST::Neo4p->get_index_by_name('test_node','node'), 'got index outside batch';
   ok !$idx->is_batch;
-  $DB::single=1;
+
   for (1..10) {
       my ($n) = $idx->find_entries(name => "__test_node$_");
       ok $n, 'got node outside batch';
@@ -78,6 +78,20 @@ SKIP : {
   my ($node3) = $idx2->find_entries(name => $name);
   ok !$node3, '..but it does not work';
 
+  my $n;
+  ok (($n)= $idx->find_entries('name' => '__test_node1'));
+  my @errors = 
+      batch {
+	  ok ($n->get_properties('name'), 'get name in batch');
+	  ok (REST::Neo4p->get_node_by_id('AAGGG'), 'get a non-existent node in batch');
+  } 'keep_objs';
+  ok @errors, 'got errors from stream';
+  isa_ok($n, 'REST::Neo4p::Node');
+  is $errors[0]->code, 404, 'correct error status code ("Not Found")';
+  1;
+## error stream
+
+
 }
 
 END {
@@ -90,4 +104,5 @@ END {
       ok ($idx->remove, 'remove index') if $idx;
       ok ($idx2->remove, 'remove index') if $idx2;
   }
+  done_testing;
 }

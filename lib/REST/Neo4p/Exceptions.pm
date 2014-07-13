@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Exceptions::VERSION = '0.2253';
+  $REST::Neo4p::Exceptions::VERSION = '0.3000';
 }
 use Exception::Class (
   'REST::Neo4p::Exception',
@@ -83,6 +83,11 @@ use Exception::Class (
   'REST::Neo4p::EmptyQueryResponseException' => {
     isa => 'REST::Neo4p::LocalException',
     description => 'The server response body was empty; connection problem?'
+   },
+  'REST::Neo4p::StreamException' => {
+    isa => 'REST::Neo4p::LocalException',
+    description => 'Neo4j JSON response parsing error',
+    fields => ['message']
    },
   'REST::Neo4p::ConstraintException' => {
     isa => 'REST::Neo4p::LocalException',

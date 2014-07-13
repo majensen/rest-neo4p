@@ -46,6 +46,7 @@ if ($ENV{REST_NEO4P_AUTHOR_TESTS} && !$not_connected) {
     while (my $row = $q->fetchrow_arrayref) {
       # we don't care
     };
+    $q->finish;
   }
   #};
   memory_usage_ok;

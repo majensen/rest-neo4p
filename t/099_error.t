@@ -48,7 +48,7 @@ SKIP : {
     is $@->code, 404, '404 ok';
     my $q = REST::Neo4p::Query->new("Start n=frleb RETUN q");
     $q->{RaiseError} = 1;
-    throws_ok { 
+    throws_ok {
       $q->execute
     } 'REST::Neo4p::QuerySyntaxException', 'bad query syntax ok';
     $q->{RaiseError} = 0;

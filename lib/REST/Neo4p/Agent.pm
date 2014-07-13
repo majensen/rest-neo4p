@@ -11,7 +11,7 @@ use warnings;
 our @ISA;
 our $VERSION;
 BEGIN {
-  $REST::Neo4p::Agent::VERSION = '0.2253';
+  $REST::Neo4p::Agent::VERSION = '0.3000';
 }
 
 our $AUTOLOAD;
@@ -357,13 +357,20 @@ is a default header for requests. The server responds to requests with
 chunked content, which is handled correctly by any of the underlying
 user agents.
 
-Streaming can be stopped by calling
+L<REST::Neo4p::Query> and L<REST::Neo4p::Batch> take advantage of
+streamed responsed by retrieving and returning JSON objects
+incrementally and (with the L<Mojo::UserAgent> backend) in a
+non-blocking way. New Neo4j server versions may break the incremental
+parsing. If this happens,  L<make a
+ticket|https://rt.cpan.org/Public/Bug/Report.html?Queue=REST-Neo4p>. In
+the meantime, you should be able to keep things going (albeit more
+slowly) by turning off streaming at the agent:
 
- $agent->no_stream
+ REST::Neo4p->agent->no_stream;
 
-and started with
+Streaming responses can be requested again by issuing
 
- $agent->stream
+ REST::Neo4p->agent->stream
 
 For batch API features, see L</Batch Mode>.
 

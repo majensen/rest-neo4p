@@ -69,5 +69,4 @@ END {
     ok ($_->remove, 'entity removed') for reverse @cleanup;
   }
   }
-
 }

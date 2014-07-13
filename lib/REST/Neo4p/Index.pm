@@ -8,7 +8,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Index::VERSION = '0.2253';
+  $REST::Neo4p::Index::VERSION = '0.3000';
 }
 
 my $unsafe = "^A-Za-z0-9\-\._\ ~";
@@ -295,8 +295,14 @@ sub create_unique_relationship {
 # index name
 sub name { ${$_[0]} }
 # index type (node or relationship)
-sub type { shift->_entry->{type} }
-sub _action { shift->_entry->{action} }
+sub type { 
+  my $self = shift;
+  $self->_entry && $self->_entry->{type}
+}
+sub _action { 
+  my $self = shift;
+  $self->_entry && $self->_entry->{action}
+}
 
 # unused Entity methods
 sub set_property { not_supported() }

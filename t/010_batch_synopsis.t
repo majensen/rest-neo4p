@@ -54,12 +54,19 @@ SKIP : {
 }
 
 END {
-  CLEANUP : {
+    SKIP : {
+	skip 'no local connection to neo4j', $num_live_tests if $not_connected;
+	CLEANUP : {
+      my @relns;
       my @nodes = $idx->find_entries('name:*') if $idx;
-      for my $n (@nodes) {
-	  ok ($_->remove, 'remove relationship') for $n->get_all_relationships;
+      for (@nodes) {
+	  push @relns, $_->get_all_relationships;
       }
-      ok($_->remove,'remove node') for @nodes;
-      ok ($idx->remove, 'remove index') if $idx;
-  }
+      batch {
+	  ok ($_->remove, 'remove reln') for @relns;
+	  ok($_->remove,'remove node') for @nodes;
+	  ok ($idx->remove, 'remove index') if $idx;
+      } 'discard_objs';
+	}
+    }
 }
