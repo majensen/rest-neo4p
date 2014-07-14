@@ -14,7 +14,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::VERSION = '0.3000';
+  $REST::Neo4p::VERSION = '0.3001';
 }
 
 our $CREATE_AUTO_ACCESSORS = 0;

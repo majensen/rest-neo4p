@@ -14,7 +14,7 @@ use strict;
 use warnings;
 no warnings qw(once);
 BEGIN {
-  $REST::Neo4p::Query::VERSION = '0.3000';
+  $REST::Neo4p::Query::VERSION = '0.3001';
 }
 
 our $BUFSIZE = 50000;
@@ -464,11 +464,12 @@ over the rows, in the spirit of L<DBI>.
 =head2 Streaming
 
 L<C<execute()>|/execute()> captures the Neo4j query response in a temp
-file. L<C<fetch()>|/fetch()> iterates over the JSON in the response using
-L<JSON::Streaming::Reader|JSON::Streaming::Reader>. So go ahead and
-make those 100 meg queries. The tempfile is unlinked after the
-iterator runs out of rows, or upon object destruction, whichever
-comes first.
+file. L<C<fetch()>|/fetch()> iterates (in a non-blocking way if
+possible) over the JSON in the response using the incremental parser
+of L<JSON::XS|JSON::XS> (see L<REST::Neo4p::ParseStream> if
+interested). So go ahead and make those 100 meg queries. The tempfile
+is unlinked after the iterator runs out of rows, or upon object
+destruction, whichever comes first.
 
 =head2 Parameters
 

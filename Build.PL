@@ -39,7 +39,7 @@ my $build =  Module::Build->new
        },
       build_recommends => {
 	 'Test::Pod' => 1.0,
-         'Test::Memory::Usage' => 0,
+#         'Test::Memory::Usage' => 0,
 	 'Mojo::UserAgent' => 0,
 	 'HTTP::Thin' => 0
 	},
