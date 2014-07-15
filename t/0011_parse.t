@@ -28,7 +28,7 @@ my ($obj,@rows);
 
 my $handle;
 
-$g->read($buf,$CHUNK);
+read $g,$buf,$CHUNK or die $!;
 $j->incr_parse($buf);
 ok $res = j_parse($j), "parsing batch response";
 is $res->[0], 'BATCH', "is batch response";
@@ -47,7 +47,7 @@ while (my $obj = drop($str)) {
       pass "value is hashref";
     }
     when('PENDING') {
-      $g->read($buf,$CHUNK);
+      read $g, $buf,$CHUNK;
       $j->incr_parse($buf);
     }
     default {
@@ -65,7 +65,7 @@ is $j->incr_text,'', "All text consumed";
  undef $str;
 
 $j = JSON::XS->new();
-$f->read($buf,$CHUNK) or die $!;
+read ($f, $buf,$CHUNK) or die $!;
 $j->incr_parse($buf);
 ok $res = j_parse($j), "parsing qry response";
 is $res->[0],'QUERY', "is query response";
@@ -91,7 +91,7 @@ while (my $obj = drop($ar)) {
       pass "value is arrayref";
     }
     when('PENDING') {
-      $f->read($buf,$CHUNK);
+      read $f, $buf,$CHUNK;
       $j->incr_parse($buf);
     }
     default {
@@ -109,7 +109,7 @@ is $j->incr_text,'', 'all text consumed';
 
 
 $j = JSON::XS->new();
-$k->read($buf,$CHUNK) or die $!;
+read($k, $buf,$CHUNK) or die $!;
 $j->incr_parse($buf);
 ok $res = j_parse($j), "parsing txn response";
 is $res->[0],'TXN', "is txn response";
@@ -142,7 +142,7 @@ while ($r_obj = drop($r_str)) {
 	pass "value is hashref";
       }
       when('PENDING') {
-	$k->read($buf,$CHUNK);
+	read $k, $buf,$CHUNK;
 	$j->incr_parse($buf);
       }
       default {
@@ -170,7 +170,7 @@ while (my $item = drop($ar)) {
 
 open $k, File::Spec->catfile($TESTDIR, 'samples','null-txn-response.txt');
 $j = JSON::XS->new();
-$k->read($buf,$CHUNK) or die $!;
+read($k, $buf,$CHUNK) or die $!;
 $j->incr_parse($buf);
 ok $res = j_parse($j), "parsing null txn response";
 is $res->[0],'TXN', "is txn response";
