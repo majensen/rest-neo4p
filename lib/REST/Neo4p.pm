@@ -532,7 +532,7 @@ C<$REST::Neo4p::AGENT_MODULE> to one of the following
  HTTP::Thin
 
 The L<REST::Neo4p::Agent> created will be a subclass of the selected
-backend agent. It can be accessed with L<agent()>.
+backend agent. It can be accessed with L</agent()>.
 
 The initial value of C<$REST::Neo4p::AGENT_MODULE> will be the value
 of the environment variable C<REST_NEO4P_AGENT_MODULE> or
