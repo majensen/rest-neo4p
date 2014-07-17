@@ -27,6 +27,10 @@ my $iofile_control = qtakeover 'IO::File';
 $iofile_control->override(
   filename => 'mockfile'
 );
+my $iohandle_control = qtakeover 'IO::Handle';
+$iohandle_control->override(
+  filename => 'mockfile'
+);
 my $neo4p_control = qtakeover 'REST::Neo4p';
 $neo4p_control->override(
   connected => 1,
