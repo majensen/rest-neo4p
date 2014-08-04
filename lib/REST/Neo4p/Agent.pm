@@ -1,6 +1,6 @@
 #$Id$
+use v5.10;
 package REST::Neo4p::Agent;
-use base LWP::UserAgent;
 use REST::Neo4p::Exceptions;
 use JSON;
 use File::Temp;
@@ -8,13 +8,15 @@ use Carp qw(croak carp);
 use strict;
 use warnings;
 
+our @ISA;
+our $VERSION;
 BEGIN {
   $REST::Neo4p::Agent::VERSION = '0.3003';
 }
 
 our $AUTOLOAD;
 our $JOB_CHUNK = 1024;
-our $JSON = JSON->new()->allow_nonref(1);
+our $JSON = JSON->new()->allow_nonref(1)->utf8;
 our $RQ_RETRIES = 3;
 our $RETRY_WAIT = 5;
 sub new {
@@ -31,10 +33,10 @@ sub new {
   $self->default_header( 'Content-Type' => 'application/json' );
   $self->default_header( 'X-Stream' => 'true' );
   $self->protocols_allowed( ['http','https'] );
-  bless $self, $class;
+  return $self;
 }
 
-sub server {
+sub server_url {
   my $self = shift;
   $self->{__server} = shift if @_;
   return $self->{__server};
@@ -53,13 +55,14 @@ sub batch_length{
 }
 
 sub connect {
+
   my $self = shift;
   my ($server) = @_;
   $self->{__server} = $server if defined $server;
-  unless ($self->server) {
+  unless ($self->server_url) {
     REST::Neo4p::Exception->throw("Server not set\n");
    }
-  my $resp = $self->get($self->server);
+  my $resp = $self->get($self->server_url);
   unless ($resp->is_success) {
     REST::Neo4p::CommException->throw( code => $resp->code,
 				       message => $resp->message );
@@ -136,13 +139,14 @@ sub execute_batch {
     undef $self->{__batch_queue};
     $self->{__batch_length} = 0;
   }
-  $self->post_batch([],\@chunk, {':content_file' => $tfname});
+  $self->post_batch([],\@chunk, {':content_file' => $tfh->filename});
   $self->batch_mode(1);
-  return $tfname;
+  return $tfh;
 }
 
 sub execute_batch_chunk { shift->execute_batch($JOB_CHUNK) }
 
+sub raw_response { shift->{_raw_response} }
 # contains a reference to the returned content, as decoded by JSON
 sub decoded_content { shift->{_decoded_content} }
 # contains the url representation of the node returned in the Location:
@@ -151,21 +155,8 @@ sub location { shift->{_location} }
 
 sub available_actions { keys %{shift->{_actions}} }
 
-sub no_stream {
-  my $self = shift;
-  my $default_headers = $self->default_headers;
-  $default_headers->remove_header('X-Stream');
-  $self->default_headers($default_headers);
-}
-
-sub stream {
-  my $self = shift;
-  my $default_headers = $self->default_headers;
-  unless ($default_headers->header('X-Stream')) {
-    $default_headers->header('X-Stream' => 'true');
-  }
-  $self->default_headers($default_headers);
-}
+sub no_stream { shift->remove_header('X-Stream') }
+sub stream { shift->add_header('X-Stream' => 'true') }
 
 # autoload getters for discovered neo4j rest urls
 
@@ -202,6 +193,12 @@ sub AUTOLOAD {
   return $self->{_decoded_content};
 }
 
+# $rq : [get|post|put|delete]
+# $action : {neo4j REST endpt action}
+# @args : depends on REST rq
+# get|delete : my @url_components = @args;
+# post|put : my ($url_components, $content, $addl_headers) = @args;
+
 sub __do_request {
   my $self = shift;
   my ($rq, $action, @args) = @_;
@@ -217,6 +214,11 @@ sub __do_request {
 	%rest_params = %{ pop @url_components };
       }
       my $url = join('/',$self->{_actions}{$action},@url_components);
+      my @params;
+      while (my ($p,$v) = each %rest_params) {
+	push @params, join('=',$p,$v);
+      }
+      $url.='?'.join('&',@params) if @params;
       if ($self->batch_mode) {
 	$url = ($url_components[0] =~ /{[0-9]+}/) ? $url_components[0] : $url; # index batch object kludge
 
@@ -225,14 +227,16 @@ sub __do_request {
 	      $rq);
 	goto &_add_to_batch_queue; # short circuit to _add_to_batch_queue
       }
-      $resp = $self->$rq($url,%rest_params);
-    };
-    /post|put/ && do {
+      $resp = $self->{_raw_response} = $self->$rq($url);
+    }
+    when (/post|put/) {
       my ($url_components, $content, $addl_headers) = @args;
       unless (!$addl_headers || (ref $addl_headers eq 'HASH')) {
 	REST::Neo4p::LocalException->throw("Arg 3 must be a hashref of additional headers\n");
       }
+      no warnings qw(uninitialized);
       my $url = join('/',$self->{_actions}{$action},@$url_components);
+      use warnings qw(uninitialized);
       if ($self->batch_mode) {
 	$url = ($url_components->[0] =~ /{[0-9]+}/) ? join('/',@$url_components) : $url; # index batch object kludge
 	@_ = ($self, 
@@ -240,52 +244,54 @@ sub __do_request {
 	      $rq, $content, $addl_headers);
 	goto &_add_to_batch_queue;
       }
-      $content = $JSON->encode($content) if $content;
-      $resp  = $self->$rq($url, 'Content-Type' => 'application/json', Content=> $content, %$addl_headers);
-    };
-    do { # exception handling
-      # rt80471...
-      eval {
-	$self->{_decoded_content} = $JSON->decode($resp->content);
-      };
-      undef $self->{_decoded_content} if $@;
-      unless ($resp->is_success) {
-	if ( $self->{_decoded_content} ) {
-	  my %error_fields = (
-	    code => $resp->code,
-	    neo4j_message => $self->{_decoded_content}->{message},
-	    neo4j_exception => $self->{_decoded_content}->{exception},
-	    neo4j_stacktrace =>  $self->{_decoded_content}->{stacktrace}
-	   );
-	  my $xclass;
-	  if ($resp->code == 404) {
-	    $xclass = 'REST::Neo4p::NotFoundException';
-	  }
-	  elsif ($resp->code == 409) {
-	    $xclass = 'REST::Neo4p::ConflictException';
-	  }
-	  else {
-	    $xclass = 'REST::Neo4p::Neo4jException';
-	  }
-	  if ( $error_fields{neo4j_exception} && 
-		 ($error_fields{neo4j_exception} =~ /^Syntax/ )) {
-	    $xclass = 'REST::Neo4p::QuerySyntaxException';
-	  }
-	  $xclass->throw(%error_fields);
+      $content = $JSON->encode($content) if $content && !$self->isa('Mojo::UserAgent');
+      $resp  = $self->{_raw_response} = $self->$rq($url, 'Content-Type' => 'application/json', Content=> $content, %$addl_headers);
+      1;
+    }
+  }
+  # exception handling
+  # rt80471...
+  if (length $resp->content) {
+    if ($resp->header('Content_Type') =~ /json/) {
+      $self->{_decoded_content} = $JSON->decode($resp->content);
+    }
+  }
+  unless ($resp->is_success) {
+    if ( $self->{_decoded_content} ) {
+      my %error_fields = (
+	code => $resp->code,
+	neo4j_message => $self->{_decoded_content}->{message},
+	neo4j_exception => $self->{_decoded_content}->{exception},
+	neo4j_stacktrace =>  $self->{_decoded_content}->{stacktrace}
+       );
+      my $xclass;
+      given ($resp->code) {
+	when (404) {
+	  $xclass = 'REST::Neo4p::NotFoundException';
 	}
-	else { # couldn't parse the content as JSON...
-
-	  my $xclass = ($resp->code == 404) ? 'REST::Neo4p::NotFoundException' : 'REST::Neo4p::CommException';
-	  $xclass->throw( 
-	    code => $resp->code,
-	    message => $resp->message
-	   );
+	when (409) {
+	  $xclass = 'REST::Neo4p::ConflictException';
+	}
+	default {
+	  $xclass = 'REST::Neo4p::Neo4jException';
 	}
       }
-      $self->{_location} = $resp->header('Location');
-      last;
-    };
+      if ( $error_fields{neo4j_exception} && 
+	     ($error_fields{neo4j_exception} =~ /^Syntax/ )) {
+	$xclass = 'REST::Neo4p::QuerySyntaxException';
+      }
+      $xclass->throw(%error_fields);
+    }
+    else { # couldn't parse the content as JSON...
+      my $xclass = ($resp->code && ($resp->code == 404)) ? 
+	'REST::Neo4p::NotFoundException' : 'REST::Neo4p::CommException';
+      $xclass->throw( 
+	code => $resp->code,
+	message => $resp->message
+       );
+    }
   }
+  $self->{_location} = $resp->header('Location');
 }
 
 sub DESTROY {}
@@ -297,7 +303,7 @@ REST::Neo4p::Agent - HTTP client interacting with Neo4j
 =head1 SYNOPSIS
 
  $agent = REST::Neo4p::Agent->new();
- $agent->server('http://127.0.0.1:7474');
+ $agent->server_url('http://127.0.0.1:7474');
  unless ($agent->connect) {
   print STDERR "Didn't find the server\n";
  }
@@ -319,6 +325,18 @@ L<Exception::Class> subclasses. See L<REST::Neo4p::Exceptions>.
 
 A REST::Neo4p::Agent instance is created as a subclass of a choice
 of HTTP user agents:
+
+=over
+
+=item * L<LWP::UserAgent> (default)
+
+=item * L<Mojo::UserAgent>
+
+=item * L<HTTP::Thin> (L<HTTP::Tiny> with L<HTTP::Response> responses)
+
+=back
+
+REST::Neo4p::Agent responses are always L<HTTP::Response> objects.
 
 REST::Neo4p::Agent will retry requests that fail with
 L<REST::Neo4p::CommException|REST::Neo4p::Exceptions>. The default
@@ -363,13 +381,21 @@ For batch API features, see L</Batch Mode>.
 =item new()
 
  $agent = REST::Neo4p::Agent->new();
+ $agent = REST::Neo4p::Agent->new( agent_module => 'HTTP::Thin');
  $agent = REST::Neo4p::Agent->new("http://127.0.0.1:7474");
 
-Returns a new agent. Accepts optional server address arg.
+Returns a new agent. The C<agent_module> parameter may be set to
 
-=item server()
+ LWP::UserAgent (default)
+ Mojo::UserAgent
+ HTTP::Thin
 
- $agent->server("http://127.0.0.1:7474");
+to select the underlying user agent class. Additional arguments are
+passed to the user agent constructor.
+
+=item server_url()
+
+ $agent->server_url("http://127.0.0.1:7474");
 
 Sets the server address and port.
 
@@ -416,7 +442,7 @@ methods to make requests directly.
 
  $version = $agent->neo4j_version;
 
-Returns the version of the connected Neo4j server.
+Returns the version string of the connected Neo4j server.
 
 =item available_actions()
 
@@ -474,13 +500,20 @@ Makes a DELETE request to the REST endpoint mapped to {action}. Arguments
 are additional URL components (without slashes). If the final argument
 is a hashref, it will be sent in the request as (encoded) JSON content.
 
-=item decoded_response()
+=item decoded_content()
 
- $decoded_json = $agent->decoded_response;
+ $decoded_json = $agent->decoded_content;
 
 Returns the response content of the last agent request, as decoded by
 L<JSON|JSON>. It is generally a reference, but can be a scalar if a
 bareword was returned by the server.
+
+=item raw_response()
+
+ $resp = $agent->raw_response
+
+Returns the L<HTTP::Response> object returned by the last request made
+by the backend user agent.
 
 =item no_stream()
 
@@ -526,9 +559,10 @@ batch mode.
 
 =item execute_batch()
 
- $tempfile_name = $agent->execute_batch();
+ $tmpfh = $agent->execute_batch();
+ $tmpfh = $agent->execute_batch(50);
 
- while (my $tmpf = $agent->execute_batch(50)) {
+ while (<$tmpfn>) {
    # handle responses
  }
 
@@ -540,7 +574,8 @@ Second form takes an integer argument; this will submit the next [integer]
 jobs and return the server response in the tempfile. The batch length is
 updated.
 
-You are responsible for unlinking the tempfile.
+The filehandle returned is a L<File::Temp> object. The file will be unlinked
+when the object is destroyed.
 
 =item execute_batch_chunk()
 
@@ -562,7 +597,7 @@ has default value of 1024.
 
 =head1 LICENSE
 
-Copyright (c) 2012 Mark A. Jensen. This program is free software; you
+Copyright (c) 2012-2014 Mark A. Jensen. This program is free software; you
 can redistribute it and/or modify it under the same terms as Perl
 itself.
 

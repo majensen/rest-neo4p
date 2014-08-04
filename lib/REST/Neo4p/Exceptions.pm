@@ -1,5 +1,8 @@
 #$Id$
 package REST::Neo4p::Exceptions;
+use strict;
+use warnings;
+
 BEGIN {
   $REST::Neo4p::Exceptions::VERSION = '0.3003';
 }
@@ -7,6 +10,7 @@ use Exception::Class (
   'REST::Neo4p::Exception',
   'REST::Neo4p::LocalException' => {
     isa => 'REST::Neo4p::Exception',
+    fields => [ 'code' ],
     description => 'REST::Neo4p code-local error'
    },
   'REST::Neo4p::Neo4jException' => {
@@ -33,6 +37,12 @@ use Exception::Class (
 		'neo4j_exception', 'neo4j_stacktrace' ],
     description => 'Conflict (409) thrown when fail is specified for create_unique on indexes'
    },
+  'REST::Neo4p::TxQueryException' => 
+    {
+    isa => 'REST::Neo4p::Neo4jException',
+    fields => [qw/error_list message code/],
+    description => 'List of errors returned by query executed within a txn'
+   },
   'REST::Neo4p::QuerySyntaxException' =>
     {
       isa => 'REST::Neo4p::Neo4jException',
@@ -48,6 +58,10 @@ use Exception::Class (
     isa => 'REST::Neo4p::LocalException',
     description => 'Attempt to call a non-supported inherited method'
    },
+  'REST::Neo4p::TxException' => {
+    isa => 'REST::Neo4p::LocalException',
+    description => 'Problem with transaction building or execution'
+   },
   'REST::Neo4p::AbstractMethodException' => {
     isa => 'REST::Neo4p::LocalException',
     description => 'Attempt to call a subclass-only method from a parent class'
@@ -57,9 +71,18 @@ use Exception::Class (
     message => 'This is a class method only',
     description => 'Attempt to call a class method from an instance'
    },
+  'REST::Neo4p::VersionMismatchException' => {
+    isa => 'REST::Neo4p::LocalException',
+    message => 'This feature is not supported in your neo4j server version',
+    description => 'Use of features only implemented in a more recent neo4j version'
+   },
   'REST::Neo4p::QueryResponseException' => {
     isa => 'REST::Neo4p::LocalException',
     description => 'Problem parsing the response to a cypher query (prob. a bug)'
+   },
+  'REST::Neo4p::EmptyQueryResponseException' => {
+    isa => 'REST::Neo4p::LocalException',
+    description => 'The server response body was empty; connection problem?'
    },
   'REST::Neo4p::StreamException' => {
     isa => 'REST::Neo4p::LocalException',
@@ -72,7 +95,7 @@ use Exception::Class (
     fields => ['args']
    },
   'REST::Neo4p::ConstraintSpecException' => {
-    ias => 'REST::Neo4p::LocalException',
+    isa => 'REST::Neo4p::LocalException',
     description => 'Constraint specification syntax incorrect',
   }
    );
@@ -179,7 +202,7 @@ L<REST::Neo4p>, L<Exception::Class>
 
 =head1 LICENSE
 
-Copyright (c) 2012 Mark A. Jensen. This program is free software; you
+Copyright (c) 2012-2014 Mark A. Jensen. This program is free software; you
 can redistribute it and/or modify it under the same terms as Perl
 itself.
 

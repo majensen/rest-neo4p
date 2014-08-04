@@ -1,4 +1,4 @@
-#$Id: Schema.pm 488 2014-07-17 01:17:06Z maj $
+#$Id$
 use v5.10;
 package REST::Neo4p::Schema;
 use REST::Neo4p::Exceptions;

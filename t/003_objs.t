@@ -6,11 +6,16 @@ use lib '../lib';
 use strict;
 use warnings;
 
+#$SIG{__DIE__} = sub { print $_[0] };
+
 no warnings qw(once);
 my $build;
+my ($user,$pass);
 
 eval {
     $build = Module::Build->current;
+    $user = $build->notes('user');
+    $pass = $build->notes('pass');
 };
 my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
 my $num_live_tests = 34;
@@ -19,12 +24,13 @@ my $num_live_tests = 34;
 use_ok('REST::Neo4p');
 
 my $not_connected;
+
 eval {
-  REST::Neo4p->connect($TEST_SERVER);
+  REST::Neo4p->connect($TEST_SERVER,$user,$pass);
 };
 if ( my $e = REST::Neo4p::CommException->caught() ) {
   $not_connected = 1;
-  diag "Test server unavailable : ".$e->message;
+  diag "Test server unavailable : tests skipped";
 }
 
 SKIP : {

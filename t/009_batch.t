@@ -11,19 +11,23 @@ use warnings;
 no warnings qw(once);
 
 my $build;
+my ($user,$pass);
+
 eval {
     $build = Module::Build->current;
+    $user = $build->notes('user');
+    $pass = $build->notes('pass');
 };
 my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
 my $num_live_tests = 59;
 
 my $not_connected;
 eval {
-  REST::Neo4p->connect($TEST_SERVER);
+  REST::Neo4p->connect($TEST_SERVER,$user,$pass);
 };
 if ( my $e = REST::Neo4p::CommException->caught() ) {
   $not_connected = 1;
-  diag "Test server unavailable : ".$e->message;
+  diag "Test server unavailable : tests skipped";
 }
 
 my ($idx,$idx2);
@@ -34,7 +38,7 @@ SKIP : {
   my $rel;
   ok( !(
   batch {
-      ok $REST::Neo4p::AGENT->batch_mode, 'agent now in batch mode';
+      ok (REST::Neo4p->agent->batch_mode, 'agent now in batch mode');
       ok $idx = REST::Neo4p::Index->new(node => 'test_node'), 'make an index inside batch';
       my $name = "__test_node";
       my @names = map { $name.$_ } (1..10);
@@ -45,7 +49,7 @@ SKIP : {
       ok $rel =  $nodes[0]->relate_to($nodes[1], 'one2two'), 'create relationship inside batch';
   } ('keep_objs')
       ), 'batch ran without errors');
-  ok !$REST::Neo4p::AGENT->batch_mode, 'agent not now in batch mode';
+  ok !REST::Neo4p->agent->batch_mode, 'agent not now in batch mode';
   ok $idx = REST::Neo4p->get_index_by_name('test_node','node'), 'got index outside batch';
   ok !$idx->is_batch;
 

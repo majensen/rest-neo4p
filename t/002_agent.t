@@ -1,14 +1,24 @@
 #-*-perl-*-
-#$Id$
-use Test::More tests => 8;
+#$Id: 002_agent.t 416 2014-05-05 04:13:30Z maj $
+use Test::More;
 use Module::Build;
 use lib '../lib';
+use REST::Neo4p::Exceptions;
 use strict;
 use warnings;
 
+my @agent_modules = qw/
+LWP::UserAgent
+Mojo::UserAgent
+HTTP::Thin
+/;
+
 my $build;
+my ($user,$pass);
 eval {
     $build = Module::Build->current;
+    $user = $build->notes('user');
+    $pass = $build->notes('pass');
 };
 
 my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
@@ -67,19 +77,8 @@ foreach my $mod (@agent_modules) {
 	    unlike $ua->raw_response->header('Content-Type'), qr/stream=true/,
 	      'server acknowledges no streaming';
 	    $ua->delete_node($id);
-is $TEST_SERVER, $ua->server($TEST_SERVER), 'server spec';
+	}
+    }
+}
+done_testing;
 
-my $not_connected;
-eval {
-  $ua->connect;
-};
-if ( my $e = REST::Neo4p::CommException->caught() ) {
-  $not_connected = 1;
-  diag "Test server unavailable : ".$e->message;
-}
-SKIP : {
-  skip 'no local connection to neo4j',3 if $not_connected;
-    is $ua->node, join('/',$TEST_SERVER, qw(db data node)), 'node url looks good';
-    like $ua->neo4j_version, qr/^1.8/, 'neo4j version 1.8...';
-    like $ua->relationship_types, qr/^http.*types/, 'relationship types url';
-}

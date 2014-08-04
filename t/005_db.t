@@ -10,8 +10,12 @@ no warnings qw(once);
 
 my @cleanup;
 my $build;
+my ($user,$pass);
+
 eval {
     $build = Module::Build->current;
+    $user = $build->notes('user');
+    $pass = $build->notes('pass');
 };
 my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
 my $num_live_tests = 31;
@@ -20,11 +24,11 @@ use_ok('REST::Neo4p');
 
 my $not_connected;
 eval {
-  REST::Neo4p->connect($TEST_SERVER);
+  REST::Neo4p->connect($TEST_SERVER,$user,$pass);
 };
 if ( my $e = REST::Neo4p::CommException->caught() ) {
   $not_connected = 1;
-  diag "Test server unavailable : ".$e->message;
+  diag "Test server unavailable : tests skipped";
 }
 SKIP : {
   skip 'no local connection to neo4j', $num_live_tests if $not_connected;
@@ -74,9 +78,9 @@ SKIP : {
   
   ok $R->remove, 'remove relationship';
   ok !REST::Neo4p->get_relationship_by_id($$r12), 'relationship is gone';
-  lives_ok { $REST::Neo4p::AGENT->delete_node($$N) } 'delete node';
+  lives_ok { REST::Neo4p->agent->delete_node($$N) } 'delete node';
 #  ok $REST::Neo4p::AGENT->delete_relationship($$R);
-  lives_ok { $REST::Neo4p::AGENT->delete_node_index($$I) } 'delete node index';
+  lives_ok { REST::Neo4p->agent->delete_node_index($$I) } 'delete node index';
 }
 
 END {

@@ -1,7 +1,6 @@
 #$Id$#
 package REST::Neo4p::Index;
 use base 'REST::Neo4p::Entity';
-use REST::Neo4p::Relationship;
 use REST::Neo4p::Exceptions;
 use Carp qw(croak carp);
 use URI::Escape;
@@ -78,8 +77,9 @@ sub add_entry {
   }
   my %entry_hash = (ref $entry_hash[0] eq 'HASH') ? 
 		      %{$entry_hash[0]} : @entry_hash;
-
-  my $agent = $REST::Neo4p::AGENT;
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
+  my $agent = REST::Neo4p->agent;
   my $rq = "post_".$self->_action;
   my $decoded_resp;
   while (my ($key, $value) = each %entry_hash) {
@@ -111,7 +111,9 @@ sub remove_entry {
      );
   }
   my @addl_components;
-  my $agent = $REST::Neo4p::AGENT;
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
+  my $agent = REST::Neo4p->agent;
   my $rq = 'delete_'.$self->_action;
   if (defined $key) {
     if (defined $value) {
@@ -146,7 +148,9 @@ sub find_entries {
   my ($key, $value) = @_;
   my ($query) = @_;
   my $decoded_resp;
-  my $agent = $REST::Neo4p::AGENT;
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
+  my $agent = REST::Neo4p->agent;
   my $rq = 'get_'.$self->_action;
   if ($value) { # exact key->value match
     eval {
@@ -203,13 +207,16 @@ sub create_unique_node {
   unless ($self->type eq 'node') {
     REST::Neo4p::LocalException->throw("Can't create node on a non-node index\n");
   }
-  unless ($key && $value && $properties && (ref $properties eq 'HASH')) {
+  unless (defined $key && defined $value && 
+	    defined $properties && (ref $properties eq 'HASH')) {
     REST::Neo4p::LocalException->throw("Args required: key => value, hashref_of_properties\n");
   }
   unless ( $on_found =~ /^get|fail$/ ) {
     REST::Neo4p::LocalException->throw("on_found parameter (4th arg) must be one of 'get', 'fail'\n");
   }
-  my $agent = $REST::Neo4p::AGENT;
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
+  my $agent = REST::Neo4p->agent;
   my $rq = "post_".$self->_action;
   my $restq = 'uniqueness='.($on_found eq 'get' ? 'get_or_create' : 'create_or_fail');
   my $decoded_resp;
@@ -242,9 +249,11 @@ sub create_unique_relationship {
   unless ($self->type eq 'relationship') {
     REST::Neo4p::LocalException->throw("Can't create relationship on a non-relationship index\n");
   }
-  unless ($key && $value && $from_node && $to_node && $rel_type &&
-	    (ref $from_node eq 'REST::Neo4p::Node') &&
-	      (ref $to_node eq 'REST::Neo4p::Node') ) {
+  unless (defined $key && defined $value && 
+	    defined $from_node && defined $to_node && 
+	      defined $rel_type &&
+		(ref $from_node eq 'REST::Neo4p::Node') &&
+		  (ref $to_node eq 'REST::Neo4p::Node') ) {
     REST::Neo4p::LocalException->throw("Args required: key => value, from_node => to_node, rel_type\n");
   }
   unless (!defined $properties || (ref $properties eq 'HASH')) {
@@ -253,7 +262,9 @@ sub create_unique_relationship {
   unless ( $on_found =~ /^get|fail$/ ) {
     REST::Neo4p::LocalException->throw("on_found parameter (7th arg) must be one of 'get', 'fail'\n");
   }
-  my $agent = $REST::Neo4p::AGENT;
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
+  my $agent = REST::Neo4p->agent;
   my $rq = "post_".$self->_action;
   my $restq = 'uniqueness='.($on_found eq 'get' ? 'get_or_create' : 'create_or_fail');
   my $decoded_resp;
@@ -311,7 +322,7 @@ REST::Neo4p::Index - Neo4j index object
 
  $node_idx = REST::Neo4p::Index->new('node', 'my_node_index');
  $rel_idx = REST::Neo4p::Index->new('relationship', 'my_rel_index');
- $fulltext_idx = REST::Neo4p::Index->new('node', "my_ft_index,
+ $fulltext_idx = REST::Neo4p::Index->new('node', 'my_ft_index',
                                     { type => 'fulltext',
                                       provider => 'lucene' });
  $node_idx->add_entry( $ShaggyNode, 'pet' => 'ScoobyDoo' );
@@ -337,7 +348,7 @@ REST::Neo4p::Index objects represent Neo4j node and relationship indexes.
 
  $node_idx = REST::Neo4p::Index->new('node', 'my_node_index');
  $rel_idx = REST::Neo4p::Index->new('relationship', 'my_rel_index');
- $fulltext_idx = REST::Neo4p::Index->new('node', "my_ft_index,
+ $fulltext_idx = REST::Neo4p::Index->new('node', 'my_ft_index',
                                     { type => 'fulltext',
                                       provider => 'lucene' });
 
@@ -384,6 +395,21 @@ L<Lucene|http://lucene.apache.org/core/3_5_0/queryparsersyntax.html>.
 
 C<find_entries()> is not supported in batch mode.
 
+=item create_unique()
+
+ $node = $index->create_unique( name => 'fred', 
+                                { name => 'fred', state => 'unshaven'} );
+
+ $reln = $index->create_unique( name => 'married_to',
+                                $node => $wilma_node,
+                                'MARRIED_TO');
+
+Creates a unique node or relationship on the basis of presence or absence
+of a matching item in the index. 
+
+Optional final argument: one of 'get' or 'fail'. If 'get' (default), the 
+matching item is returned if present. If 'fail', false is returned.
+
 =back
 
 =head1 SEE ALSO
@@ -398,7 +424,7 @@ L<REST::Neo4p>, L<REST::Neo4p::Relationship>, L<REST::Neo4p::Node>.
 
 =head1 LICENSE
 
-Copyright (c) 2012 Mark A. Jensen. This program is free software; you
+Copyright (c) 2012-2014 Mark A. Jensen. This program is free software; you
 can redistribute it and/or modify it under the same terms as Perl
 itself.
 

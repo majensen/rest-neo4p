@@ -1,10 +1,5 @@
-MANIFEST
-README
-LICENSE
-Todo
-Changes
 Build.PL
-Makefile.PL
+Changes
 LICENSE
 MANIFEST
 Makefile.PL
@@ -34,7 +29,9 @@ t/0010_load.t
 t/0011_parse.t
 t/002_agent.t
 t/003_objs.t
+t/0041_idx_create_unique.t
 t/004_idx.t
+t/0051_handle.t
 t/005_db.t
 t/006_query.t
 t/007_accessors.t
@@ -47,6 +44,9 @@ t/021_validation.t
 t/022_constrain.t
 t/023_constrain_synopsis.t
 t/030_idx_escape.t
+t/040_v2_labels.t
+t/041_v2_txns.t
+t/050_v2_schema.t
 t/097_parse_errors.t
 t/098_pod.t
 t/099_error.t

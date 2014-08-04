@@ -1,7 +1,7 @@
 #$Id$
 package REST::Neo4p::Relationship;
 use base 'REST::Neo4p::Entity';
-use REST::Neo4p;
+use REST::Neo4p::Exceptions;
 use Carp qw(croak carp);
 use strict;
 use warnings;
@@ -33,6 +33,34 @@ sub end_node {
   return REST::Neo4p->get_node_by_id(shift->_entry->{end_id});
 }
 
+sub as_simple {
+  my $self = shift;
+  my $ret;
+  my $props = $self->get_properties;
+  $ret->{_relationship} = $$self;
+  $ret->{_type} = $self->type;
+  $ret->{_start} = ${$self->start_node};
+  $ret->{_end} = ${$self->end_node};
+  $ret->{$_} = $props->{$_} for keys %$props;
+  return $ret;
+}
+
+sub simple_from_json_response {
+  my $class = shift;
+  my ($decoded_resp) = @_;
+  my $ret;
+  # reln id
+  ($ret->{_relationship}) = $decoded_resp->{self} =~ m{.*/([0-9]+)$};
+  # reln type
+  $ret->{_type} = $decoded_resp->{type};
+  # reln properties
+  $ret->{$_} = $decoded_resp->{data}->{$_} for keys %{$decoded_resp->{data}};
+  # start and end nodes (by id)
+  ($ret->{_start}) = $decoded_resp->{start} =~ m{.*/([0-9]+)$};
+  ($ret->{_end}) = $decoded_resp->{end} =~ m{.*/([0-9]+)$};
+  return $ret;
+}
+
 =head1 NAME
 
 REST::Neo4p::Relationship - Neo4j relationship object
@@ -60,7 +88,7 @@ REST::Neo4p::Relationship objects represent Neo4j relationships.
 
 Creates the relationship given by the scalar third argument between
 the first argument and second argument, both C<REST::Neo4p::Node>
-objects. An optional third argument is a hashref of I<relationship> 
+objects. An optional fourth argument is a hashref of I<relationship> 
 properties.
 
 =item get_property()
@@ -82,6 +110,13 @@ Sets values of properties on nodes and relationships.
 
 Get all the properties of relationship as a hashref.
 
+=item remove_property()
+
+ $relationship->remove_property('name');
+ $relationship->remove_property(@property_names);
+
+Remove properties from relationship.
+
 =item start_node(), end_node()
 
  $fred_node = $married_to->start_node;
@@ -100,6 +135,17 @@ Gets a relationship's type.
 
 See L<REST::Neo4p/Property Auto-accessors>.
 
+=item as_simple()
+
+ $simple_reln = $reln1->as_simple
+ $rel_id = $simple_reln->{_relationship};
+ $value = $simple_reln->{$property_name};
+ $type = $simple_reln->{_type};
+ $start_node_id = $simple_reln->{_start};
+ $end_node_id = $simple_reln->{_end};
+
+Get relationship as a simple hashref.
+
 =back
 
 =head1 SEE ALSO
@@ -114,7 +160,7 @@ L<REST::Neo4p>, L<REST::Neo4p::Node>, L<REST::Neo4p::Index>.
 
 =head1 LICENSE
 
-Copyright (c) 2012 Mark A. Jensen. This program is free software; you
+Copyright (c) 2012-2014 Mark A. Jensen. This program is free software; you
 can redistribute it and/or modify it under the same terms as Perl
 itself.
 

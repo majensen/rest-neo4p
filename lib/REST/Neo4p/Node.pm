@@ -1,10 +1,10 @@
 #$Id$
 package REST::Neo4p::Node;
+use base 'REST::Neo4p::Entity';
 use REST::Neo4p::Relationship;
 use REST::Neo4p::Exceptions;
 use JSON;
 use Carp qw(croak carp);
-use base 'REST::Neo4p::Entity';
 use strict;
 use warnings;
 BEGIN {
@@ -20,7 +20,9 @@ BEGIN {
 sub relate_to {
   my $self = shift;
   my ($target_node, $rel_type, $rel_props) = @_;
-  my $agent = $REST::Neo4p::AGENT;
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
+  my $agent = REST::Neo4p->agent;
   my $suffix = $self->_get_url_suffix('create_relationship')
     || 'relationships'; # weak workaround
   my $content = {
@@ -52,7 +54,9 @@ sub get_relationships {
   my $self = shift;
   my ($direction) = @_;
   $direction ||= 'all';
-  my $agent = $REST::Neo4p::AGENT;
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
+  my $agent = REST::Neo4p->agent;
   my $action;
   for ($direction) {
     /^all$/ && do {
@@ -95,6 +99,104 @@ sub get_relationships {
   return @ret;
 }
 
+sub set_labels {
+  my $self = shift;
+  my @labels = @_;
+  unless (REST::Neo4p->_check_version(2)) {
+    REST::Neo4p::VersionMismatchException->throw("set_labels requires neo4j v2.0 or greater");
+  }
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
+  my $agent = REST::Neo4p->agent;
+  my $decoded_resp;
+  eval {
+    $decoded_resp= $agent->put_node([$$self,'labels'],[@labels]);
+  };
+  my $e;
+  if ($e = Exception::Class->caught('REST::Neo4p::Exception')) {
+    # TODO : handle different classes
+    $e->rethrow;
+  }
+  elsif ($@) {
+    ref $@ ? $@->rethrow : die $@;
+  }
+  return $self;
+}
+
+sub add_labels {
+  my $self = shift;
+  my @labels = @_;
+  unless (REST::Neo4p->_check_version(2)) {
+    REST::Neo4p::VersionMismatchException->throw("add_labels requires neo4j v2.0 or greater");
+  }
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
+  my $agent = REST::Neo4p->agent;
+  my $decoded_resp;
+  eval {
+    $decoded_resp= $agent->post_node([$$self,'labels'],[@labels]);
+  };
+  my $e;
+  if ($e = Exception::Class->caught('REST::Neo4p::Exception')) {
+    # TODO : handle different classes
+    $e->rethrow;
+  }
+  elsif ($@) {
+    ref $@ ? $@->rethrow : die $@;
+  }
+  return $self;
+}
+
+sub get_labels {
+  my $self = shift;
+  unless (REST::Neo4p->_check_version(2)) {
+    REST::Neo4p::VersionMismatchException->throw("get_labels requires neo4j v2.0 or greater");
+  }
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
+  my $agent = REST::Neo4p->agent;
+  my $decoded_resp;
+  eval {
+    $decoded_resp = $agent->get_node($$self, 'labels');
+  };
+  my $e;
+  if ($e = Exception::Class->caught('REST::Neo4p::Exception')) {
+    # TODO : handle different classes
+    $e->rethrow;
+  }
+  elsif ($@) {
+    ref $@ ? $@->rethrow : die $@;
+  }
+  return @$decoded_resp;
+}
+
+sub drop_labels {
+  my $self = shift;
+  unless (REST::Neo4p->_check_version(2)) {
+    REST::Neo4p::VersionMismatchException->throw("drop_labels requires neo4j v2.0 or greater");
+  }
+  my @labels = @_;
+  return $self unless @labels;
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
+  my $agent = REST::Neo4p->agent;
+  my $decoded_resp;
+  eval {
+    foreach my $label (@labels) {
+      $decoded_resp = $agent->delete_node($$self, 'labels', $label);
+    }
+  };
+  my $e;
+  if ($e = Exception::Class->caught('REST::Neo4p::Exception')) {
+    # TODO : handle different classes
+    $e->rethrow;
+  }
+  elsif ($@) {
+    ref $@ ? $@->rethrow : die $@;
+  }
+  return $self;
+}
+
 sub get_incoming_relationships { shift->get_relationships('in',@_) }
 sub get_outgoing_relationships { shift->get_relationships('out',@_) }
 sub get_all_relationships { shift->get_relationships('all',@_) }
@@ -102,6 +204,26 @@ sub get_all_relationships { shift->get_relationships('all',@_) }
 sub get_typed_relationships {
   my $self = shift;
   REST::Neo4p::NotImplException->throw( "get_typed_relationships() not implemented yet\n" );
+}
+
+sub as_simple {
+  my $self = shift;
+  my $ret;
+  my $props = $self->get_properties;
+  $ret->{_node} = $$self;
+  $ret->{$_} = $props->{$_} for keys %$props;
+  return $ret;
+}
+
+sub simple_from_json_response {
+  my $class = shift;
+  my ($decoded_resp) = @_;
+  my $ret;
+  # node id
+  ($ret->{_node}) = $decoded_resp->{self} =~ m{.*/([0-9]+)$};
+  # node properties
+  $ret->{$_} = $decoded_resp->{data}->{$_} for keys %{$decoded_resp->{data}};
+  return $ret;
 }
 
 =head1 NAME
@@ -154,10 +276,17 @@ Sets values of properties on nodes and relationships.
 
 =item get_properties()
 
- $props = $relationship->get_properties;
+ $props = $node->get_properties;
  print "'Sup, Al." if ($props->{name} eq 'Al');
 
 Get all the properties of a node or relationship as a hashref.
+
+=item remove_property()
+
+ $node->remove_property('name');
+ $node->remove_property(@property_names);
+
+Remove properties from node.
 
 =item relate_to()
 
@@ -187,6 +316,46 @@ of L<REST::Neo4p::Relationship|REST::Neo4p::Relationship> objects;
 
 See L<REST::Neo4p/Property Auto-accessors>.
 
+=item as_simple()
+
+ $simple_node = $node1->as_simple
+ $node_id = $simple_node->{_node};
+ $value = $simple_node->{$property_name};
+
+Get node as a simple hashref.
+
+=back
+
+=head2 METHODS - Neo4j Version 2.0
+
+These methods are supported by v2.0 of the Neo4j server.
+
+=over
+
+=item set_labels()
+
+ my $node = $node->set_labels($label1, $label2);
+
+Sets the node's labels. This replaces any existing node labels.
+
+=item add_labels()
+
+ my $node = $node->add_labels($label3, $label4);
+
+Add labels to the nodes existing labels.
+
+=item get_labels()
+
+ my @labels = $node->get_labels;
+
+Retrieve the node's list of labels, if any.
+
+=item drop_labels()
+
+ my $node = $node->drop_labels($label1, $label4);
+
+Remove one or more labels from a node.
+
 =back
 
 =head1 SEE ALSO
@@ -201,7 +370,7 @@ L<REST::Neo4p>, L<REST::Neo4p::Relationship>, L<REST::Neo4p::Index>.
 
 =head1 LICENSE
 
-Copyright (c) 2012 Mark A. Jensen. This program is free software; you
+Copyright (c) 2012-2014 Mark A. Jensen. This program is free software; you
 can redistribute it and/or modify it under the same terms as Perl
 itself.
 

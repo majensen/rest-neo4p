@@ -1,4 +1,5 @@
 #$Id$
+use v5.10;
 package REST::Neo4p::Entity;
 use REST::Neo4p::Exceptions;
 use Carp qw(croak carp);
@@ -27,13 +28,14 @@ sub new {
   }
   my ($properties) = (@_);
   my $url_components = delete $properties->{_addl_components};
-  my $agent = $REST::Neo4p::AGENT;
+  my $agent = REST::Neo4p->agent;
   REST::Neo4p::CommException->throw("Not connected\n") unless $agent;
   my $decoded_resp;
   eval {
-    $decoded_resp = $agent->post_data([$entity_type,
-					$url_components ? @$url_components : ()],
-				       $properties);
+    $decoded_resp = $agent->post_data(
+      [$entity_type, $url_components ? @$url_components : ()],
+      $properties
+     );
   };
   if (my $e = REST::Neo4p::Exception->caught()) {
     # TODO : handle cases
@@ -71,29 +73,32 @@ sub new_from_json_response {
   my $self_url  = $decoded_resp->{self} || $decoded_resp->{template};
   $self_url =~ s/{key}.*$//; # another kludge for get_indexes
   my ($obj) = $self_url =~ /([a-z0-9_]+)\/?$/i;
+  my $tbl_entry = $ENTITY_TABLE->{$entity_type}{$obj};
   my ($start_id,$end_id);
   if ($decoded_resp->{start}) {
     ($start_id) = $decoded_resp->{start} =~ /([0-9]+)\/?$/;
     ($end_id) = $decoded_resp->{end} =~ /([0-9]+)\/?$/;
   }
-  unless (defined $ENTITY_TABLE->{$entity_type}{$obj}) {
+  unless (defined $tbl_entry) {
     if ($decoded_resp->{template}) {     # another kludge for get_indexes
       ($decoded_resp->{type}) = $decoded_resp->{template} =~ m|index/([a-z]+)/|;
     }
-    $ENTITY_TABLE->{$entity_type}{$obj}{entity_type} = $entity_type;
-    $ENTITY_TABLE->{$entity_type}{$obj}{self} = bless \$obj, $class;
-    $ENTITY_TABLE->{$entity_type}{$obj}{self_url} = $self_url;
-    $ENTITY_TABLE->{$entity_type}{$obj}{start_id} = $start_id;
-    $ENTITY_TABLE->{$entity_type}{$obj}{end_id} = $end_id;
-    $ENTITY_TABLE->{$entity_type}{$obj}{batch} = 0;
-    $ENTITY_TABLE->{$entity_type}{$obj}{type} = $decoded_resp->{type};
+    $tbl_entry = $ENTITY_TABLE->{$entity_type}{$obj} = {};
+    $tbl_entry->{entity_type} = $entity_type;
+    $tbl_entry->{self} = bless \$obj, $class;
+    $tbl_entry->{self_url} = $self_url;
+    $tbl_entry->{start_id} = $start_id;
+    $tbl_entry->{end_id} = $end_id;
+    $tbl_entry->{batch} = 0;
+    $tbl_entry->{type} = $decoded_resp->{type};
+    $tbl_entry->{_handle} = REST::Neo4p->handle; # current db handle
   }
   if ($REST::Neo4p::CREATE_AUTO_ACCESSORS && ($entity_type ne 'index')) {
-    my $self =  $ENTITY_TABLE->{$entity_type}{$obj}{self};
+    my $self =  $tbl_entry->{self};
     my $props = $self->get_properties;
     for (keys %$props) { $self->_create_accessors($_) unless $self->can($_); }
   }
-  return $ENTITY_TABLE->{$entity_type}{$obj}{self};
+  return $tbl_entry->{self};
 }
 
 sub new_from_batch_response {
@@ -104,12 +109,14 @@ sub new_from_batch_response {
     REST::Neo4p::NotSuppException->throw("Cannot use ".__PACKAGE__." directly\n");
   }
   my ($id_token) = (@_);
-  $ENTITY_TABLE->{$entity_type}{$id_token}{entity_type} = $entity_type;
-  $ENTITY_TABLE->{$entity_type}{$id_token}{self} = bless \$id_token, $class;
-  $ENTITY_TABLE->{$entity_type}{$id_token}{self_url} = $id_token;
-  $ENTITY_TABLE->{$entity_type}{$id_token}{batch} = 1;
-  $ENTITY_TABLE->{batch_objs}->{$id_token} =  $ENTITY_TABLE->{$entity_type}{$id_token}{self};
-  return $ENTITY_TABLE->{$entity_type}{$id_token}{self};
+  my $tbl_entry = $ENTITY_TABLE->{$entity_type}{$id_token} = {};
+  $tbl_entry->{entity_type} = $entity_type;
+  $tbl_entry->{self} = bless \$id_token, $class;
+  $tbl_entry->{self_url} = $id_token;
+  $tbl_entry->{_handle} = REST::Neo4p->handle; # current handle
+  $tbl_entry->{batch} = 1;
+  $ENTITY_TABLE->{batch_objs}{$id_token} = $tbl_entry->{self};
+  return $tbl_entry->{self};
 }
 
 # remove() - delete the node and destroy the object
@@ -119,7 +126,9 @@ sub remove {
   my @url_components = @_;
   my $entity_type = ref $self;
   $entity_type =~ s/.*::(.*)/\L$1\E/;
-  my $agent = $REST::Neo4p::AGENT;
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
+  my $agent = REST::Neo4p->agent;
   eval {
     $agent->delete_data($entity_type, @url_components, $$self);
   };
@@ -129,7 +138,7 @@ sub remove {
   elsif ($e = Exception::Class->caught()) {
     ref $e ? $e->rethrow : die $e;
   }
-  $self->DESTROY;
+  $self->_deregister;
   return 1;
 }
 # set_property( { prop1 => $val1, prop2 => $val2, ... } )
@@ -140,7 +149,9 @@ sub set_property {
   REST::Neo4p::LocalException->throw("Arg must be a hashref\n") unless ref($props) && ref $props eq 'HASH';
   my $entity_type = ref $self;
   $entity_type =~ s/.*::(.*)/\L$1\E/;
-  my $agent = $REST::Neo4p::AGENT;
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
+  my $agent = REST::Neo4p->agent;
   my $suffix = $self->_get_url_suffix('property');
   my @ret;
   $suffix =~ s|/[^/]*$||; # strip the '{key}' placeholder
@@ -162,7 +173,7 @@ sub set_property {
   if ($REST::Neo4p::CREATE_AUTO_ACCESSORS) {
     for (keys %$props) { $self->_create_accessors($_) unless $self->can($_) }
   }
-  return 1;
+  return $self;
 }
 
 # @prop_values = get_property( qw(prop1 prop2 ...) )
@@ -171,7 +182,9 @@ sub get_property {
   my @props = @_;
   my $entity_type = ref $self;
   $entity_type =~ s/.*::(.*)/\L$1\E/;
-  my $agent = $REST::Neo4p::AGENT;
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
+  my $agent = REST::Neo4p->agent;
   REST::Neo4p::CommException->throw("Not connected\n") unless $agent;
   my $suffix = $self->_get_url_suffix('property');
   my @ret;
@@ -201,7 +214,9 @@ sub get_properties {
   my $self = shift;
   my $entity_type = ref $self;
   $entity_type =~ s/.*::(.*)/\L$1\E/;
-  my $agent = $REST::Neo4p::AGENT;
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
+  my $agent = REST::Neo4p->agent;
   REST::Neo4p::CommException->throw("Not connected\n") unless $agent;
   my $suffix = $self->_get_url_suffix('property');
   $suffix =~ s|/[^/]*$||; # strip the '{key}' placeholder
@@ -244,9 +259,12 @@ sub remove_property {
   my @props = @_;
   my $entity_type = ref $self;
   $entity_type =~ s/.*::(.*)/\L$1\E/;
-  my $agent = $REST::Neo4p::AGENT;
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
+  my $agent = REST::Neo4p->agent;
   REST::Neo4p::CommException->throw("Not connected\n") unless $agent;
   my $suffix = $self->_get_url_suffix('property');
+  $suffix =~ s|/[^/]*$||; # strip the '{key}' placeholder
   foreach (@props) {
     eval {
       $agent->delete_data($entity_type,$$self,$suffix,$_);
@@ -259,7 +277,18 @@ sub remove_property {
       ref $e ? $e->rethrow : die $e;
     }
   }
-  return 1;
+  return $self;
+}
+
+sub as_simple {
+  my $self = shift;
+  return;
+}
+
+sub simple_from_json_response {
+  my $class = shift;
+  my ($decoded_resp) = @_;
+  return;
 }
 
 sub id { ${$_[0]} }
@@ -289,7 +318,7 @@ sub _entity_by_id {
   my $new;
   unless ($ENTITY_TABLE->{$entity_type}{$id}) {
     # not recorded as object yet
-    my $agent = $REST::Neo4p::AGENT;
+    my $agent = REST::Neo4p->agent;
     REST::Neo4p::CommException->throw("Not connected\n") unless $agent;
     my ($rq, $decoded_resp);
     if ($entity_type eq 'index') {
@@ -349,13 +378,6 @@ sub _get_url_suffix {
   my $suffix = $ENTITY_TABLE->{$entity_type}{_actions}{$action};
 }
 
-sub _self_url {
-  my $self = shift;
-  my $entity_type = ref $self;
-  $entity_type =~ s/.*::(.*)/\L$1\E/;
-  return $ENTITY_TABLE->{$entity_type}{$$self}{self_url};
-}
-
 # get the $ENTITY_TABLE entry for the object
 sub _entry {
   my $self = shift;
@@ -363,18 +385,34 @@ sub _entry {
   $entity_type =~ s/.*::(.*)/\L$1\E/;
   return $ENTITY_TABLE->{$entity_type}{$$self};
 }
+sub _self_url {
+  my $self = shift;
+  return $self->_entry->{self_url} if $self->_entry;
+  return;
+}
+
+# get the $ENTITY_TABLE entry for the object
+sub _handle { 
+  my $self = shift;
+  return $self->_entry->{_handle} if $self->_entry;
+  return;
+}
+
+sub _deregister {
+  my $self = shift;
+  my $entity_type = ref $self;
+  $entity_type =~ s/.*::(.*)/\L$1\E/;
+  foreach (sort keys %{$ENTITY_TABLE->{$entity_type}{$$self}}) {
+    delete $ENTITY_TABLE->{$entity_type}{$$self}{$_};
+  }
+  delete $ENTITY_TABLE->{$entity_type}{$$self};
+}
 
 sub DESTROY {
   my $self = shift;
   my $entity_type = ref $self;
   $entity_type =~ s/.*::(.*)/\L$1\E/;
-  foreach (keys %{$ENTITY_TABLE->{$entity_type}{$$self}}) {
-    delete $ENTITY_TABLE->{$entity_type}{$$self}{$_};
-  }
-
-  delete $ENTITY_TABLE->{$entity_type}{$$self};
-
-  return;
+  $self->_deregister if $ENTITY_TABLE->{$entity_type}{$$self}{entity_type};
 }
 
 sub _create_accessors {
@@ -439,7 +477,7 @@ L<REST::Neo4p::Index>.
 
 =head1 LICENSE
 
-Copyright (c) 2012 Mark A. Jensen. This program is free software; you
+Copyright (c) 2012-2014 Mark A. Jensen. This program is free software; you
 can redistribute it and/or modify it under the same terms as Perl
 itself.
 

@@ -1,15 +1,18 @@
 
 #$Id$
+use v5.10;
 package REST::Neo4p::Query;
 use REST::Neo4p::Path;
 use REST::Neo4p::Exceptions;
 use JSON::XS;
 use REST::Neo4p::ParseStream;
 use HOP::Stream qw/drop/;
-use File::Temp qw(tempfile);
+use Tie::IxHash;
+use File::Temp qw(:seekable);
 use Carp qw(croak carp);
 use strict;
 use warnings;
+no warnings qw(once);
 BEGIN {
   $REST::Neo4p::Query::VERSION = '0.3003';
 }
@@ -25,19 +28,34 @@ sub new {
   unless (!defined $params || ref($params) eq 'HASH') {
     REST::Neo4p::LocalException->throw( "Second argment must be a hashref of query parameters\n" );
   }
+  $q_string =~ s/\s/ /g;
+  ($q_string) = $q_string =~ m/^\s*(.*)\s*$/;
   bless { '_query' => $q_string,
 	  '_params' => $params || {},
+	  '_handle' => REST::Neo4p->handle, # current handle
 	  'Statement' => $q_string,
 	  'NUM_OF_PARAMS' => $params ? scalar keys %$params : 0,
-	  'ParamValues' => $params,
+#	  'ParamValues' => $params,
+	  'ResponseAsObjects' => 1,
 	  '_tempfile' => ''
 	}, $class;
 }
-
+sub tmpf { shift->{_tempfile} }
+sub _handle { shift->{_handle} }
 sub execute {
   my $self = shift;
-  my $agent = $REST::Neo4p::AGENT;
-  REST::Neo4p::CommException->throw("Not connected\n") unless $agent;
+  my @params = @_;
+  my %params;
+  if (@params) {
+    %params = ref $params[0] ? %{$params[0]} : @params;
+    $self->{_params} = \%params;
+  }
+  # current handle
+  local $REST::Neo4p::HANDLE;
+  REST::Neo4p->set_handle($self->_handle);
+  REST::Neo4p::CommException->throw("Not connected\n") unless REST::Neo4p->connected;
+  my $agent = REST::Neo4p->agent;
+
   if ($agent->batch_mode) {
     REST::Neo4p::NotSuppException->throw("Query execution not supported in batch mode (yet)\n");
   }
@@ -53,7 +71,6 @@ sub execute {
       "Can't create query result tempfile : $!\n"
      );
   }
-  my $resp;
   eval {
     use experimental qw/smartmatch/;
     given ($endpt) {
@@ -85,9 +102,9 @@ sub execute {
       }
     }
   };
-  my $e;
-  if ($e = Exception::Class->caught('REST::Neo4p::Neo4jException') ) {
+  if (my $e = REST::Neo4p::Neo4jException->caught ) {
     $self->{_error} = $e;
+    $e->can('error_list') && ($self->{_error_list} = $e->error_list);
     $e->rethrow if ($self->{RaiseError});
     return;
   }
@@ -374,78 +391,50 @@ sub _process_row {
 	eval {
 	  $entity_type = _response_entity($elt);
 	};
-	/end_array/ && do { # finished
-	  $temp_fh->close;
-	  unlink $self->{_tempfile};
-	  undef $self->{_tempfile};
-	  undef $temp_fh;
-	  return;
-	};
-	do { # fail
-	  REST::Neo4p::LocalException->throw("Can't parse query response (unexpected token looking for next row)\n");
-	  last;
-	};
-      }
-      foreach my $elt (@$row) {
-	for (ref($elt)) {
-	  !$_ && do {
-	    push @ret, $elt;
-	    last;
-	  };
-	  /HASH/ && do {
-	    my $entity_type;
-	    eval {
-	      $entity_type = _response_entity($elt);
-	    };
-	    my $e;
-	    if ($e = Exception::Class->caught()) {
-	      ref $e ? $e->rethrow : die $e;
-	    }
-	    my $entity_class = 'REST::Neo4p::'.$entity_type;
-	    push @ret, $entity_class->new_from_json_response($elt);
-	    last;
-	  };
-	  /ARRAY/ && do {
-	    for my $ary_elt (@$elt) {
-	      my ($entity_type,$entity_class);
-	      eval {
-		$entity_type = _response_entity($ary_elt);
-	      };
-	      my $e;
-	      if ($e = Exception::Class->caught()) {
-		ref $e ? $e->rethrow : die $e;
-	      }
-	      if ($entity_type eq 'bareword') {
-		push @ret, $ary_elt;
-	      }
-	      else {
-		$entity_class = 'REST::Neo4p::'.$entity_type;
-		push @ret, $entity_class->new_from_json_response($ary_elt);
-	      }
-	    }
-	    last;
-	  };
-	  do {
-	    REST::Neo4p::QueryResponseException->throw("Can't parse query response (row doesn't make sense)\n");
-	  };
+	my $e;
+	if ($e = Exception::Class->caught()) {
+	  ref $e ? $e->rethrow : die $e;
 	}
+	my $entity_class = 'REST::Neo4p::'.$entity_type;
+	push @ret, $self->{ResponseAsObjects} ?
+	  $entity_class->new_from_json_response($elt) :
+	    $entity_class->simple_from_json_response($elt);
       }
-      return \@ret;
-    };
-  return $row_count;
-}
-
-sub fetchrow_arrayref { 
-  my $self = shift;
-  unless ( defined $self->{_iterator} ) {
-    REST::Neo4p::LocalException->throw("Can't run fetch(), query not execute()'d yet\n");
+      when (ref =~ /ARRAY/) {
+	my $array;
+	for my $ary_elt (@$elt) {
+	  my $entity_type;
+	  eval {
+	    $entity_type = _response_entity($ary_elt);
+	  };
+	  my $e;
+	  if ($e = Exception::Class->caught()) {
+	    ref $e ? $e->rethrow : die $e;
+	  }
+	  if ($entity_type eq 'bareword') {
+	    push @$array, $ary_elt;
+	  }
+	  else {
+	    my $entity_class = 'REST::Neo4p::'.$entity_type;
+	    push @$array, $self->{ResponseAsObjects} ?
+	      $entity_class->new_from_json_response($ary_elt) :
+		$entity_class->simple_from_json_response($ary_elt) ;
+	  }
+	}
+	# guess whether to flatten response:
+	# if more than one row element, don't flatten, 
+	# return an array reference in the response
+	push @ret, @$row > 1 ? $array : @$array;
+      }
+      default {
+	REST::Neo4p::QueryResponseException->throw("Can't parse query response (row doesn't make sense)\n");
+      }
+    }
   }
-  $self->{_iterator}->();
+  return \@ret;
 }
 
-sub fetch { shift->fetchrow_arrayref(@_) }
-
-sub column_names {
+sub finish {
   my $self = shift;
   delete $self->{_iterator};
   delete $self->{_tempfile};
@@ -553,6 +542,8 @@ Create a new query object. First argument is the Cypher query
 =item execute()
 
  $numrows = $query->execute;
+ $numrows = $query->execute( param1 => 'value1', param2 => 'value2');
+ $numrows = $query->execute( $param_hashref );
 
 Execute the query on the server. Not supported in batch mode.
 
@@ -584,6 +575,50 @@ scalars are returned as-is.
 Returns the HTTP error code, Neo4j server error message, and exception
 object if an error was encountered on execution.
 
+=item err_list()
+
+=item finish()
+
+  while (my $row = $q->fetch) {
+    if ($row->[0] eq 'What I needed') {
+      $q->finish();
+      last;
+    }
+  }
+
+Call finish() to unlink the tempfile before all items have been
+fetched.
+
+=back
+
+=head2 ATTRIBUTES
+
+=over 
+
+=item RaiseError
+
+ $q->{RaiseError} = 1;
+
+Set C<$query-E<gt>{RaiseError}> to die immediately (e.g., to catch the exception in an C<eval> block).
+
+=item ResponseAsObjects
+
+ $q->{ResponseAsObjects} = 0;
+ $row_as_plain_perl = $q->fetch;
+
+If set to true (the default), query reponses are returned as
+REST::Neo4p objects.  If false, nodes, relationships and paths are
+returned as simple perl structures.  See
+L<REST::Neo4p::Node/as_simple()>,
+L<REST::Neo4p::Relationship/as_simple()>,
+L<REST::Neo4p::Path/as_simple()> for details.
+
+=item Statement
+
+ $stmt = $q->{Statement};
+
+Get the Cypher statement associated with the query object.
+
 =back
 
 =head1 SEE ALSO
@@ -598,7 +633,7 @@ L<DBD::Neo4p>, L<REST::Neo4p>, L<REST::Neo4p::Path>, L<REST::Neo4p::Agent>.
 
 =head1 LICENSE
 
-Copyright (c) 2012 Mark A. Jensen. This program is free software; you
+Copyright (c) 2012-2014 Mark A. Jensen. This program is free software; you
 can redistribute it and/or modify it under the same terms as Perl
 itself.
 

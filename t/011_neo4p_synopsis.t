@@ -11,8 +11,13 @@ my @cleanup;
 use_ok('REST::Neo4p');
 
 my $build;
+my ($user,$pass);
+
+#$SIG{__DIE__} = sub { print $_[0] };
 eval {
   $build = Module::Build->current;
+  $user = $build->notes('user');
+  $pass = $build->notes('pass');
 };
 
 my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
@@ -20,11 +25,11 @@ my $num_live_tests = 13;
 my $not_connected;
 
 eval {
-  REST::Neo4p->connect($TEST_SERVER);
+  REST::Neo4p->connect($TEST_SERVER,$user,$pass);
 };
 if ( my $e = REST::Neo4p::CommException->caught() ) {
   $not_connected = 1;
-  diag "Test server unavailable : ".$e->message;
+  diag "Test server unavailable : tests skipped";
 }
 
 SKIP : {
