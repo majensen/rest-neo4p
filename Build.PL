@@ -11,10 +11,18 @@ my $build =  Module::Build->new
       license => 'perl',
       requires => {
 	'JSON' => 2.0,
-	'JSON::Streaming::Reader' => 0.05,
+	'JSON::XS' => 2.0,
+	'HOP::Stream' => 0,
 	'URI::Escape' => 3.3,
 	'LWP::UserAgent' => 6.04,
-	'Exception::Class' => 1.3
+	'Exception::Class' => 1.3,
+	'Tie::IxHash' => 0,
+	'experimental' => 0,
+	perl => 5.010001
+       },
+      recommends => {
+	'Mojo::UserAgent' => 0,
+	'HTTP::Thin' => 0
        },
       configure_requires => {
 	'Module::Build' => 0
@@ -23,10 +31,17 @@ my $build =  Module::Build->new
 	'Module::Build' => 0,
 	'Test::More' => 0,
 	'Test::Exception' => 0,
-	'List::MoreUtils' => 0
+	'Test::NoWarnings' => 0,
+	'Mock::Quick' => 0,
+	'List::MoreUtils' => 0,
+	experimental => 0
+
        },
       build_recommends => {
-	 'Test::Pod' => 1.0
+	 'Test::Pod' => 1.0,
+#         'Test::Memory::Usage' => 0,
+	 'Mojo::UserAgent' => 0,
+	 'HTTP::Thin' => 0
 	}
       
     );

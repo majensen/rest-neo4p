@@ -1,7 +1,7 @@
 #$Id$
 package REST::Neo4p::Exceptions;
 BEGIN {
-  $REST::Neo4p::Exceptions::VERSION = '0.2020';
+  $REST::Neo4p::Exceptions::VERSION = '0.3003';
 }
 use Exception::Class (
   'REST::Neo4p::Exception',
@@ -60,6 +60,11 @@ use Exception::Class (
   'REST::Neo4p::QueryResponseException' => {
     isa => 'REST::Neo4p::LocalException',
     description => 'Problem parsing the response to a cypher query (prob. a bug)'
+   },
+  'REST::Neo4p::StreamException' => {
+    isa => 'REST::Neo4p::LocalException',
+    description => 'Neo4j JSON response parsing error',
+    fields => ['message']
    },
   'REST::Neo4p::ConstraintException' => {
     isa => 'REST::Neo4p::LocalException',

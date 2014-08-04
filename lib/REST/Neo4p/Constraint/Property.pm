@@ -5,7 +5,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Constraint::Property::VERSION = '0.20';
+  $REST::Neo4p::Constraint::Property::VERSION = '0.3003';
 }
 
 sub new_from_constraint_hash {
@@ -188,6 +188,9 @@ package REST::Neo4p::Constraint::NodeProperty;
 use base 'REST::Neo4p::Constraint::Property';
 use strict;
 use warnings;
+BEGIN {
+  $REST::Neo4p::Constraint::NodeProperty::VERSION='0.3003';
+}
 
 sub new {
   my $class = shift;
@@ -212,6 +215,9 @@ use base 'REST::Neo4p::Constraint::Property';
 use strict;
 use warnings;
 
+BEGIN {
+  $REST::Neo4p::Constraint::RelationshipProperty::VERSION='0.3003';
+}
 # relationship_type is added as a pseudoproperty
 
 sub new {

@@ -1,6 +1,6 @@
 #-*-perl-*-
 #$Id$#
-use Test::More qw(no_plan);
+use Test::More;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
@@ -166,4 +166,5 @@ END {
   CLEANUP : {
     ok ($_->remove,'entity removed') for reverse @cleanup;
   }
+  done_testing;
   }

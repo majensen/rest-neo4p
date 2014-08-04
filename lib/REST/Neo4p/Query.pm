@@ -1,17 +1,20 @@
+
 #$Id$
 package REST::Neo4p::Query;
 use REST::Neo4p::Path;
 use REST::Neo4p::Exceptions;
-use JSON::Streaming::Reader;
+use JSON::XS;
+use REST::Neo4p::ParseStream;
+use HOP::Stream qw/drop/;
 use File::Temp qw(tempfile);
 use Carp qw(croak carp);
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Query::VERSION = '0.2010';
+  $REST::Neo4p::Query::VERSION = '0.3003';
 }
 
-my $BUFSIZE = 4096;
+our $BUFSIZE = 50000;
 
 sub new {
   my $class = shift;
@@ -38,18 +41,49 @@ sub execute {
   if ($agent->batch_mode) {
     REST::Neo4p::NotSuppException->throw("Query execution not supported in batch mode (yet)\n");
   }
-  $self->{_error} = undef;
-  $self->{_decoded_resp} = undef;
-  $self->{NAME} = undef;
-  my $temp_fh;
-  ($temp_fh, $self->{_tempfile}) = tempfile();
-  unless ($temp_fh) {
-    REST::Neo4p::LocalException->throw("Can't create query result tempfile : $!");
+  delete $self->{_error};
+  delete $self->{_error_list};
+  delete $self->{_decoded_resp};
+  delete $self->{NAME};
+
+  my $endpt = 'post_'.REST::Neo4p->q_endpoint;
+  $self->{_tempfile} = File::Temp->new;
+  unless ($self->tmpf) {
+    REST::Neo4p::LocalException->throw(
+      "Can't create query result tempfile : $!\n"
+     );
   }
   my $resp;
   eval {
-    $agent->post_cypher([], { query => $self->query, params => $self->params },
-		       {':content_file' => $self->{_tempfile}});
+    use experimental qw/smartmatch/;
+    given ($endpt) {
+      when (/cypher/) {
+	$agent->$endpt(
+	  [], 
+	  { query => $self->query, params => $self->params },
+	  {':content_file' => $self->tmpf->filename}
+	 );
+      }
+      when (/transaction/) {
+	# unfortunately, the order of 'statement' and 'parameters'
+	# is strict in the content (2.0.0-M06)
+	tie my %stmt, 'Tie::IxHash';
+	$stmt{statement} = $self->query;
+	$stmt{parameters} = $self->params;
+	$agent->$endpt(
+	  [REST::Neo4p->_transaction],
+	  { 
+	    statements => [ \%stmt ]
+	   },
+	  {':content_file' => $self->tmpf->filename}
+	 );
+      }
+      default {
+	REST::Neo4p::TxException->throw(
+	  "Unknown query REST endpoint '".REST::Neo4p->q_endpoint."'\n"
+	 );
+      }
+    }
   };
   my $e;
   if ($e = Exception::Class->caught('REST::Neo4p::Neo4jException') ) {
@@ -57,110 +91,288 @@ sub execute {
     $e->rethrow if ($self->{RaiseError});
     return;
   }
-  elsif ($e = Exception::Class->caught()) {
+  elsif ($e = REST::Neo4p::Exception->caught()) {
+    $self->{_error} = $e;
+    $e->rethrow if ($self->{RaiseError});
+    return;
+  }
+  elsif ( $e = Exception::Class->caught) {
     ref $e ? $e->rethrow : die $e;
   }
+  my $jsonr = JSON::XS->new;
+  my ($buf,$res,$str,$rowstr,$obj);
+  my $row_count;
+  use experimental 'smartmatch';
+  $self->tmpf->read($buf, $BUFSIZE);
+  $jsonr->incr_parse($buf);
+  eval { # capture j_parse errors
+    $res = j_parse($jsonr);
+    die 'j_parse: No text to parse' unless $res;
+    die 'j_parse: JSON is not a query or txn response' unless $res->[0] =~ /QUERY|TXN/;
+    for ($res->[0]) {
+      /QUERY/ && do {
+	$obj = drop($str = $res->[1]->());
+	die 'j_parse: columns key not present' unless $obj && ($obj->[0] eq 'columns');
+	$self->{NAME} = $obj->[1];
+	$self->{NUM_OF_FIELDS} = scalar @{$obj->[1]};
+	$obj = drop($str);
+	die 'j_parse: data key not present' unless $obj->[0] eq 'data';
+	$rowstr = $obj->[1]->();
+	# query iterator
+	$self->{_iterator} =  sub {
+	  return unless defined $self->tmpf;
+	  my $row;
+	  my $item;
+	  $item = drop($rowstr);
+	  unless ($item) {
+	    undef $rowstr;
+	    return;
+	  }
+	  $row = $item->[1];
+	  if (ref $row) {
+	    return $self->_process_row($row);
+	  }
+	  else {
+	    my $ret;
+	    eval {
+	      if ($row eq 'PENDING') {
+		if ($self->tmpf->read($buf, $BUFSIZE)) {
+		  $jsonr->incr_parse($buf);
+		  $ret = $self->{_iterator}->();
+		}
+		else {
+		  $item = drop($rowstr);
+		  $ret = $self->_process_row($item->[1]);
+		}
 
-  # set up iterator
-  my $columns_elt;
-  my $buf;
-  my $jsonr = JSON::Streaming::Reader->for_stream($temp_fh);
-  # count items and reset
-  while ( my $ret = $jsonr->get_token ) {
-    if ($$ret[0] eq 'start_property' && $$ret[1] eq 'columns') {
-      $columns_elt = $jsonr->slurp;
-      last;
-    }
-  } 
-  unless ($columns_elt) {
-    REST::Neo4p::LocalException->throw("Can't parse query reponse json (missing 'columns' element)\n");
-  }
-  my $row_count = 0;
-  my $in_data;
-  while ( my $ret = $jsonr->get_token ) {
-    my ($token_type, @data) = @$ret;
-    for ($token_type) {
-      /start_property/ && do {
-        if ($data[0] && $data[0] eq 'data') {
-	  $in_data = 1;
-	}
-	else {
-	  REST::Neo4p::LocalException->throw("Can't parse query response (data token not found)\n");
-	}
+	      }
+	      else {
+		die "j_parse: barf(qry)"
+	      }
+	    };
+	    if (my $e = Exception::Class->caught()) {
+	      if ($e =~ /j_parse|json/i) {
+		$e = REST::Neo4p::StreamException->new(message => $e);
+		$self->{_error} = $e;
+		$e->throw if $self->{RaiseError};
+		return;
+	      }
+	      else {
+		die $e;
+	      }
+	    }
+	    return $ret;
+	  }
+	};
+	# error check
 	last;
       };
-      /start_array/ && do {
-	if ($in_data) {
-	  # count rows
-	  while ( $ret = $jsonr->get_token ) {
-	    ($token_type, @data) = @$ret;
-	    if ($token_type eq 'start_array') {
-	      $row_count++;
-	      $jsonr->skip;
+      /TXN/ && do {
+	$obj = drop($str = $res->[1]->());
+	die 'j_parse: commit key not present' unless $obj && ($obj->[0] eq 'commit');
+	$obj = drop($str);
+	die 'j_parse: results key not present' unless $obj && ($obj->[0] eq 'results');
+	my $res_str = $obj->[1]->();
+	my $row_str;
+	my $item = drop($res_str);
+	$self->{_iterator} = sub {
+	  return unless defined $self->tmpf;
+	  my $row;
+	  unless ($item) {
+	    undef $row_str;
+	    undef $res_str;
+	    return;
+	  }
+	  my $ret;
+	  eval {
+	    if ($item->[0] eq 'columns') {
+	      $self->{NAME} = $item->[1];
+	      $self->{NUM_OF_FIELDS} = scalar @{$item->[1]};
+	      $item = drop($res_str); # move to data
+	      die 'j_parse: data key not present' unless $item->[0] eq 'data';
 	    }
-	    elsif ( $token_type eq 'end_array' ) { # end of the data array
-	      # we're done
-	      1;
+	    if ($item->[0] eq 'data' && ref($item->[1])) {
+	      $row_str = $item->[1]->();
+	    }
+	    if ($row_str) {
+	      $row = drop($row_str);
+	      if (ref $row && ref $row->[1]) {
+		$ret =  $self->_process_row($row->[1]->{row});
+	      }
+	      elsif (!defined $row) {
+		$item = drop($res_str);
+		$ret = $self->{_iterator}->();
+	      }
+	      else {
+		if ($row->[1] eq 'PENDING') {
+		  $self->tmpf->read($buf, $BUFSIZE);
+		  $jsonr->incr_parse($buf);
+		  $ret = $self->{_iterator}->();
+		}
+		else {
+
+		  die "j_parse: barf(txn)";
+		}
+	      }
+	    }
+	    else { # $row_str undef
+	      $item = drop($res_str);
+	      $item = drop($res_str) if $item->[1] =~ /STREAM/;
+	    }
+	    return if $ret || ($self->err && $self->errobj->isa('REST::Neo4p::TxQueryException'));
+	    if ($item && $item->[0] eq 'transaction') {
+	      $item = drop($res_str) # skip
+	    }
+	    if ($item && $item->[0] eq 'errors') {
+	      my $err_str = $item->[1]->();
+	      my @error_list;
+	      while (my $err_item = drop($err_str)) {
+		my $err = $err_item->[1];
+		if (ref $err) {
+		  push @error_list, $err;
+		}
+		elsif ($err eq 'PENDING') {
+		  $self->tmpf->read($buf,$BUFSIZE);
+		  $jsonr->incr_parse($buf);
+		}
+		else {
+		  die 'j_parse: error parsing txn error list';
+		}
+	      }
+	      my $e = REST::Neo4p::TxQueryException->new(
+		message => "Query within transaction returned errors (see error_list)\n",
+		error_list => \@error_list, code => '304'
+	       ) if @error_list;
+	      $item = drop($item);
+	      $e->throw if $e;
+	    }
+	  };
+	  if (my $e = Exception::Class->caught()) {
+	    if (ref $e) {
+	      $self->{_error} = $e;
+	      $e->rethrow if $self->{RaiseError};
+	    }
+	    elsif ($e =~ /j_parse|json/i) {
+	      $e = REST::Neo4p::StreamException->new(message => $e);
+	      $self->{_error} = $e;
+	      $e->throw if $self->{RaiseError};
+	      return;
 	    }
 	    else {
-#	      REST::Neo4p::LocalException->throw("Can't parse query response (array representing data row expected and not found)\n");
-	      1;
+	      die $e;
 	    }
 	  }
-	}
-	else {
-	  REST::Neo4p::LocalException->throw("Can't parse query response (start of data array not found)\n");
-	}
+	  return $ret;
+
+	};
 	last;
       };
-      do {
-	die "Why am I here?";
-      };
+      # default
+      REST::Neo4p::StreamException->throw( "j_parse: unknown item" );
     }
+  };
+  if (my $e = Exception::Class->caught('REST::Neo4p::LocalException')) {
+    $self->{_error} = $e;
+    $e->rethrow if ($self->{RaiseError});
+    return;
   }
-  seek $temp_fh, 0, 0;
-  $jsonr = JSON::Streaming::Reader->for_stream($temp_fh);
-  while ( my $ret = $jsonr->get_token ) {
-    if ($$ret[0] eq 'start_property' && $$ret[1] eq 'columns') {
-      $jsonr->skip;
-      last;
+  elsif ($e = Exception::Class->caught()) {
+    if (ref $e) {
+      $e->rethrow;
     }
-  }
-  $self->{NAME} = $columns_elt;
-  $self->{NUM_OF_FIELDS} = scalar @$columns_elt;
-  # position parser cursor
-  undef $in_data;
-  my $cursor_set;
-  CURSOR :
-      while ( my ($token_type, @data) = @{$jsonr->get_token} ) {
-	TOKEN_TYPE :
-	    for ($token_type) {
-	      /start_property/ && do {
-		$in_data = 1 if ($data[0] && $data[0] eq 'data');
-		last TOKEN_TYPE;
-	      };
-	      /start_array/ && do {
-		if ($in_data) {
-		  $cursor_set = 1;
-		  last CURSOR;
-		}
-		last TOKEN_TYPE;
-	      };
-	    }
+    else {
+      if ($e =~ /j_parse|json/i) {
+	$e = REST::Neo4p::StreamException->new(message => $e);
+	$self->{_error} = $e;
+	$e->throw if $self->{RaiseError};
+	return;
       }
-  unless ($cursor_set) {
-    REST::Neo4p::LocalException->throw("Can't parse query response (start of data array not found)\n");
+      else {
+	die $e;
+      }
+    }
   }
-  $self->{_iterator} = 
-    sub {
-      return unless defined $temp_fh;
-      my @ret;
-      my $row;
-      my ($token_type, @data) = @{$jsonr->get_token};
-      for ($token_type) {
-	/start_array/ && do {
-	  $row = $jsonr->slurp;
-	  last;
+  1;
+}
+
+sub fetchrow_arrayref { 
+  my $self = shift;
+  unless ( defined $self->{_iterator} ) {
+    REST::Neo4p::LocalException->throw("Can't run fetch(), query not execute()'d yet\n");
+  }
+  $self->{_iterator}->();
+}
+
+sub fetch { shift->fetchrow_arrayref(@_) }
+
+sub column_names {
+  my $self = shift;
+  return $self->{_column_names} && @{$self->{_column_names}};
+}
+
+sub err { 
+  my $self = shift;
+  return $self->{_error} && ($self->{_error}->code || 599);
+}
+
+sub errstr { 
+  my $self = shift;
+  return $self->{_error} && ( $self->{_error}->message || $self->{_error}->neo4j_message );
+}
+
+sub errobj { shift->{_error} }
+
+sub err_list {
+  my $self = shift;
+  return $self->{_error} && $self->{_error_list};
+}
+
+
+sub query { shift->{_query} }
+sub params { shift->{_params} }
+
+sub _response_entity {
+  my ($resp) = @_;
+  use experimental qw/smartmatch/;
+  if ( ref($resp) eq '' ) { #handle arrays of barewords
+    return 'bareword';
+  }
+  elsif (defined $resp->{self}) {
+    given ($resp->{self}) {
+      when (m|data/node|) {
+	return 'Node';
+      }
+      when (m|data/relationship|) {
+	return 'Relationship';
+      }
+      default {
+	REST::Neo4p::QueryResponseException->throw(message => "Can't identify object type by JSON response\n");
+      }
+    }
+  }
+  elsif (defined $resp->{start} && defined $resp->{end}
+	   && defined $resp->{nodes}) {
+    return 'Path';
+  }
+  else {
+    return 'Simple';
+  }
+}
+
+sub _process_row {
+  my $self = shift;
+  my ($row) = @_;
+  use experimental qw/smartmatch/;
+  my @ret;
+  foreach my $elt (@$row) {
+    given ($elt) {
+       when (!ref) { #bareword
+	push @ret, $elt;
+      }
+      when (ref =~ /HASH/) {
+	my $entity_type;
+	eval {
+	  $entity_type = _response_entity($elt);
 	};
 	/end_array/ && do { # finished
 	  $temp_fh->close;
@@ -235,56 +447,12 @@ sub fetch { shift->fetchrow_arrayref(@_) }
 
 sub column_names {
   my $self = shift;
-  return $self->{_column_names} && @{$self->{_column_names}};
+  delete $self->{_iterator};
+  delete $self->{_tempfile};
+  return 1;
 }
 
-sub err { 
-  my $self = shift;
-  return $self->{_error} && $self->{_error}->code;
-}
-
-sub errstr { 
-  my $self = shift;
-  return $self->{_error} && ( $self->{_error}->message || $self->{_error}->neo4j_message );
-}
-
-
-sub query { shift->{_query} }
-sub params { shift->{_params} }
-
-sub _response_entity {
-  my ($resp) = @_;
-  if ( ref($resp) eq '' ) { #handle arrays of barewords
-    return 'bareword';
-  }
-  elsif (defined $resp->{self}) {
-    for ($resp->{self}) {
-      m|data/node| && do {
-	return 'Node';
-	last;
-      };
-      m|data/relationship| && do {
-	return 'Relationship';
-	last;
-      };
-      do {
-	REST::Neo4p::QueryResponseException->throw("Can't identify object type by JSON response\n");
-      };
-    }
-  }
-  elsif (defined $resp->{start} && defined $resp->{end}
-	   && defined $resp->{nodes}) {
-    return 'Path';
-  }
-  else {
-    REST::Neo4p::QueryResponseException->throw("Can't identify object type by JSON response (2)\n");
-  }
-}
-
-sub DESTROY {
-  my $self = shift;
-  $self->{_tempfile} && unlink $self->{_tempfile};
-}
+sub DESTROY { shift->finish }
 
 =head1 NAME
 
@@ -307,17 +475,68 @@ over the rows, in the spirit of L<DBI>.
 =head2 Streaming
 
 L<C<execute()>|/execute()> captures the Neo4j query response in a temp
-file. L<C<fetch()>|/fetch()> iterates over the JSON in the response using
-L<JSON::Streaming::Reader|JSON::Streaming::Reader>. So go ahead and
-make those 100 meg queries. The tempfile is unlinked after the
-iterator runs out of rows, or upon object destruction, which ever
-comes first.
+file. L<C<fetch()>|/fetch()> iterates (in a non-blocking way if
+possible) over the JSON in the response using the incremental parser
+of L<JSON::XS|JSON::XS> (see L<REST::Neo4p::ParseStream> if
+interested). So go ahead and make those 100 meg queries. The tempfile
+is unlinked after the iterator runs out of rows, or upon object
+destruction, whichever comes first.
+
+=head2 Parameters
+
+C<REST::Neo4p::Query> understands Cypher L<query
+parameters|http://docs.neo4j.org/chunked/stable/cypher-parameters.html>. These
+are represented in Cypher as simple tokens surrounded by curly braces.
+
+ MATCH (n) WHERE n.first_name = {name} RETURN n
+
+Here, C<{name}> is the named parameter. A single query object can be executed
+multiple times with different parameter values:
+
+ my $q = REST::Neo4p::Query->new(
+           'MATCH (n) WHERE n.first_name = {name} RETURN n'
+         );
+ foreach (@names) {
+   $q->execute(name => $_);
+   while ($row = $q->fetch) {
+    ...process
+   }
+ }
+
+This is very highly recommended over creating multiple query objects like so:
+
+ foreach (@names) {
+   my $q = REST::Neo4p::Query->new(
+             "MATCH (n) WHERE n.first_name = '$_' RETURN n"
+           );
+   $q->execute;
+   ...
+ }
+
+As with any database engine, a large amount of overhead is saved by
+planning a parameterized query once. In addition, the REST side of the
+Neo4j server currently (Feb 2014) will balk at handling 1000s of
+individual queries in a row. Parameterizing queries gets around this
+issue.
 
 =head2 Paths
 
 If your query returns a path, L<C<fetch()>|/fetch()> returns a
 L<REST::Neo4p::Path> object from which you can obtain the Nodes and
 Relationships.
+
+=head2 Transactions
+
+See L<REST::Neo4p/Transaction Support (Neo4j Server Version 2 only)>.
+
+NOTE: Rows returned from the Neo4j transaction endpoint are not
+completely specified database objects (see
+L<Neo4j docs|http://docs.neo4j.org/chunked/stable/rest-api-transactional.html>). Fetches
+on transactional queries will return an array of simple Perl
+structures (hashes and arrays) that correspond to the row as returned
+in JSON by the server, rather than as REST::Neo4p objects. This is
+regardless of the setting of the
+L<ResponseAsObjects|REST::Neo4p::Query/ResponseAsObjects> attribute.
 
 =head1 METHODS
 
@@ -353,23 +572,23 @@ relationships are returned as
 L<REST::Neo4p::Relationship|REST::Neo4p::Relationship> objects,
 scalars are returned as-is.
 
-=item err(), errstr()
+=item err(), errstr(), errobj()
 
   $query->execute;
   if ($query->err) {
     printf "status code: %d\n", $query->err;
     printf "error message: %s\n", $query->errstr;
+    printf "Exception class was %s\n", ref $query->errobj;
   }
 
-Returns the HTTP error code and Neo4j server error message if an error
-was encountered on execution. Set C<$query-E<gt>{RaiseError}> to die
-immediately (e.g., to catch the exception in an C<eval> block).
+Returns the HTTP error code, Neo4j server error message, and exception
+object if an error was encountered on execution.
 
 =back
 
 =head1 SEE ALSO
 
-L<REST::Neo4p>, L<REST::Neo4p::Path>,L<REST::Neo4p::Agent>.
+L<DBD::Neo4p>, L<REST::Neo4p>, L<REST::Neo4p::Path>, L<REST::Neo4p::Agent>.
 
 =head1 AUTHOR
 

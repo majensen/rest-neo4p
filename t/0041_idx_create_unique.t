@@ -29,6 +29,8 @@ if ( my $e = REST::Neo4p::CommException->caught() ) {
 SKIP : {
   skip 'no local connection to neo4j', $num_live_tests if $not_connected;
   my @cleanup;
+  if ( my $i = REST::Neo4p->get_index_by_name('nidx555','node') ) { $i->remove }
+  if ( my $i = REST::Neo4p->get_index_by_name('ridx555','relationship') ) { $i->remove }
   ok my $n1 = REST::Neo4p::Node->new({name => 'A', type => 'purine'}), "create a new node";
   push @cleanup, $n1;
   ok my $nidx = REST::Neo4p::Index->new('node', 'nidx555'), "create a node index";
@@ -64,5 +66,4 @@ END {
     ok ($_->remove, 'entity removed') for reverse @cleanup;
   }
   }
-
 }

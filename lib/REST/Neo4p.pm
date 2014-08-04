@@ -12,7 +12,7 @@ use REST::Neo4p::Query;
 use REST::Neo4p::Exceptions;
 
 BEGIN {
-  $REST::Neo4p::VERSION = '0.2020';
+  $REST::Neo4p::VERSION = '0.3003';
 }
 
 our $CREATE_AUTO_ACCESSORS = 0;
@@ -221,6 +221,7 @@ Actions on class instances have a corresponding effect on the database
 (i.e., REST::Neo4p approximates an ORM).
 
 The class L<REST::Neo4p::Query> provides a DBIesqe Cypher query facility.
+(And see also L<DBD::Neo4p>.)
 
 =head2 Property Auto-accessors
 
@@ -266,6 +267,28 @@ This is a mixin that is not I<use>d automatically by REST::Neo4p. For
 details and examples, see L<REST::Neo4p::Constrain> and
 L<REST::Neo4p::Constraint>.
 
+=head2 Server-side constraints (Neo4j server version 2.0.1+ only)
+
+Neo4j L<"schema" constraints"|http://docs.neo4j.org/chunked/stable/cypher-schema.html>
+based on labels can be manipulated via REST using
+L<REST::Neo4p::Schema>.
+
+=head1 USER AGENT
+
+The backend user agent can be selected by setting the package variable
+C<$REST::Neo4p::AGENT_MODULE> to one of the following
+
+ LWP::UserAgent
+ Mojo::UserAgent
+ HTTP::Thin
+
+The L<REST::Neo4p::Agent> created will be a subclass of the selected
+backend agent. It can be accessed with L</agent()>.
+
+The initial value of C<$REST::Neo4p::AGENT_MODULE> will be the value
+of the environment variable C<REST_NEO4P_AGENT_MODULE> or
+C<LWP::UserAgent> by default.
+
 =head1 CLASS METHODS
 
 =over
@@ -306,11 +329,55 @@ Returns false if index C<$name> does not exist in database.
 
 =back
 
+=head2 Transaction Support (Neo4j Server Version 2 only)
+
+Initiate, commit, or rollback L<queries|REST::Neo4p::Query> in transactions.
+
+=over
+
+=item begin_work()
+
+=item commit()
+
+=item rollback()
+ 
+ $q = REST::Neo4p::Query->new(
+   'start n=node(0) match n-[r:pal]->m create r'
+ );
+ $r = REST::Neo4p::Query->new(
+    'start n=node(0) match n-[r:pal]->u create unique u'
+ );
+ REST::Neo4p->begin_work;
+ $q->execute;
+ $r->execute;
+ if ($q->err || $r->err) {
+   REST::Neo4p->rollback;
+ }
+ else {
+   REST::Neo4p->commit;
+   $results = REST::Neo4p->_tx_results;
+   unless (REST::Neo4p->_tx_errors) {
+     print 'all queries successful';
+   }
+ }
+
+=item _tx_results(), _tx_errors()
+
+These fields contain decoded JSON responses from the server following
+a commit.  C<_tx_errors> is an arrayref of statement errors during
+commit. C<_tx_results> is an arrayref of columns-data hashes as
+described at
+L<Neo4j:Transactional HTTP endpoint|http://docs.neo4j.org/chunked/stable/rest-api-transactional.html>.
+
+These fields are cleared by C<begin_work()> and C<rollback()>.
+
+=back
+
 =head1 SEE ALSO
 
 L<REST::Neo4p::Node>,L<REST::Neo4p::Relationship>,L<REST::Neo4p::Index>,
 L<REST::Neo4p::Query>, L<REST::Neo4p::Path>, L<REST::Neo4p::Batch>,
-L<REST::Neo4p::Constrain>, L<REST::Neo4p::Constraint>.
+L<REST::Neo4p::Schema>,L<REST::Neo4p::Constrain>, L<REST::Neo4p::Constraint>.
 
 =head1 AUTHOR
 

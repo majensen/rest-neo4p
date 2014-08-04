@@ -2,14 +2,14 @@
 package REST::Neo4p::Agent;
 use base LWP::UserAgent;
 use REST::Neo4p::Exceptions;
-use File::Temp qw(tempfile);
 use JSON;
+use File::Temp;
 use Carp qw(croak carp);
 use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Agent::VERSION = '0.2020';
+  $REST::Neo4p::Agent::VERSION = '0.3003';
 }
 
 our $AUTOLOAD;
@@ -19,7 +19,14 @@ our $RQ_RETRIES = 3;
 our $RETRY_WAIT = 5;
 sub new {
   my $class = shift;
-  my $self = $class->SUPER::new(@_);
+  my %args = @_;
+  my $mod = delete $args{agent_module} || 'LWP::UserAgent';
+  die "No user agent module specified" unless $mod;
+  $mod = join('::','REST::Neo4p::Agent',$mod);
+  eval "require $mod;1" or REST::Neo4p::LocalException->throw("Module $mod is not available\n");
+  my @args = %args;
+  my $self = $mod->new(@args);
+  $self->agent("Neo4p/$VERSION");
   $self->default_header( 'Accept' => 'application/json' );
   $self->default_header( 'Content-Type' => 'application/json' );
   $self->default_header( 'X-Stream' => 'true' );
@@ -117,7 +124,7 @@ sub execute_batch {
     REST::Neo4p::LocalException->throw("Agent not in batch mode; can't execute batch\n");
   }
   return unless ($self->batch_length);
-  my ($tfh, $tfname) = tempfile;
+  my $tfh = File::Temp->new;
   $self->batch_mode(0);
   my @chunk;
   if ($chunk_size) {
@@ -198,10 +205,11 @@ sub AUTOLOAD {
 sub __do_request {
   my $self = shift;
   my ($rq, $action, @args) = @_;
-  $self->{_errmsg} = $self->{_location} = $self->{_decoded_content} = undef;
-  for ($rq) {
-    my $resp;
-    /get|delete/ && do {
+  use experimental qw/smartmatch/;
+  $self->{_errmsg} = $self->{_location} = $self->{_raw_response} = $self->{_decoded_content} = undef;
+  my $resp;
+  given ($rq) {
+    when (/get|delete/) {
       my @url_components = @args;
       my %rest_params = ();
       # look for a hashref as final arg containing field => value pairs
@@ -284,7 +292,7 @@ sub DESTROY {}
 
 =head1 NAME
 
-REST::Neo4p::Agent - LWP client interacting with Neo4j
+REST::Neo4p::Agent - HTTP client interacting with Neo4j
 
 =head1 SYNOPSIS
 
@@ -299,18 +307,18 @@ See examples under L</METHODS> below.
 =head1 DESCRIPTION
 
 The agent's job is to encapsulate and connect to the REST service URLs
-of a running neo4j server. It also stores the discovered URLs for
-various actions.  and provides those URLs as getters from the agent
+of a running Neo4j server. It also stores the discovered URLs for
+various actions and provides those URLs as getters from the agent
 object. The getter names are the keys in the JSON objects returned by
 the server. See
-L<http://docs.neo4j.org/chunked/milestone/rest-api.html> for more
+L<the Neo4j docs|http://docs.neo4j.org/chunked/stable/rest-api.html> for more
 details.
 
 API and HTTP errors are distinguished and thrown by
 L<Exception::Class> subclasses. See L<REST::Neo4p::Exceptions>.
 
-REST::Neo4p::Agent is a subclass of L<LWP::UserAgent|LWP::UserAgent>
-and inherits its capabilities.
+A REST::Neo4p::Agent instance is created as a subclass of a choice
+of HTTP user agents:
 
 REST::Neo4p::Agent will retry requests that fail with
 L<REST::Neo4p::CommException|REST::Neo4p::Exceptions>. The default
@@ -323,19 +331,30 @@ sec. These can be adjusted by setting the package variables
 to the desired values.
 
 According to the Neo4j recommendation, the agent requests streamed
-responses by default (i.e.,
+responses by default; i.e.,
 
- X-Stream:true
+ X-Stream: true
 
-is a default header. This can be removed by calling
+is a default header for requests. The server responds to requests with
+chunked content, which is handled correctly by any of the underlying
+user agents.
 
- $agent->no_stream
+L<REST::Neo4p::Query> and L<REST::Neo4p::Batch> take advantage of
+streamed responsed by retrieving and returning JSON objects
+incrementally and (with the L<Mojo::UserAgent> backend) in a
+non-blocking way. New Neo4j server versions may break the incremental
+parsing. If this happens,  L<make a
+ticket|https://rt.cpan.org/Public/Bug/Report.html?Queue=REST-Neo4p>. In
+the meantime, you should be able to keep things going (albeit more
+slowly) by turning off streaming at the agent:
 
-and added back with 
+ REST::Neo4p->agent->no_stream;
 
- $agent->stream
+Streaming responses can be requested again by issuing
 
-For batch API experimental features, see L</Batch Mode>.
+ REST::Neo4p->agent->stream
+
+For batch API features, see L</Batch Mode>.
 
 =head1 METHODS
 
@@ -502,7 +521,7 @@ Set/get current agent mode.
  }
 
 Returns current queue length. Throws
-L<REST::Neo4p::Exceptions|REST::Neo4p::LocalException> if agent not in
+L<REST::Neo4p::LocalException|REST::Neo4p::Exceptions> if agent not in
 batch mode.
 
 =item execute_batch()
@@ -515,7 +534,7 @@ batch mode.
 
 Processes the queued calls and returns the decoded json response from
 server in a temporary file. Returns with undef if batch length is zero.
-Throws L<REST::Neo4p::Exceptions|REST::Neo4p::LocalException> if not in batch mode.
+Throws L<REST::Neo4p::LocalException|REST::Neo4p::Exceptions> if not in batch mode.
 
 Second form takes an integer argument; this will submit the next [integer]
 jobs and return the server response in the tempfile. The batch length is

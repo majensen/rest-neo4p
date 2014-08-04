@@ -1,6 +1,6 @@
 #-*-perl-*-
 #$Id$#
-use Test::More qw(no_plan);
+use Test::More;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
@@ -27,6 +27,9 @@ if ( my $e = REST::Neo4p::CommException->caught() ) {
 }
 
 use_ok ('REST::Neo4p::Constraint');
+use_ok ('REST::Neo4p::Constraint::Property');
+use_ok ('REST::Neo4p::Constraint::Relationship');
+use_ok ('REST::Neo4p::Constraint::RelationshipType');
 
 # test validation - property constraints
 
@@ -362,5 +365,6 @@ END {
     for (reverse @cleanup) {
       ok $_->remove, 'entity removed from db';
     }
+    done_testing;
   }
   }

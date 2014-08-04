@@ -8,7 +8,7 @@ use base 'REST::Neo4p::Entity';
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Node::VERSION = '0.2001';
+  $REST::Neo4p::Node::VERSION = '0.3003';
 }
 
 # creation, deletion and property manipulation are delegated
@@ -197,9 +197,7 @@ L<REST::Neo4p>, L<REST::Neo4p::Relationship>, L<REST::Neo4p::Index>.
 
     Mark A. Jensen
     CPAN ID: MAJENSEN
-    TCGA DCC
-    mark -dot- jensen -at- nih -dot- gov
-    http://tcga-data.nci.nih.gov
+    majensen -at- cpan -dot- org
 
 =head1 LICENSE
 

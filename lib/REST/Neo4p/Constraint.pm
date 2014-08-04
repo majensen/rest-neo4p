@@ -3,9 +3,6 @@ package REST::Neo4p::Constraint;
 use base 'Exporter';
 use REST::Neo4p;
 use REST::Neo4p::Exceptions;
-use REST::Neo4p::Constraint::Property;
-use REST::Neo4p::Constraint::Relationship;
-use REST::Neo4p::Constraint::RelationshipType;
 use JSON;
 use Data::Dumper;
 
@@ -34,7 +31,7 @@ my $regex_to_json = sub {
 };
 
 BEGIN {
-  $REST::Neo4p::Constraint::VERSION = '0.2001';
+  $REST::Neo4p::Constraint::VERSION = '0.3003';
 }
 
 # valid constraint types

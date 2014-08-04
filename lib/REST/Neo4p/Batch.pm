@@ -1,6 +1,9 @@
+use v5.10.1;
 package REST::Neo4p::Batch;
 use REST::Neo4p::Exceptions;
-use JSON::Streaming::Reader;
+use JSON::XS;
+use REST::Neo4p::ParseStream;
+use HOP::Stream qw/drop head/;
 require REST::Neo4p;
 
 use base qw(Exporter);
@@ -8,11 +11,12 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Batch::VERSION = '0.2001';
+  $REST::Neo4p::Batch::VERSION = '0.3003';
 }
 
 our @EXPORT = qw(batch);
 our @BATCH_ACTIONS = qw(keep_objs discard_objs);
+our $BUFSIZE = 50000;
 
 sub batch (&@) {
   my ($coderef,$action) = @_;
@@ -22,99 +26,59 @@ sub batch (&@) {
   warn 'Agent already in batch_mode on batch() call' if ($agent->batch_mode);
   $agent->batch_mode(1);
   $coderef->();
-  for ($action) {
-    /^discard_objs$/ && do {
-      # do in eval to catch an agent error...
-      while (my $tmpf = $agent->execute_batch_chunk) {
-	@errors = _scan_for_errors($tmpf);
-	unlink $tmpf;
-	1;
+  my $tmpfh = $agent->execute_batch_chunk;
+  my $jsonr = JSON::XS->new();
+  my $buf;
+  $tmpfh->read($buf, $BUFSIZE);
+  $jsonr->incr_parse($buf);
+  my $res = j_parse($jsonr);
+  die "j_parse: expecting BATCH stream" unless ($res->[0] eq 'BATCH');
+  my $str = $res->[1]->();
+  while (my $obj = drop($str)) {
+    use experimental qw/smartmatch/;
+    $obj = $obj->[1];
+    given ($obj) {
+      when (!!ref($obj)) {
+	if ($obj->{status} !~ m/^2../) {
+	  warn "Error at id ".$obj->{id}." from ".$obj->{from}.": status ".$obj->{status} if $REST::Neo4p::VERBOSE;
+	  push @errors, REST::Neo4p::Neo4jException->new(
+	    code=>$obj->{status},
+	    message => 'Server returned '.$obj->{status}.' at job id '.$obj->{id}.' from '.$obj->{from}, neo4j_message=>$obj->{message}
+	   );
+	}
+	elsif (!$obj->{status}) {
+	  $obj->{status} = 599;
+	  warn "Error at id ".$obj->{id}." from ".$obj->{from}.": status ".$obj->{status} if $REST::Neo4p::VERBOSE;
+	  push @errors, REST::Neo4p::Neo4jException->new(
+	    code=>$obj->{status},
+	    message => 'Server returned no status at job id '.$obj->{id}.' from '.$obj->{from}, neo4j_message=>$obj->{message}
+	   );
+	}
+	else {
+	  _register_object($obj) if $action eq 'keep_objs';
+	}
       }
-      last;
-    };
-    /^keep_objs$/ && do {
-      while (my $tmpf = $agent->execute_batch_chunk) {
-	@errors = _scan_for_errors($tmpf);
-	_process_objs($tmpf);
+      when ('PENDING') {
+	$tmpfh->read($buf,$BUFSIZE);
+	$jsonr->incr_parse($buf)
       }
-      last;
-    };
-    do { # fallthru
-      die "I shouldn't be here."
-    };
+      when (!defined) {
+	last;
+      }
+      default {
+	die "j_parse: batch response ended prematurely";
+      }
+    }
+
   }
   $agent->batch_mode(undef);
   return @errors;
 }
 
-sub _scan_for_errors {
-  my $tmpf = shift;
-  open my $fh, $tmpf or REST::Neo4p::LocalException->throw("Problem with temp file $tmpf : $!");
-  my $jsonr = JSON::Streaming::Reader->for_stream($fh);
-  my $in_response;
-  my @errors;
-  PARSE :
-      while (my $cursor = $jsonr->get_token) {
-	for ($$cursor[0]) {
-	  /start_array/ && do {
-	    $in_response = 1;
-	    last;
-	  };
-	  /start_object/ && do {
-	    unless ($in_response) {
-	      REST::Neo4p::LocalException->throw("Unexpected token in server batch response\n");
-	    }
-	    my $obj = $jsonr->slurp;
-	    if ($obj->{status} !~ m/^2../) {
-	      warn "Error at id ".$obj->{id}." from ".$obj->{from}.": status ".$obj->{status} if $REST::Neo4p::VERBOSE;
-	      push @errors, REST::Neo4p::Neo4jException->new(code=>$obj->{status},message => 'Server returned '.$obj->{status}.' at job id '.$obj->{id}.' from '.$obj->{from}, neo4j_message=>$obj->{message});
-	    }
-	    last;
-	  };
-	  /end_array/ && do {
-	    last PARSE;
-	  };
-	}
-	1;
-      }
-  $fh->close;
-  return @errors;
-}
-
-# right now, look for 'body' elts, and
 # create new nodes, relationships as they are encountered
 #
 # TODO: handling indexes, queries? Prevent queries in batch mode?
 # TODO: use JSON streaming from file
-
-sub _process_objs {
-  my $tmpf = shift;
-  open my $fh, $tmpf or REST::Neo4p::LocalException->throw("Problem with temp file $tmpf : $!");
-  my $jsonr = JSON::Streaming::Reader->for_stream($fh);
-  my $in_response;
-  PARSE : 
-      while ( my $cursor = $jsonr->get_token ) {
-	for ($$cursor[0]) {
-	  /start_array/ && do {
-	    $in_response = 1;
-	    last;
-	  };
-	  /start_object/ && do {
-	    unless ($in_response) {
-	      REST::Neo4p::LocalException->throw("Unexpected token in server batch response\n");
-	    }
-	    _register_object($jsonr->slurp);
-	    last;
-	  };
-	  /end_array/ && do {
-	    last PARSE;
-	  };
-	}
-      }
-  $fh->close;
-  unlink $tmpf;
-  return;
-}
 
 sub _register_object {
   my $decoded_batch_resp = shift;
@@ -125,14 +89,17 @@ sub _register_object {
   if ($body->{template}) {
     $obj = REST::Neo4p::Index->new_from_json_response($body);
   }
-  elsif ($body->{self} =~ m|node/[0-9]+$|) {
+  elsif ($body->{from} and $body->{from} =~ /properties/) {
+    1; # ignore
+  }
+  elsif ($body->{self} and $body->{self} =~ m|node/[0-9]+$|) {
     $obj = REST::Neo4p::Node->new_from_json_response($body);
   }
-  elsif ($body->{self} =~ m|relationship/[0-9]+$|) {
+  elsif ($body->{self} and $body->{self} =~ m|relationship/[0-9]+$|) {
     $obj = REST::Neo4p::Relationship->new_from_json_response($body);
   }
   else {
-    warn "Don't understand object in batch response: id ".$id;
+    warn "Don't understand object in batch response: id ".$id if $REST::Neo4p::VERBOSE;
   }
   if ($obj) {
     my $batch_objs = $REST::Neo4p::Entity::ENTITY_TABLE->{batch_objs};
@@ -141,10 +108,6 @@ sub _register_object {
     }
   }
   return;
-}
-
-sub _cleanup_batch_objs {
-  
 }
 
 =head1 NAME
