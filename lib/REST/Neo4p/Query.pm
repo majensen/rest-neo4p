@@ -14,7 +14,7 @@ use strict;
 use warnings;
 no warnings qw(once);
 BEGIN {
-  $REST::Neo4p::Query::VERSION = '0.3003';
+  $REST::Neo4p::Query::VERSION = '0.3004';
 }
 
 our $BUFSIZE = 50000;
