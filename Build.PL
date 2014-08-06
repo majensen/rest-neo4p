@@ -43,8 +43,14 @@ my $build =  Module::Build->new
 	 'Mojo::UserAgent' => 0,
 	 'HTTP::Thin' => 0
 	},
+      meta_merge => {
+	resources => {
+	  bugtracker => 'http://rt.cpan.org/Public/Dist/Display.html?Name=REST-Neo4p',
+	  repository  => 'git://github.com/majensen/rest-neo4p.git',
+         }
+       },
       perl => 5.010
-    );
+     );
 
 $build->notes( test_server => $ENV{REST_NEO4P_TEST_SERVER} // $build->prompt("Server for live tests:", "http://127.0.0.1:7474"));
 $build->notes( user => $ENV{REST_NEO4P_TEST_USER} // $build->prompt("Username:", "") );
