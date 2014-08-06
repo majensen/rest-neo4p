@@ -1,4 +1,7 @@
 Revision history for Perl module REST::Neo4p
+0.3004 2014-08-05
+    - Added git repos to distro metadata
+
 0.3000 2014-07-12
     - Major update: streamed query, transaction and batch responses now
       processed incrementally on the fly; should result in significant
