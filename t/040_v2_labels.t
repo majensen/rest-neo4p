@@ -50,10 +50,7 @@ SKIP : {
     ok $n1->set_labels('mom'), 'set label on node 1';
     is_deeply [$n1->get_labels], ['mom'], 'single label is set correctly on node 1';
     ok $n1->set_labels('mom','sister'), 'set multiple labels on node 1';
-    TODO : {
-      local $TODO = 'Server 2.0.0-M06 has a known issue here';
-      is_deeply [sort $n1->get_labels], [qw/mom sister/], 'multiple labels set correctly (and replace previous label) on node 1';
-    }
+    is_deeply [sort $n1->get_labels], [qw/mom sister/], 'multiple labels set correctly (and replace previous label) on node 1';
     ok $n2->set_labels('aunt','sister'), 'set multiple labels on node 2';
     $n2->set_property({type => 'half'});
     ok my @sisters = REST::Neo4p->get_nodes_by_label('sister'), 'get nodes by label';
