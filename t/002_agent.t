@@ -7,8 +7,7 @@ use REST::Neo4p::Exceptions;
 use strict;
 use warnings;
 
-my @agent_modules = qw/
-LWP::UserAgent
+my @agent_modules = qw/LWP::UserAgent
 Mojo::UserAgent
 HTTP::Thin
 /;
@@ -21,11 +20,15 @@ eval {
     $pass = $build->notes('pass');
 };
 
+$user = 'neo4j';
+$pass = 'oogabooga';
+
 my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
 
 use_ok('REST::Neo4p::Agent');
 
 foreach my $mod (@agent_modules) {
+    $DB::single = 1 if $mod =~ /mojo/i;
     my $ua;
     my $mod_available = 1;
     diag "$mod";
@@ -47,12 +50,16 @@ foreach my $mod (@agent_modules) {
 
 	my $not_connected;
 	eval {
-	    $ua->credentials($TEST_SERVER, '',$user,$pass) if defined $user;
+	    $ua->credentials($TEST_SERVER, 'Neo4j',$user,$pass) if defined $user;
 	    $ua->connect;
 	};
 	if ( my $e = REST::Neo4p::CommException->caught() ) {
 	    $not_connected = 1;
 	    diag "Test server unavailable : tests skipped";
+	}
+	elsif ( $e = REST::Neo4p::AuthException->caught() ) {
+	    $not_connected = 1;
+	    diag "Authorization err (bad pass?)";
 	}
 	SKIP : {
 	    skip 'no local connection to neo4j',11 if $not_connected;

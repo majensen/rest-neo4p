@@ -25,6 +25,12 @@ use Exception::Class (
     fields => [ 'code' ],
     description => 'Network or HTTP errors'
    },
+  'REST::Neo4p::AuthException' =>
+    {
+    isa => 'REST::Neo4p::Exception',
+    fields => [ 'code', 'message' ],
+    description => 'Authorization error'
+   },
   'REST::Neo4p::NotFoundException' => {
     isa => 'REST::Neo4p::Neo4jException',
     fields => [ 'code', 'neo4j_message', 

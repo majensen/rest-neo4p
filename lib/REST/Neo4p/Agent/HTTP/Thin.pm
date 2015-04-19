@@ -3,6 +3,7 @@ use v5.10;
 package REST::Neo4p::Agent::HTTP::Thin;
 use base qw/HTTP::Thin REST::Neo4p::Agent/;
 use URI::Escape;
+use MIME::Base64;
 use REST::Neo4p::Exceptions;
 use strict;
 use warnings;
@@ -23,6 +24,9 @@ sub credentials {
   my ($srv,$realm,$user,$pwd) = @_;
   $self->{_user} = $user;
   $self->{_pwd} = $pwd;
+  if ($user && $pwd) {
+    $self->default_header('Authorization' => encode_base64("$user:$pwd",''));
+  }
   1;
 }
 
@@ -51,9 +55,9 @@ sub _do {
   my $self = shift;
   my ($rq, $url, @args) = @_;
   use experimental qw/smartmatch/;
-  if (length($self->{_user}) && length($self->{_pwd})) {
-    $url =~ s|(https?://)|${1}$$self{_user}:$$self{_pwd}@|;
-  }
+#  if (length($self->{_user}) && length($self->{_pwd})) {
+#    $url =~ s|(https?://)|${1}$$self{_user}:$$self{_pwd}@|;
+#  }
 #  $DB::single = 1 if $url =~ /Roger/;
   $url =~ s{/([^/]+)}{'/'.uri_escape_utf8($1,$unsafe)}ge;
   my ($resp,$content,$content_file);

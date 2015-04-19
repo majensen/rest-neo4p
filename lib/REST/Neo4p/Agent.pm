@@ -64,8 +64,9 @@ sub connect {
    }
   my $resp = $self->get($self->server_url);
   unless ($resp->is_success) {
-    REST::Neo4p::CommException->throw( code => $resp->code,
-				       message => $resp->message );
+    my $exc = $resp->code == 401 ? 'AuthException' : 'CommException';
+      "REST::Neo4p::$exc"->throw( code => $resp->code,
+					 message => $resp->message );
   }
   my $json =  $JSON->decode($resp->content);
   # add the discovered URLs to the object hash, keyed by 
@@ -78,7 +79,8 @@ sub connect {
   }
   $resp = $self->get($self->{_actions}{data});
   unless ($resp->is_success) {
-    REST::Neo4p::CommException->throw( code => $resp->code,
+    my $exc = $resp->code == 401 ? 'AuthException' : 'CommException';
+    "REST::Neo4p::$exc"->throw( code => $resp->code,
 				       message => $resp->message." (connect phase 2)\n" );
   }
   $json = $JSON->decode($resp->content);
@@ -227,6 +229,7 @@ sub __do_request {
 	      $rq);
 	goto &_add_to_batch_queue; # short circuit to _add_to_batch_queue
       }
+# request made here:
       $resp = $self->{_raw_response} = $self->$rq($url);
     }
     when (/post|put/) {
@@ -245,6 +248,7 @@ sub __do_request {
 	goto &_add_to_batch_queue;
       }
       $content = $JSON->encode($content) if $content && !$self->isa('Mojo::UserAgent');
+# request made here
       $resp  = $self->{_raw_response} = $self->$rq($url, 'Content-Type' => 'application/json', Content=> $content, %$addl_headers);
       1;
     }

@@ -125,8 +125,10 @@ sub agent {
 sub connect {
   my $neo4p = shift;
   my ($server_address, $user, $pass) = @_;
+  $HANDLES[$HANDLE]->{_user} = $user;
+  $HANDLES[$HANDLE]->{_pass} = $pass;
   REST::Neo4p::LocalException->throw("Server address not set\n")  unless $server_address;
-  $neo4p->agent->credentials($server_address,'',$user,$pass) if defined $user;
+  $neo4p->agent->credentials($server_address,'Neo4j',$user,$pass) if defined $user;
   my $connected = $neo4p->agent->connect($server_address);
   return $HANDLES[$HANDLE]->{_connected} = $connected;
 }
@@ -549,7 +551,7 @@ C<LWP::UserAgent> by default.
 
 =item agent()
 
- REST::Neo4p->agent->credentials( $server, '', $user, $pass);
+ REST::Neo4p->agent->credentials( $server, 'Neo4j', $user, $pass);
  REST::Neo4p->connect($server);
 
 Returns the underlying L<REST::Neo4p::Agent> object.

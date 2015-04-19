@@ -3,6 +3,7 @@ use v5.10;
 package REST::Neo4p::Agent::Mojo::UserAgent;
 use base qw/Mojo::UserAgent REST::Neo4p::Agent/;
 use REST::Neo4p::Exceptions;
+use MIME::Base64;
 use Carp qw/carp/;
 use HTTP::Response;
 use strict;
@@ -29,6 +30,10 @@ sub credentials {
   my ($srv, $realm, $user, $pwd) = @_;
   $self->{_user} = $user;
   $self->{_pwd} = $pwd;
+  $self->{_realm} = $realm;
+  if ($user && $pwd) {
+    $self->default_header('Authorization' => encode_base64("$user:$pwd",''));
+  }
   return;
 }
 
@@ -58,7 +63,6 @@ sub http_response {
   # kludge : if 400 error, pull the tmp file content back into response
   # body 
   if ($tx->res->is_status_class(400) && $tx->res->content->asset->is_file ) {
-    $DB::single=1;
     $tx->res->body($tx->res->content->asset->slurp);
   }
   unless (defined $tx->res->code) {
@@ -88,9 +92,6 @@ sub _do {
   # neo4j wants to redirect .../data to .../data/
   # and mojo doesn't want to redirect at all...
   $self->max_redirects || $self->max_redirects(2); 
-  if (length($self->{_user}) && length($self->{_pwd})) {
-    $url =~ s|(https?://)|${1}$$self{_user}:$$self{_pwd}@|;
-  }
   given ($rq) {
     when (/get|delete/i) {
       $tx = $self->build_tx($rq => $url => { @{$self->{_default_headers}} });

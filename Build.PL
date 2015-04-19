@@ -46,7 +46,7 @@ my $build =  Module::Build->new
       meta_merge => {
 	resources => {
 	  bugtracker => 'http://rt.cpan.org/Public/Dist/Display.html?Name=REST-Neo4p',
-	  repository  => 'git://github.com/majensen/rest-neo4p.git',
+	  repository  => 'http://github.com/majensen/rest-neo4p.git',
          }
        },
       perl => 5.010
