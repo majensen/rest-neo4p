@@ -9,7 +9,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Agent::HTTP::Thin::VERSION = 0.3004;
+  $REST::Neo4p::Agent::HTTP::Thin::VERSION = 0.3010;
 }
 
 my $unsafe = "^A-Za-z0-9\-\._~:+?%&=";

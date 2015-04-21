@@ -10,7 +10,7 @@ use warnings;
 
 # base class for nodes, relationships, indexes...
 BEGIN {
-  $REST::Neo4p::Entity::VERSION = '0.3004';
+  $REST::Neo4p::Entity::VERSION = '0.3010';
 }
 
 our $ENTITY_TABLE = {};
@@ -435,7 +435,7 @@ use strict;
 use warnings;
 no warnings qw/once/;
 BEGIN {
-  $REST::Neo4p::Simple::VERSION = '0.3004';
+  $REST::Neo4p::Simple::VERSION = '0.3010';
 }
 
 sub new { $_[1] }
