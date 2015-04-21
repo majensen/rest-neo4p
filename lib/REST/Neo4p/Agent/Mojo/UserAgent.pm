@@ -10,7 +10,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Agent::Mojo::UserAgent::VERSION = 0.3004;
+  $REST::Neo4p::Agent::Mojo::UserAgent::VERSION = 0.3010;
 }
 
 our @default_headers;
@@ -30,10 +30,13 @@ sub credentials {
   my ($srv, $realm, $user, $pwd) = @_;
   $self->{_user} = $user;
   $self->{_pwd} = $pwd;
+  $self->{_userinfo} = "$user:$pwd";
   $self->{_realm} = $realm;
-  if ($user && $pwd) {
-    $self->default_header('Authorization' => encode_base64("$user:$pwd",''));
-  }
+  $self->on(start => sub {
+	      my ($ua,$tx) = @_;
+	      $tx->req->url->userinfo($ua->{_userinfo})
+		unless ($tx->req->url->userinfo)
+	    });
   return;
 }
 
@@ -91,7 +94,7 @@ sub _do {
   my ($tx, $content, $content_file);
   # neo4j wants to redirect .../data to .../data/
   # and mojo doesn't want to redirect at all...
-  $self->max_redirects || $self->max_redirects(2); 
+  $self->max_redirects || $self->max_redirects(2);
   given ($rq) {
     when (/get|delete/i) {
       $tx = $self->build_tx($rq => $url => { @{$self->{_default_headers}} });
