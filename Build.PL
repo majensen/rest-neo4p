@@ -15,6 +15,7 @@ my $build =  Module::Build->new
 	'HOP::Stream' => 0,
 	'URI::Escape' => 3.3,
 	'LWP::UserAgent' => 6.04,
+	'LWP::Protocol::https' => 6.06,
 	'Exception::Class' => 1.3,
 	'Tie::IxHash' => 0,
 	'experimental' => 0,
