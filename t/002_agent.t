@@ -6,11 +6,9 @@ use lib '../lib';
 use REST::Neo4p::Exceptions;
 use strict;
 use warnings;
-
 my @agent_modules = qw/LWP::UserAgent
-Mojo::UserAgent
-HTTP::Thin
-/;
+		       Mojo::UserAgent
+		       HTTP::Thin/;
 
 my $build;
 my ($user,$pass);
@@ -20,15 +18,11 @@ eval {
     $pass = $build->notes('pass');
 };
 
-$user = 'neo4j';
-$pass = 'oogabooga';
-
 my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
 
 use_ok('REST::Neo4p::Agent');
 
 foreach my $mod (@agent_modules) {
-    $DB::single = 1 if $mod =~ /mojo/i;
     my $ua;
     my $mod_available = 1;
     diag "$mod";
