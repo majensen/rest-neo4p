@@ -53,6 +53,7 @@ t/099_error.t
 t/ErrJ.pm
 t/Neo4p.pm
 t/agent_mod.t
+t/lib/Neo4p/Connect.pm
 t/lib/Neo4p/Test.pm
 t/rt_80150.t
 t/rt_80196.t
