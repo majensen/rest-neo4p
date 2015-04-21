@@ -3,6 +3,8 @@ use Test::More tests => 2;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
+use lib 't/lib';
+use Neo4p::Connect;
 use REST::Neo4p;
 use strict;
 use warnings;
@@ -20,14 +22,8 @@ eval {
 my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
 my $num_live_tests = 2;
 
-my $not_connected;
-eval {
-  REST::Neo4p->connect($TEST_SERVER,$user,$pass);
-};
-if ( my $e = REST::Neo4p::CommException->caught() ) {
-  $not_connected = 1;
-  diag "Test server unavailable : tests skipped";
-}
+my $not_connected = connect($TEST_SERVER,$user,$pass);
+diag "Test server unavailable (".$not_connected->message.") : tests skipped" if $not_connected;
 
 SKIP : {
   skip 'no local connection to neo4j', $num_live_tests if $not_connected;

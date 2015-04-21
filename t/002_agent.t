@@ -6,6 +6,7 @@ use lib '../lib';
 use REST::Neo4p::Exceptions;
 use strict;
 use warnings;
+
 my @agent_modules = qw/LWP::UserAgent
 		       Mojo::UserAgent
 		       HTTP::Thin/;
@@ -28,6 +29,7 @@ foreach my $mod (@agent_modules) {
     diag "$mod";
     eval {
 	$ua = REST::Neo4p::Agent->new(agent_module=>$mod);
+	$ua->ssl_opts(verify_hostname => 0) if $mod =~ /LWP/; # only for tests
     };
     if ( my $e = REST::Neo4p::LocalException->caught ) {
 	$mod_available = 0 if ($e->message =~ /is not available/);

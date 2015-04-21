@@ -3,6 +3,8 @@
 use Test::More;
 use Module::Build;
 use lib '../lib';
+use lib 't/lib';
+use Neo4p::Connect;
 use strict;
 use warnings;
 
@@ -22,13 +24,9 @@ my $num_live_tests = 1;
 use_ok('REST::Neo4p');
 
 my $agent1 = REST::Neo4p->agent;
-my $not_connected;
-eval {
-  REST::Neo4p->connect($TEST_SERVER,$user,$pass);
-};
-if ( my $e = REST::Neo4p::CommException->caught() ) {
-  $not_connected = 1;
-}
+
+my $not_connected = connect($TEST_SERVER,$user,$pass);
+diag "Test server unavailable (".$not_connected->message.") : tests skipped" if $not_connected;
 
 SKIP : {
     skip 'no connection to neo4j',$num_live_tests if $not_connected;
@@ -39,7 +37,7 @@ SKIP : {
       REST::Neo4p->connect('http://www.zzyxx.foo:7474');
     };
     if ( my $e = REST::Neo4p::CommException->caught() ) {
-      like $e->message, qr/Not Found|timeout|Bad hostname|Can't connect/, 'timed out ok';
+      like $e->message, qr/Not Found|timeout|Bad hostname|Can't connect|Internal Exception/, 'timed out ok';
     }
     is $agent1, $agent2, 'same agent';
 

@@ -4,6 +4,8 @@ use Test::More;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
+use lib 't/lib';
+use Neo4p::Connect;
 use strict;
 use warnings;
 no warnings qw(once);
@@ -22,14 +24,9 @@ my $num_live_tests = 1;
 
 use_ok('REST::Neo4p');
 
-my $not_connected;
-eval {
-  REST::Neo4p->connect($TEST_SERVER,$user,$pass);
-};
-if ( my $e = REST::Neo4p::CommException->caught() ) {
-  $not_connected = 1;
-  diag "Test server unavailable : tests skipped";
-}
+my $not_connected = connect($TEST_SERVER,$user,$pass);
+diag "Test server unavailable (".$not_connected->message.") : tests skipped" if $not_connected;
+
 SKIP : {
   skip 'no local connection to neo4j', $num_live_tests if $not_connected;
   $DB::single=1;
@@ -38,7 +35,7 @@ SKIP : {
   is (REST::Neo4p->create_and_set_handle, 1, 'created and set handle 1');
   is $REST::Neo4p::HANDLE, 1, 'active handle now 1';
   ok !REST::Neo4p->connected, 'handle 1 is active, but not connected';
-  ok (REST::Neo4p->connect($TEST_SERVER,$user,$pass), 'connect with handle 1');
+  ok (!connect($TEST_SERVER,$user,$pass), 'connect with handle 1');
   ok (REST::Neo4p->connected, 'handle 1 now connected');
   is scalar @REST::Neo4p::HANDLES, 2, '2 handles exist...';
   isnt "$REST::Neo4p::HANDLES[0]->{_agent}","$REST::Neo4p::HANDLES[1]->{_agent}", '... and have different agents';

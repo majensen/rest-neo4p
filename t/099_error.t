@@ -3,6 +3,8 @@ use Test::More qw(no_plan);
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
+use lib 't/lib';
+use Neo4p::Connect;
 use REST::Neo4p;
 use strict;
 use warnings;
@@ -29,14 +31,8 @@ throws_ok { REST::Neo4p->connect('http://127.0.0.1:9999') } 'REST::Neo4p::CommEx
 
 throws_ok { REST::Neo4p->get_indexes() } 'REST::Neo4p::LocalException', 'No type arg on get_indexes ok';
 
-my $not_connected;
-eval {
-  REST::Neo4p->connect($TEST_SERVER,$user,$pass);
-};
-if ( my $e = REST::Neo4p::CommException->caught() ) {
-  $not_connected = 1;
-  diag "Test server unavailable : tests skipped";
-}
+my $not_connected = connect($TEST_SERVER,$user,$pass);
+diag "Test server unavailable (".$not_connected->message.") : tests skipped" if $not_connected;
 
 SKIP : {
     skip 'no connection to neo4j',$num_live_tests if $not_connected;

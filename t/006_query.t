@@ -5,6 +5,8 @@ use Data::Dumper;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
+use lib 't/lib';
+use Neo4p::Connect;
 use strict;
 use warnings;
 no warnings qw(once);
@@ -23,15 +25,9 @@ eval {
 
 my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
 my $num_live_tests = 1;
-my $not_connected;
 
-eval {
-  REST::Neo4p->connect($TEST_SERVER,$user,$pass);
-};
-if ( my $e = REST::Neo4p::CommException->caught() ) {
-  $not_connected = 1;
-  diag "Test server unavailable : tests skipped";
-}
+my $not_connected = connect($TEST_SERVER,$user,$pass);
+diag "Test server unavailable (".$not_connected->message.") : tests skipped" if $not_connected;
 
 ok my $q = REST::Neo4p::Query->new('START n=node({node_id}) RETURN n',
 				   { node_id => 1 }), 'create query object';

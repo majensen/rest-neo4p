@@ -8,6 +8,7 @@ use lib 'lib';
 use lib 't/lib';
 use REST::Neo4p;
 use Neo4p::Test;
+use Neo4p::Connect;
 use strict;
 use warnings;
 no warnings qw(once);
@@ -24,14 +25,9 @@ eval {
 
 my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
 my $num_live_tests = 27;
-my $not_connected;
-eval {
-  REST::Neo4p->connect($TEST_SERVER,$user,$pass);
-};
-if ( my $e = REST::Neo4p::CommException->caught() ) {
-  $not_connected = 1;
-  diag "Test server unavailable : tests skipped";
-}
+my $not_connected = connect($TEST_SERVER,$user,$pass);
+diag "Test server unavailable (".$not_connected->message.") : tests skipped" if $not_connected;
+
 
 #SKIP : {
 #  skip "Neo4j server version >= 2.0.0-M02 required, skipping...", $num_live_tests unless  REST::Neo4p->_check_version(2,0,0,2);
