@@ -204,6 +204,7 @@ sub execute {
 	  eval {
 	    if ($item->[0] eq 'columns') {
 	      $self->{NAME} = $item->[1];
+	      $DB::single=1;
 	      $self->{NUM_OF_FIELDS} = scalar @{$item->[1]};
 	      $item = drop($res_str); # move to data
 	      die 'j_parse: data key not present' unless $item->[0] eq 'data';
