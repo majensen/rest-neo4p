@@ -78,7 +78,7 @@ sub create_constraint {
 	REST::Neo4p::ConstraintSpecException->throw($e->message);
       }
       if ($e = Exception::Class->caught()) {
-	ref $e ? $e->rethrow : die $e;
+	(ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
       }
       last;
     };
@@ -99,7 +99,7 @@ sub create_constraint {
 	REST::Neo4p::ConstraintSpecException->throw($e->message);
       }
       if ($e = Exception::Class->caught()) {
-	ref $e ? $e->rethrow : die $e;
+	(ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
       }
       last;
     };
@@ -122,7 +122,7 @@ sub create_constraint {
 	REST::Neo4p::ConstraintSpecException->throw($e->message);
       }
       if ($e = Exception::Class->caught()) {
-	ref $e ? $e->rethrow : die $e;
+	(ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
       }
       last;
     };
@@ -144,7 +144,7 @@ sub create_constraint {
 	REST::Neo4p::ConstraintSpecException->throw($e->message);
       }
       if ($e = Exception::Class->caught()) {
-	ref $e ? $e->rethrow : die $e;
+	(ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
       }
       last;
     };

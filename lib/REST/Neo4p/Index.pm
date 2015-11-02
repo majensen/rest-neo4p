@@ -95,7 +95,7 @@ sub add_entry {
       $e->rethrow;
     }
     elsif ($e = Exception::Class->caught()) {
-      ref $e ? $e->rethrow : die $e;
+      (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
     }
   }
   return 1;
@@ -179,7 +179,7 @@ sub find_entries {
       $e->rethrow;
     }
     elsif ($e = Exception::Class->caught) {
-      ref $e ? $e->rethrow : die $e;
+      (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
     }
   }
   my @ret; 
@@ -236,7 +236,7 @@ sub create_unique_node {
     }
   }
   elsif ($e = Exception::Class->caught) {
-    ref $e ? $e->rethrow : die $e;
+    (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
   }
   return REST::Neo4p::Node->new_from_json_response($decoded_resp);
 }
@@ -287,7 +287,7 @@ sub create_unique_relationship {
     }
   }
   elsif ($e = Exception::Class->caught) {
-    ref $e ? $e->rethrow : die $e;
+    (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
   }
   return REST::Neo4p::Relationship->new_from_json_response($decoded_resp);
 }

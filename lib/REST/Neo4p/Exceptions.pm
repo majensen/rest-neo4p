@@ -123,7 +123,7 @@ REST::Neo4p::Exceptions - Exception::Class objects for REST::Neo4p
      $RETRIES--;
    };
  } while ( $e = Exception::Class->caught('REST::Neo4p::CommException') );
- ref $e ? $e->rethrow : die $e if $e;
+ (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e if $e;
 
 =head1 Classes
 

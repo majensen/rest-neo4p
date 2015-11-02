@@ -35,7 +35,7 @@ sub new_from_json_response {
       $e->rethrow;
     }
     elsif ($e = Exception::Class->caught()) {
-      ref $e ? $e->rethrow : die $e;
+      (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
     }
     push @{$obj->{_nodes}}, $node;
     eval {
@@ -46,7 +46,7 @@ sub new_from_json_response {
       $e->rethrow;
     }
     elsif ($e = Exception::Class->caught()) {
-      ref $e ? $e->rethrow : die $e;
+      (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
     }
     push @{$obj->{_relationships}}, $relationship if $relationship;
   }

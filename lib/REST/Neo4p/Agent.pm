@@ -186,7 +186,7 @@ sub AUTOLOAD {
       }
     }
     elsif ($e = Exception::Class->caught()) {
-      ref $e ? $e->rethrow : die $e;
+      (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
     }
     else {
       last; # success

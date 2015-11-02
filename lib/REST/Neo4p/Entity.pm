@@ -42,7 +42,7 @@ sub new {
     $e->rethrow;
   }
   elsif ($e = Exception::Class->caught()) {
-    ref $e ? $e->rethrow : die $e;
+    (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
   }
 
   $decoded_resp->{self} ||= $agent->location if ref $decoded_resp;
@@ -136,7 +136,7 @@ sub remove {
     1;
   }
   elsif ($e = Exception::Class->caught()) {
-    ref $e ? $e->rethrow : die $e;
+    (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
   }
   $self->_deregister;
   return 1;
@@ -166,7 +166,7 @@ sub set_property {
       $e->rethrow;
     }
     elsif ($e = Exception::Class->caught()) {
-      ref $e ? $e->rethrow : die $e;
+      (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
     }
   }
   # create accessors
@@ -199,7 +199,7 @@ sub get_property {
       push @ret, undef;
     }
     elsif ( $e = Exception::Class->caught()) {
-      ref $e ? $e->rethrow : die $e;
+      (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
     }
     else {
       _unescape($decoded_resp);
@@ -229,7 +229,7 @@ sub get_properties {
     return;
   }
   elsif ($e = Exception::Class->caught()) {
-    ref $e ? $e->rethrow : die $e;
+    (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
   }
   _unescape($decoded_resp);
   return $decoded_resp;
@@ -274,7 +274,7 @@ sub remove_property {
       $e->rethrow;
     }
     elsif ($e = Exception::Class->caught()) {
-      ref $e ? $e->rethrow : die $e;
+      (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
     }
   }
   return $self;
@@ -360,7 +360,7 @@ sub _entity_by_id {
 	$e->rethrow;
       }
       elsif ($e = Exception::Class->caught()) {
-	ref $e ? $e->rethrow : die $e;
+	(ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
       }
     }
     $new = ref($decoded_resp) ? $class->new_from_json_response($decoded_resp) :
