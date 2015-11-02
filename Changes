@@ -1,4 +1,7 @@
 Revision history for Perl module REST::Neo4p
+0.3011 2015-11-01
+    - Fix issue with exceptions that can't(rethrow)
+      (thanks @Htbaa)
 0.3010 2015-04-20
     - Fix git repos link
     - Enabled basic auth for all backends, so that...
