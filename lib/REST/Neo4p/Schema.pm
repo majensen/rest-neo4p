@@ -7,7 +7,8 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Schema::VERSION = '0.3010';
+  $REST::Neo4p::Schema::VERSION = '0.3011';
+  $REST::Neo4p::Schema::VERSION = '0.3011';
 }
 
 #require 'REST::Neo4p';
@@ -42,7 +43,7 @@ sub create_index {
       1; # ignore, already present
     }
     elsif ($e = Exception::Class->caught()) {
-      ref $e ? $e->rethrow : die $e;
+      (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
     }
   }
   return 1;
@@ -60,7 +61,7 @@ sub get_indexes {
     return;
   }
   elsif ($e = Exception::Class->caught()) {
-    ref $e ? $e->rethrow : die $e;
+    (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
   }
   my @ret;
   foreach (@{$self->_agent->decoded_content}) {
@@ -81,7 +82,7 @@ sub drop_index {
       1; #ignore if not found
     }
     elsif ($e = Exception::Class->caught()) {
-      ref $e ? $e->rethrow : die $e;
+      (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
     }
   }
   return 1;
@@ -111,7 +112,7 @@ sub create_constraint {
       1; # ignore, already present
     }
     elsif ($e = Exception::Class->caught()) {
-      ref $e ? $e->rethrow : die $e;
+      (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
     }
   }
   return 1;
@@ -129,7 +130,7 @@ sub get_constraints {
     return;
   }
   elsif ($e = Exception::Class->caught()) {
-    ref $e ? $e->rethrow : die $e;
+    (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
   }
   my @ret;
   foreach (@{$self->_agent->decoded_content}) {
@@ -158,7 +159,7 @@ sub drop_constraint {
       1; # ignore, not initially present
     }
     elsif ($e = Exception::Class->caught()) {
-      ref $e ? $e->rethrow : die $e;
+      (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
     }
   }
   return 1;

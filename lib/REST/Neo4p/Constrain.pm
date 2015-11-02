@@ -12,7 +12,8 @@ no warnings qw(once redefine);
 
 
 BEGIN {
-  $REST::Neo4p::Constrain::VERSION = '0.3010';
+  $REST::Neo4p::Constrain::VERSION = '0.3011';
+  $REST::Neo4p::Constrain::VERSION = '0.3011';
 }
 our @EXPORT = qw(create_constraint drop_constraint constrain relax);
 our @VALIDATE = qw(validate_properties validate_relationship validate_relationship_type);
@@ -78,7 +79,7 @@ sub create_constraint {
 	REST::Neo4p::ConstraintSpecException->throw($e->message);
       }
       if ($e = Exception::Class->caught()) {
-	ref $e ? $e->rethrow : die $e;
+	(ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
       }
       last;
     };
@@ -99,7 +100,7 @@ sub create_constraint {
 	REST::Neo4p::ConstraintSpecException->throw($e->message);
       }
       if ($e = Exception::Class->caught()) {
-	ref $e ? $e->rethrow : die $e;
+	(ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
       }
       last;
     };
@@ -122,7 +123,7 @@ sub create_constraint {
 	REST::Neo4p::ConstraintSpecException->throw($e->message);
       }
       if ($e = Exception::Class->caught()) {
-	ref $e ? $e->rethrow : die $e;
+	(ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
       }
       last;
     };
@@ -144,7 +145,7 @@ sub create_constraint {
 	REST::Neo4p::ConstraintSpecException->throw($e->message);
       }
       if ($e = Exception::Class->caught()) {
-	ref $e ? $e->rethrow : die $e;
+	(ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
       }
       last;
     };

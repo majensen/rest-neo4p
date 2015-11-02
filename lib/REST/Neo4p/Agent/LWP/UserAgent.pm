@@ -5,7 +5,8 @@ use MIME::Base64;
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Agent::LWP::UserAgent::VERSION = "0.3010";
+  $REST::Neo4p::Agent::LWP::UserAgent::VERSION = "0.3011";
+  $REST::Neo4p::Agent::LWP::UserAgent::VERSION = "0.3011";
 }
 sub new {
   my ($class,@args) = @_;

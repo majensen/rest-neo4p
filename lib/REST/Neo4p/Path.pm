@@ -5,7 +5,8 @@ use Carp qw(croak carp);
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Path::VERSION = '0.3010';
+  $REST::Neo4p::Path::VERSION = '0.3011';
+  $REST::Neo4p::Path::VERSION = '0.3011';
 }
 
 sub new {
@@ -35,7 +36,7 @@ sub new_from_json_response {
       $e->rethrow;
     }
     elsif ($e = Exception::Class->caught()) {
-      ref $e ? $e->rethrow : die $e;
+      (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
     }
     push @{$obj->{_nodes}}, $node;
     eval {
@@ -46,7 +47,7 @@ sub new_from_json_response {
       $e->rethrow;
     }
     elsif ($e = Exception::Class->caught()) {
-      ref $e ? $e->rethrow : die $e;
+      (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
     }
     push @{$obj->{_relationships}}, $relationship if $relationship;
   }

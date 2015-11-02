@@ -14,7 +14,8 @@ use strict;
 use warnings;
 no warnings qw(once);
 BEGIN {
-  $REST::Neo4p::Query::VERSION = '0.3010';
+  $REST::Neo4p::Query::VERSION = '0.3011';
+  $REST::Neo4p::Query::VERSION = '0.3011';
 }
 
 our $BUFSIZE = 50000;
@@ -114,7 +115,7 @@ sub execute {
     return;
   }
   elsif ( $e = Exception::Class->caught) {
-    ref $e ? $e->rethrow : die $e;
+    (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
   }
   my $jsonr = JSON::XS->new;
   my ($buf,$res,$str,$rowstr,$obj);
@@ -204,6 +205,7 @@ sub execute {
 	  eval {
 	    if ($item->[0] eq 'columns') {
 	      $self->{NAME} = $item->[1];
+	      $DB::single=1;
 	      $self->{NUM_OF_FIELDS} = scalar @{$item->[1]};
 	      $item = drop($res_str); # move to data
 	      die 'j_parse: data key not present' unless $item->[0] eq 'data';
@@ -393,7 +395,7 @@ sub _process_row {
 	};
 	my $e;
 	if ($e = Exception::Class->caught()) {
-	  ref $e ? $e->rethrow : die $e;
+	  (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
 	}
 	my $entity_class = 'REST::Neo4p::'.$entity_type;
 	push @ret, $self->{ResponseAsObjects} ?
@@ -409,7 +411,7 @@ sub _process_row {
 	  };
 	  my $e;
 	  if ($e = Exception::Class->caught()) {
-	    ref $e ? $e->rethrow : die $e;
+	    (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
 	  }
 	  if ($entity_type eq 'bareword') {
 	    push @$array, $ary_elt;

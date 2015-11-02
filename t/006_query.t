@@ -94,7 +94,8 @@ SKIP : {
   }
 
   # test responses as simple structs
-  ok $q = REST::Neo4p::Query->new("START n=node($$n1) MATCH (n)-->(x) RETURN x.name, x"), 'node query';
+  $DB::single=1;
+  ok $q = REST::Neo4p::Query->new("START n=node($$n1) MATCH (n)-[:married_to]->(x) RETURN x.name, x"), 'node query';
   $q->{ResponseAsObjects} = 0;
   ok $q->execute, 'execute (node)';
   my $ret = $q->fetch;

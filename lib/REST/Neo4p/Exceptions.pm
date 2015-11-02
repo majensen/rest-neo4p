@@ -4,7 +4,8 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Exceptions::VERSION = '0.3010';
+  $REST::Neo4p::Exceptions::VERSION = '0.3011';
+  $REST::Neo4p::Exceptions::VERSION = '0.3011';
 }
 use Exception::Class (
   'REST::Neo4p::Exception',
@@ -123,7 +124,7 @@ REST::Neo4p::Exceptions - Exception::Class objects for REST::Neo4p
      $RETRIES--;
    };
  } while ( $e = Exception::Class->caught('REST::Neo4p::CommException') );
- ref $e ? $e->rethrow : die $e if $e;
+ (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e if $e;
 
 =head1 Classes
 

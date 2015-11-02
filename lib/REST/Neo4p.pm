@@ -14,7 +14,8 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::VERSION = '0.3010';
+  $REST::Neo4p::VERSION = '0.3011';
+  $REST::Neo4p::VERSION = '0.3011';
 }
 
 our $CREATE_AUTO_ACCESSORS = 0;
@@ -115,7 +116,7 @@ sub agent {
       $e->rethrow;
     }
     elsif ($e = Exception::Class->caught()) {
-      ref $e ? $e->rethrow : die $e;
+      (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
     }
   }
   return $HANDLES[$HANDLE]->{_agent};
@@ -151,7 +152,7 @@ sub get_node_by_id {
     return;
   }
   elsif ($e = Exception::Class->caught) {
-    ref $e ? $e->rethrow : die $e;
+    (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
   }
   return $node;
 }
@@ -176,7 +177,7 @@ sub get_nodes_by_label {
     return;
    }
   elsif ($e = Exception::Class->caught) {
-    ref $e ? $e->rethrow : die $e;
+    (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
   }
   my @ret;
   foreach my $node_json (@$decoded_resp) {
@@ -204,7 +205,7 @@ sub get_relationship_by_id {
     return;
    }
   elsif ($e = Exception::Class->caught) {
-    ref $e ? $e->rethrow : die $e;
+    (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
    }
   return $relationship;
 }
@@ -226,7 +227,7 @@ sub get_index_by_name {
     return;
    }
   elsif ($e = Exception::Class->caught) {
-    ref $e ? $e->rethrow : die $e;
+    (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
    }
   return $idx;
 }
@@ -301,7 +302,7 @@ sub begin_work {
     $e->rethrow;
   }
   elsif ($e = Exception::Class->caught()) {
-    ref $e ? $e->rethrow : die $e;
+    (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
   }
   my ($tx) = $resp->{commit} =~ m|.*/([0-9]+)/commit$|;
   return REST::Neo4p->_set_transaction($tx);
@@ -328,7 +329,7 @@ sub commit {
     $e->rethrow;
   }
   elsif ($e = Exception::Class->caught()) {
-    ref $e ? $e->rethrow : die $e;
+    (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
   }
   $neo4p->_clear_transaction;
   $HANDLES[$HANDLE]->{_tx_results} = $resp->{results};  
@@ -356,7 +357,7 @@ sub rollback {
     $e->rethrow;
   }
   elsif ($e = Exception::Class->caught()) {
-    ref $e ? $e->rethrow : die $e;
+    (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
   }
   $neo4p->_reset_transaction;
   return $neo4p->_clear_transaction;

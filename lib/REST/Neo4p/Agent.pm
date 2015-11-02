@@ -11,7 +11,8 @@ use warnings;
 our @ISA;
 our $VERSION;
 BEGIN {
-  $REST::Neo4p::Agent::VERSION = '0.3010';
+  $REST::Neo4p::Agent::VERSION = '0.3011';
+  $REST::Neo4p::Agent::VERSION = '0.3011';
 }
 
 our $AUTOLOAD;
@@ -186,7 +187,7 @@ sub AUTOLOAD {
       }
     }
     elsif ($e = Exception::Class->caught()) {
-      ref $e ? $e->rethrow : die $e;
+      (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
     }
     else {
       last; # success

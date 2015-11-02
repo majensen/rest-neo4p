@@ -55,6 +55,8 @@ t/Neo4p.pm
 t/agent_mod.t
 t/lib/Neo4p/Connect.pm
 t/lib/Neo4p/Test.pm
+t/lib/Neo4p/TestAgent.pm
+t/issue_5.t
 t/rt_80150.t
 t/rt_80196.t
 t/rt_80471.t
