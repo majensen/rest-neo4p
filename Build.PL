@@ -35,6 +35,7 @@ my $build =  Module::Build->new
 	'Test::NoWarnings' => 0,
 	'Mock::Quick' => 0,
 	'List::MoreUtils' => 0,
+	'Mojo::Exception' => 0,
 	experimental => 0
 
        },
