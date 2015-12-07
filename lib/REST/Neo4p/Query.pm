@@ -439,6 +439,7 @@ sub _process_row {
 sub finish {
   my $self = shift;
   delete $self->{_iterator};
+  unlink $self->tmpf->filename if ($self->tmpf);
   delete $self->{_tempfile};
   return 1;
 }
