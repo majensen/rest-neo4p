@@ -3,13 +3,12 @@ use v5.10;
 package REST::Neo4p::Agent::HTTP::Thin;
 use base qw/HTTP::Thin REST::Neo4p::Agent/;
 use URI::Escape;
-use LWP::Authen::Basic;
+use MIME::Base64;
 use REST::Neo4p::Exceptions;
 use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Agent::HTTP::Thin::VERSION = 0.3012;
   $REST::Neo4p::Agent::HTTP::Thin::VERSION = 0.3012;
 }
 
@@ -27,7 +26,7 @@ sub credentials {
   $self->{_pwd} = $pwd;
   if ($user && $pwd) {
     $self->default_header(
-      Authorization => LWP::Authen::Basic->auth_header($user, $pass)
+      'Authorization' => "Basic " . encode_base64("$user:$pwd", '')
     );
   }
   1;
