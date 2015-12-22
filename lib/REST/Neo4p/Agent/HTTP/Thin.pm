@@ -10,7 +10,6 @@ use warnings;
 
 BEGIN {
   $REST::Neo4p::Agent::HTTP::Thin::VERSION = 0.3012;
-  $REST::Neo4p::Agent::HTTP::Thin::VERSION = 0.3012;
 }
 
 my $unsafe = "^A-Za-z0-9\-\._~:+?%&=";
@@ -26,7 +25,9 @@ sub credentials {
   $self->{_user} = $user;
   $self->{_pwd} = $pwd;
   if ($user && $pwd) {
-    $self->default_header('Authorization' => encode_base64("$user:$pwd",''));
+    $self->default_header(
+      'Authorization' => "Basic " . encode_base64("$user:$pwd", '')
+    );
   }
   1;
 }
