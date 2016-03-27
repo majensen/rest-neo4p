@@ -6,9 +6,7 @@ perl:
 #  - "5.18"
 
 env:
-  - REST_NEO4P_AGENT_MODULE=LWP::UserAgent
-  - REST_NEO4P_AGENT_MODULE=Mojo::UserAgent
-  - REST_NEO4P_AGENT_MODULE=HTTP::Thin
+  - NEO4J_VER=2.2.8
 
 
 before_install:
@@ -18,10 +16,9 @@ before_install:
   - sudo apt-get update -qq
   # perl pkgs
   - cpanm Test::Pod Test::CPAN::Changes
-  - cpanm $REST_NEO4P_AGENT_MODULE
 
 install:
-  - sudo apt-get install neo4j
+  - sudo apt-get install neo4j=$NEO4J_VER
   # need to change pass on first access
   - curl -u neo4j:neo4j -d '{"password":"j4oen"}' -X POST -H 'Accept:application/json' -H'Content-Type:application/json' http://localhost:7474/user/neo4j/password
   
@@ -34,6 +31,8 @@ script:
   - export REST_NEO4P_TEST_PASS=j4oen
   - perl Build.PL
   - yes | ./Build installdeps --cpan_client 'cpanm -n'
-  - ./Build test
+  - for REST_NEO4P_AGENT_MODULE in LWP::UserAgent Mojo::UserAgent HTTP::Thin do
+  -   ./Build test
+  -   done
 
   
