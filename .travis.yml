@@ -31,8 +31,8 @@ script:
   - export REST_NEO4P_TEST_PASS=j4oen
   - perl Build.PL
   - yes | ./Build installdeps --cpan_client 'cpanm -n'
-  - for REST_NEO4P_AGENT_MODULE in LWP::UserAgent Mojo::UserAgent HTTP::Thin do
-  -   ./Build test
-  -   done
+  - for REST_NEO4P_AGENT_MODULE in LWP::UserAgent Mojo::UserAgent HTTP::Thin ; do ./Build test ; done
+  
+
 
   
