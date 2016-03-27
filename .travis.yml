@@ -27,11 +27,11 @@ install:
 #  - sudo neo4j start
 
 script:
-  - perl Build.PL
-  - ./Build installdeps --cpan_client 'cpanm -n'
   - export REST_NEO4P_TEST_SERVER=http://localhost:7474
   - export REST_NEO4P_TEST_USER=neo4j
   - export REST_NEO4P_TEST_PASS=neo4j
+  - perl Build.PL
+  - ./Build installdeps --cpan_client 'cpanm -n'
   - ./Build test
 
   
