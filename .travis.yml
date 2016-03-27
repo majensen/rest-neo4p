@@ -23,8 +23,8 @@ before_install:
 install:
   - sudo apt-get install neo4j
   
-before_script:
-  - sudo neo4j start
+#before_script:
+#  - sudo neo4j start
 
 script:
   - perl Build.PL
