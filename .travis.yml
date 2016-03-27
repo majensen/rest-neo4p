@@ -1,0 +1,34 @@
+
+language: perl
+perl:
+  - "5.22"
+#  - "5.20"
+#  - "5.18"
+
+env:
+  - REST_NEO4P_AGENT_MODULE=LWP::UserAgent
+  - REST_NEO4P_AGENT_MODULE=Mojo::UserAgent
+  - REST_NEO4P_AGENT_MODULE=HTTP::Thin
+
+
+before_install:
+  # neo4j pkgs
+  - curl https://debian.neo4j.org/neotechnology.gpg.key | sudo apt-key add -
+  - echo 'deb http://debian.neo4j.org/repo stable/' | sudo tee -a /etc/apt/sources.list
+  - sudo apt-get update -qq
+  # perl pkgs
+  - cpanm Test::Pod Test::CPAN::Changes
+  - cpanm $REST_NEO4P_AGENT_MODULE
+
+install:
+  - sudo apt-get install neo4j
+  
+before_script:
+  - sudo neo4j start
+
+script:
+  - perl Build.PL
+  - ./Build test
+
+  
+
