@@ -29,6 +29,9 @@ install:
 script:
   - perl Build.PL
   - ./Build installdeps --cpan_client 'cpanm -n'
-  - REST_NEO4P_TEST_SERVER=http://localhost:7474 REST_NEO4P_TEST_USER=neo4j REST_NEO4P_TEST_PASS=neo4j ./Build test
+  - export REST_NEO4P_TEST_SERVER=http://localhost:7474
+  - export REST_NEO4P_TEST_USER=neo4j
+  - export REST_NEO4P_TEST_PASS=neo4j
+  - ./Build test
 
   
