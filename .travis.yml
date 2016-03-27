@@ -28,6 +28,7 @@ install:
 
 script:
   - perl Build.PL
-  - ./Build test
+  - ./Build installdeps --cpan_client 'cpanm -n'
+  - echo $'\n' $'\n' $'\n' | ./Build test
 
   
