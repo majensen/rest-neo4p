@@ -1,4 +1,3 @@
-#$Id$
 use Module::Build;
 use strict;
 use warnings;
