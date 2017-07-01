@@ -316,7 +316,7 @@ sub execute {
 sub fetchrow_arrayref { 
   my $self = shift;
   unless ( defined $self->{_iterator} ) {
-    REST::Neo4p::LocalException->throw("Can't run fetch(), query not execute()'d yet\n");
+    REST::Neo4p::LocalException->throw("Can't run fetch(), query not execute()'d yet\nCheck query object for error with err()/errstr()\n");
   }
   $self->{_iterator}->();
 }
