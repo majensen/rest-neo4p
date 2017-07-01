@@ -11,8 +11,7 @@ use warnings;
 our @ISA;
 our $VERSION;
 BEGIN {
-  $REST::Neo4p::Agent::VERSION = '0.3012';
-  $REST::Neo4p::Agent::VERSION = '0.3012';
+  $REST::Neo4p::Agent::VERSION = '0.3020';
 }
 
 our $AUTOLOAD;
