@@ -42,9 +42,7 @@ SKIP : {
     ok my $n1 = REST::Neo4p::Node->new, 'create node 1';
     ok my $r0 = REST::Neo4p::Relationship->new( $n0 => $n1, 'zero' ), 'create reln 0';
 
-    ok $n0->id == 0, 'node 0 == 0';
-    ok $n1->id == 1, 'node 1 == 1';
-    ok $r0->id == 0, 'reln 0 = 0';
+    is $r0->id, 0, 'reln 0 = 0';
 
     ok my $sth = REST::Neo4p::Query->new("MATCH p = ()-[]->() RETURN p"), 'create query';
 
