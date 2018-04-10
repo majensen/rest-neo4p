@@ -91,6 +91,12 @@ the first argument and second argument, both C<REST::Neo4p::Node>
 objects. An optional fourth argument is a hashref of I<relationship> 
 properties.
 
+=item remove()
+
+ $reln->remove()
+
+Removes the relationship from the database.
+
 =item get_property()
 
  $status = $reln->get_property('status');
