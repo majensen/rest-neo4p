@@ -13,7 +13,7 @@ use warnings;
 no warnings qw(once);
 
 BEGIN {
-  $REST::Neo4p::Batch::VERSION = '0.3020';
+  $REST::Neo4p::Batch::VERSION = '0.3021';
 }
 
 our @EXPORT = qw(batch);

@@ -6,7 +6,7 @@ use Carp qw(croak carp);
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Relationship::VERSION = '0.3020';
+  $REST::Neo4p::Relationship::VERSION = '0.3021';
 }
 
 sub new {
