@@ -116,7 +116,7 @@ sub execute {
   elsif ( $e = Exception::Class->caught) {
     (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
   }
-  my $jsonr = JSON::XS->new;
+  my $jsonr = JSON::XS->new->utf8;
   my ($buf,$res,$str,$rowstr,$obj);
   my $row_count;
   use experimental 'smartmatch';

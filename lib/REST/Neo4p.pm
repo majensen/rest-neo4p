@@ -22,7 +22,7 @@ our @HANDLES;
 our $HANDLE = 0;
 our $AGENT_MODULE = $ENV{REST_NEO4P_AGENT_MODULE} || 'LWP::UserAgent';
 
-my $json = JSON->new->allow_nonref(1);
+my $json = JSON->new->allow_nonref(1)->utf8;
 
 $HANDLES[0]->{_q_endpoint} = 'cypher';
 
