@@ -291,7 +291,7 @@ sub simple_from_json_response {
   return;
 }
 
-sub id { ${$_[0]} }
+sub id { 0 + ${$_[0]} }
 sub is_batch { shift->_entry->{batch} }
 sub entity_type { shift->_entry->{entity_type} }
 

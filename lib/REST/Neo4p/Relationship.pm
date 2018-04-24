@@ -37,7 +37,7 @@ sub as_simple {
   my $self = shift;
   my $ret;
   my $props = $self->get_properties;
-  $ret->{_relationship} = $$self;
+  $ret->{_relationship} = $$self + 0;
   $ret->{_type} = $self->type;
   $ret->{_start} = ${$self->start_node};
   $ret->{_end} = ${$self->end_node};

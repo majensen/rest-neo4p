@@ -210,7 +210,7 @@ sub as_simple {
   my $self = shift;
   my $ret;
   my $props = $self->get_properties;
-  $ret->{_node} = $$self;
+  $ret->{_node} = $$self + 0;
   $ret->{$_} = $props->{$_} for keys %$props;
   return $ret;
 }
