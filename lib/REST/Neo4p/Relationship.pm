@@ -6,7 +6,7 @@ use Carp qw(croak carp);
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Relationship::VERSION = '0.3020';
+  $REST::Neo4p::Relationship::VERSION = '0.3021';
 }
 
 sub new {
@@ -37,7 +37,7 @@ sub as_simple {
   my $self = shift;
   my $ret;
   my $props = $self->get_properties;
-  $ret->{_relationship} = $$self;
+  $ret->{_relationship} = $$self + 0;
   $ret->{_type} = $self->type;
   $ret->{_start} = ${$self->start_node};
   $ret->{_end} = ${$self->end_node};
