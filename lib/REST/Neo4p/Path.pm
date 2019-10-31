@@ -39,7 +39,7 @@ sub new_from_json_response {
     }
     push @{$obj->{_nodes}}, $node;
     eval {
-      $relationship =  REST::Neo4p::Relationship->_entity_by_id($reln_id) if $reln_id;
+      $relationship =  REST::Neo4p::Relationship->_entity_by_id($reln_id) if defined $reln_id;
     };
     if (my $e = REST::Neo4p::Exception->caught()) {
       # TODO : handle different classes
