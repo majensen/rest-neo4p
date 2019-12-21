@@ -27,6 +27,7 @@ install:
   # - sudo update-java-alternatives -s java-8-oracle
   - java -version
   - echo N | sudo apt-get -y install neo4j=$NEO4J_VER
+  - neo4j start
   - sleep 20
 
   # need to change pass on first access
