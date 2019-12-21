@@ -80,12 +80,14 @@ undef $q->{RaiseError};
 while (my $row = $q->fetch) {
   is(ref,'HASH') foreach @$row;
 }
+diag $q->errobj->message;
 isa_ok $q->errobj, 'REST::Neo4p::TxQueryException';
 open $qfh,"<",\$ErrJ::txn_long_err_resp;
 ok $q->execute;
 while (my $row = $q->fetch) {
   is(ref,'HASH') foreach @$row;
 }
+diag $q->errobj->message;
 isa_ok $q->errobj, 'REST::Neo4p::TxQueryException';
 
 open $qfh,"<",\$ErrJ::txn_no_err_resp;
@@ -95,6 +97,7 @@ while (my $row = $q->fetch) {
   is(ref,'HASH') foreach @$row;
   $DB::single=1 if $q->err;
 }
+diag $q->errobj->message if ($q->err);
 ok !$q->err, 'no txn error';
 
 open $qfh,"<",\$ErrJ::txn_baddata_resp;
