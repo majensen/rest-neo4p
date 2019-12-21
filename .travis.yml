@@ -4,16 +4,15 @@ perl:
   - "5.26"
   - "5.24"
   - "5.22"
-  - "5.20"
-  - "5.18"
+  # - "5.20"
+  # - "5.18"
 
 env:
-  - NEO4J_VER=3.0.3
-  - NEO4J_VER=2.3.3
-  - NEO4J_VER=2.2.8  
-  - NEO4J_VER=2.1.8
-  - NEO4J_VER=2.0.4
-  - NEO4J_VER=1.9.5
+  - NEO4J_VER=1:3.5.14
+  - NEO4J_VER=1:3.4.17
+  - NEO4J_VER=1:3.3.9
+
+
 
 before_install:
   # neo4j pkgs
@@ -24,8 +23,8 @@ before_install:
   - cpanm Test::Pod Test::CPAN::Changes
 
 install:
-  - yes | sudo apt-get install daemon oracle-java8-installer
-  - sudo update-java-alternatives -s java-8-oracle
+  - yes | sudo apt-get install daemon adduser psmisc lsb-base openjdk-8-jre-headless
+  # - sudo update-java-alternatives -s java-8-oracle
   - java -version
   - echo N | sudo apt-get -y install neo4j=$NEO4J_VER
   - sleep 20
