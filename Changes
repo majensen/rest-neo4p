@@ -1,5 +1,6 @@
 Revision history for Perl module REST::Neo4p
-
+0.3030 2019-12-21
+    - Fix a parsing issue occuring with JSON::XS >= 4.00
 0.3021 2018-04-24
     - Enable UTF-8 decoding of query responses
 

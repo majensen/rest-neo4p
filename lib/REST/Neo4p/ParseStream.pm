@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::ParseStream::VERSION = '0.3021';
+  $REST::Neo4p::ParseStream::VERSION = '0.3030';
 }
 
 our @EXPORT = qw/j_parse/;# j_parse_object j_parse_array /;

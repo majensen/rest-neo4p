@@ -18,6 +18,7 @@ before_install:
   - curl https://debian.neo4j.org/neotechnology.gpg.key | sudo apt-key add -
   - echo 'deb http://debian.neo4j.org/repo stable/' | sudo tee -a /etc/apt/sources.list
   - sudo apt-get update -qq
+  # trusty avoids the Java 11 problem, but dpkg won't install new neo4js unless upgraded:
   - yes | sudo apt-get install dpkg
   # perl pkgs
   - cpanm Test::Pod Test::CPAN::Changes
