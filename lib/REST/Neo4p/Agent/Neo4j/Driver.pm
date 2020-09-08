@@ -1,0 +1,288 @@
+use v5.10;
+package REST::Neo4p::Agent::Neo4j::Driver;
+use lib '../../../../../lib'; # testing
+use base qw/REST::Neo4p::Agent/;
+use Neo4j::Driver;
+use REST::Neo4p::Exceptions;
+use Try::Tiny;
+use URI;
+# use MIME::Base64;
+use Carp qw/carp/;
+use HTTP::Response;
+use strict;
+use warnings;
+
+BEGIN {
+  $REST::Neo4p::Agent::Neo4j::Driver::VERSION = '0.4000';
+}
+
+# emulate the REST actions with queries
+$action_queries = {
+  node => { # http://localhost:7474/db/data/node
+    post => 
+    },
+  relationship => { # http://localhost:7474/db/data/relationship
+   },
+  node_index => { # http://localhost:7474/db/data/index/node
+    
+    },
+  relationship_index => { # http://localhost:7474/db/data/index/relationship
+    },
+  relationship_types => { # http://localhost:7474/db/data/relationship/types
+    },
+  batch => { # http://localhost:7474/db/data/batch
+    },
+  cypher => { # http://localhost:7474/db/data/cypher
+    },
+  indexes => { # http://localhost:7474/db/data/schema/index
+   },
+  constraints =>  { # http://localhost:7474/db/data/schema/constraint
+    },
+  transaction => { # http://localhost:7474/db/data/transaction
+    },
+  node_labels => { # http://localhost:7474/db/data/labels"
+   }
+ };
+
+sub new {
+  my ($class, @args) = @_;
+  my $self = $class->SUPER::new(@_);
+  
+}
+
+sub credentials  {
+  my $self = shift;
+  my ($srv, $realm, $user, $pwd) = @_;
+  $self->{_user} = $user;
+  $self->{_pwd} = $pwd;
+  $self->{_userinfo} = "$user:$pwd";
+  $self->{_realm} = $realm;
+  return;
+}
+
+sub user { shift->{_user} }
+sub pwd { shift->{_pwd} }
+sub last_result { shift->{_last_result} }
+sub last_errors { shift->{_last_errors} }
+
+sub driver { $self->{__driver} }
+
+# these are no-ops
+sub default_header { return }
+sub add_header { return }
+sub remove_header { return }
+
+# http, https, bolt (if Neo4j::Bolt)...
+sub protocols_allowed {
+  my $self = shift;
+  my ($protocols) = @_;
+  push @{$self->{_protocols_allowed}}, @$protocols;
+  return;
+}
+
+sub timeout {
+  my $self=shift;
+  $self->driver && $self->driver->config(timeout => shift());
+  return;
+}
+
+sub tls {
+  my $self=shift;
+  $self->driver && $self->driver->config( tls => shift());
+}
+
+sub tls_ca {
+  my $self = shift;
+  $self->driver && $self->driver->config( tls_ca => shift());
+}
+
+sub database {
+  my $self = shift;
+  my ($db) = @_;
+  if (defined $db) {
+    return $self->{_database} = $db;
+  }
+  else {
+    return $self->{_database} // ($self->{_database} = 'neo4j');
+  }
+}
+
+# subclass override 
+sub batch_mode {
+  return 0; # batch mode not available
+}
+
+# subclass override 
+sub batch_length {
+  REST::Neo4p::LocalExeception->throw("Batch mode not available with Neo4j::Driver as agent\n");
+}
+sub execute_batch {
+  REST::Neo4p::LocalExeception->throw("Batch mode not available with Neo4j::Driver as agent\n");
+}
+
+# subclass override
+# $agent->connect($url [, $dbname])
+
+sub connect {
+  my $self = shift;
+  my ($server, $dbname) = @_;
+  my $drv;
+  if (defined $server) {
+    my $uri = URI->new($server);
+    if ($uri->userinfo) {
+      ($u,$p) = split(/:/,$uri->userinfo);
+      $self->credentials($uri->host,'',$u,$p);
+    }
+    $self->server_url($uri->host.':'.$uri->port);
+  }
+  if (defined $dbname) {
+    $self->database($dbname);
+  }
+  unless ($self->server_url) {
+    REST::Neo4p::Exception->throw("Server not set\n");
+  }
+  try {
+    $drv = Neo4j::Driver->new($self->server_url);
+  } catch {
+    REST::Neo4p::LocalException->throw("Problem creating new Neo4j::Driver: $_");
+  };
+  if ($self->user || $self->pwd) {
+    $drv->basic_auth($self->user, $self->pwd);
+  }
+  $self->{__driver} = $drv;
+  return 1;
+}
+
+sub session {
+  my $self = shift;
+  unless ($self->driver) {
+    REST::Neo4p::LocalException->throw("No driver connection; can't create session ( try \$agent->connect() )\n");
+  }
+  return $self->driver->session(database => $self->database);
+}
+
+# run_in_session( $query_string, { parm => value, ... } )
+
+sub run_in_session {
+  my $self = shift;
+  my ($qry, $params) = @_;
+  $self->{_last_result} = $self->{_last_errors} = undef;
+  try {
+    $self->{_last_result} = $self->session->run($qry, $params);
+  } catch {
+    $self->{_last_errors} = $_;
+  };
+  if ($self->{_last_errors}) {
+    try {
+      REST::Neo4p::Neo4jException->throw( error => "Neo4j errors; see agent->last_errors()" );
+    } catch {
+      warn $_->error;
+      return;
+    };
+  }
+  else {
+    return $self->{_last_result} // 1;
+  }
+}
+
+# $rq : [get|post|put|delete]
+# $action : {neo4j REST endpt action}
+# @args : depends on REST rq
+# get|delete : my @url_components = @args;
+# post|put : my ($url_components, $content, $addl_headers) = @args;
+
+
+# subclass override
+# emulate rest calls with appropriate queries
+
+sub __do_request {
+  my $self = shift;
+  my ($rq, $action, @args) = @_;
+  use experimental qw/smartmatch/;
+  $self->{_errmsg} = $self->{_location} = $self->{_raw_response} = $self->{_decoded_content} = undef;
+  my $resp;
+  given ($rq) {
+    when (/get|delete/) {
+      my @url_components = @args;
+      my %rest_params = ();
+      # look for a hashref as final arg containing field => value pairs
+      if (@url_components && ref $url_components[-1] && (ref $url_components[-1] eq 'HASH')) {
+	%rest_params = %{ pop @url_components };
+      }
+      my $url = join('/',$self->{_actions}{$action},@url_components);
+      my @params;
+      while (my ($p,$v) = each %rest_params) {
+	push @params, join('=',$p,$v);
+      }
+      $url.='?'.join('&',@params) if @params;
+      if ($self->batch_mode) {
+	1;
+      }
+# request made here:
+      $resp = $self->{_raw_response} = $self->$rq($url);
+    }
+    when (/post|put/) {
+      my ($url_components, $content, $addl_headers) = @args;
+      unless (!$addl_headers || (ref $addl_headers eq 'HASH')) {
+	REST::Neo4p::LocalException->throw("Arg 3 must be a hashref of additional headers\n");
+      }
+      no warnings qw(uninitialized);
+      my $url = join('/',$self->{_actions}{$action},@$url_components);
+      use warnings qw(uninitialized);
+      if ($self->batch_mode) {
+	$url = ($url_components->[0] =~ /{[0-9]+}/) ? join('/',@$url_components) : $url; # index batch object kludge
+	@_ = ($self, 
+	      $url,
+	      $rq, $content, $addl_headers);
+	goto &_add_to_batch_queue;
+      }
+      $content = $JSON->encode($content) if $content && !$self->isa('Mojo::UserAgent');
+# request made here
+      $resp  = $self->{_raw_response} = $self->$rq($url, 'Content-Type' => 'application/json', Content=> $content, %$addl_headers);
+      1;
+    }
+  }
+  # exception handling
+  # rt80471...
+  if (length $resp->content) {
+    if ($resp->header('Content_Type') =~ /json/) {
+      $self->{_decoded_content} = $JSON->decode($resp->content);
+    }
+  }
+  unless ($resp->is_success) {
+    if ( $self->{_decoded_content} ) {
+      my %error_fields = (
+	code => $resp->code,
+	neo4j_message => $self->{_decoded_content}->{message},
+	neo4j_exception => $self->{_decoded_content}->{exception},
+	neo4j_stacktrace =>  $self->{_decoded_content}->{stacktrace}
+       );
+      my $xclass;
+      given ($resp->code) {
+	when (404) {
+	  $xclass = 'REST::Neo4p::NotFoundException';
+	}
+	when (409) {
+	  $xclass = 'REST::Neo4p::ConflictException';
+	}
+	default {
+	  $xclass = 'REST::Neo4p::Neo4jException';
+	}
+      }
+      if ( $error_fields{neo4j_exception} && 
+	     ($error_fields{neo4j_exception} =~ /^Syntax/ )) {
+	$xclass = 'REST::Neo4p::QuerySyntaxException';
+      }
+      $xclass->throw(%error_fields);
+    }
+    else { # couldn't parse the content as JSON...
+      my $xclass = ($resp->code && ($resp->code == 404)) ? 
+	'REST::Neo4p::NotFoundException' : 'REST::Neo4p::CommException';
+      $xclass->throw( 
+	code => $resp->code,
+	message => $resp->message
+       );
+    }
+  }
+  $self->{_location} = $resp->header('Location');
+}
