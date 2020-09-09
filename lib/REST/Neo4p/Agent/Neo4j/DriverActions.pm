@@ -2,7 +2,8 @@ package
   REST::Neo4p::Agent::Neo4j::Driver;
 
 use v5.10;
-use REST::Neo4j::Exceptions;
+use lib '../../../../../lib'; #testing
+use REST::Neo4p::Exceptions;
 use strict;
 use warnings;
 
@@ -64,7 +65,7 @@ sub _parse_action {
 
 sub post_cypher {
   my $self = shift;
-  my ($ary, $qry) = @args;
+  my ($ary, $qry) = @_;
   # $ary not used
   my $result = $self->session->run( $qry->{query}, $qry->{params} // () );
   return [$result->list]; # ?
@@ -108,6 +109,33 @@ sub get_node {
 	else {
 	  $result = $self->run_in_session('match (n) where id(n) = $id return n[$prop]', {id => $id, prop => $other[1]});
 	}
+	last;
+      };
+      /^relationships$/ && do {
+	my $ptn;
+	my $type_cond = '';
+	for ($other[0]) {
+	  /^all$/ && do {
+	    $ptn = '(n)-[r]-()';
+	    last;
+	  };
+	  /^in$/ && do {
+	    $ptn = '(n)<-[r]-()';
+	    last;
+	  };
+	  /^out$/ && do {
+	    $ptn = '(n)-[r]->()';	    
+	    last;
+	  };
+	}
+	if ($other[1]) {
+	  my @types = split /&/,$other[1];
+	  $type_cond = 'and type(r) in ['.join(',',@types).']';
+	}
+	$result = $self->run_in_session(
+	  "match $ptn where id(n) = \$id $type_cond return r",
+	  { id => $id }
+	 );
 	last;
       };
     }
@@ -160,7 +188,24 @@ sub post_node {
 	last;
       };
       /^relationships$/ && do {
-	
+	my ($to_id) =~ $content->{to} =~ m|node/([0-9]+)$|;
+	unless ($to_id) {
+	  REST::Neo4p::LocalException->throw("Can't parse 'to' node id from content\n");
+	}
+	unless ($content->{type}) {
+	  REST::Neo4p::LocalException->throw("Create relationship requires 'type' value in content\n");
+	}
+	my $set_clause = '';
+	if (my $props = $content->{data}) {
+	  for (keys %$props) {
+	    $set_clause = join(', ',$set_clause, "r.$_ = $$props{$_}")
+	  }
+	  $set_clause = "set $set_clause";
+	}
+	$result = $self->run_in_session(
+	  "match (n), (m) where id(n) = \$fromid and id(m)=\$toid create (n)-[r:\$type]->(m) $set_clause return r",
+	  {fromid=>$id, toid=>$to_id,type=>$content->{type}}
+	 ); 
 	last;
       };
       /^properties$/ && do {

@@ -1,8 +1,9 @@
-use v5.10;
 package REST::Neo4p::Agent::Neo4j::Driver;
+use v5.10;
 use lib '../../../../../lib'; # testing
 use base qw/REST::Neo4p::Agent/;
 use Neo4j::Driver;
+use REST::Neo4p::Agent::Neo4j::DriverActions;
 use REST::Neo4p::Exceptions;
 use Try::Tiny;
 use URI;
@@ -16,38 +17,10 @@ BEGIN {
   $REST::Neo4p::Agent::Neo4j::Driver::VERSION = '0.4000';
 }
 
-# emulate the REST actions with queries
-$action_queries = {
-  node => { # http://localhost:7474/db/data/node
-    post => 
-    },
-  relationship => { # http://localhost:7474/db/data/relationship
-   },
-  node_index => { # http://localhost:7474/db/data/index/node
-    
-    },
-  relationship_index => { # http://localhost:7474/db/data/index/relationship
-    },
-  relationship_types => { # http://localhost:7474/db/data/relationship/types
-    },
-  batch => { # http://localhost:7474/db/data/batch
-    },
-  cypher => { # http://localhost:7474/db/data/cypher
-    },
-  indexes => { # http://localhost:7474/db/data/schema/index
-   },
-  constraints =>  { # http://localhost:7474/db/data/schema/constraint
-    },
-  transaction => { # http://localhost:7474/db/data/transaction
-    },
-  node_labels => { # http://localhost:7474/db/data/labels"
-   }
- };
-
 sub new {
   my ($class, @args) = @_;
-  my $self = $class->SUPER::new(@_);
-  
+  my $self = {};
+  return bless $self, $class;
 }
 
 sub credentials  {
@@ -65,12 +38,17 @@ sub pwd { shift->{_pwd} }
 sub last_result { shift->{_last_result} }
 sub last_errors { shift->{_last_errors} }
 
-sub driver { $self->{__driver} }
+sub driver { shift->{__driver} }
 
 # these are no-ops
 sub default_header { return }
 sub add_header { return }
 sub remove_header { return }
+
+sub agent {
+  my $self = shift;
+  return $_[0] ? $self->{_agent} = $_[0] : $self->{_agent};
+}
 
 # http, https, bolt (if Neo4j::Bolt)...
 sub protocols_allowed {
@@ -130,7 +108,7 @@ sub connect {
   if (defined $server) {
     my $uri = URI->new($server);
     if ($uri->userinfo) {
-      ($u,$p) = split(/:/,$uri->userinfo);
+      my ($u,$p) = split(/:/,$uri->userinfo);
       $self->credentials($uri->host,'',$u,$p);
     }
     $self->server_url($uri->host.':'.$uri->port);
@@ -191,9 +169,11 @@ sub run_in_session {
 # get|delete : my @url_components = @args;
 # post|put : my ($url_components, $content, $addl_headers) = @args;
 
-
-# subclass override
 # emulate rest calls with appropriate queries
+
+1;
+
+__END__
 
 sub __do_request {
   my $self = shift;
