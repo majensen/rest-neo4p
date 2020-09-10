@@ -50,6 +50,18 @@ sub agent {
   return $_[0] ? $self->{_agent} = $_[0] : $self->{_agent};
 }
 
+# TODO: pass stream info along to Neo4j::DRiver object
+
+sub stream {
+  my $self = shift;
+  # do sth
+}
+
+sub no_stream {
+  my $self = shift;
+  # do sth
+}
+
 # http, https, bolt (if Neo4j::Bolt)...
 sub protocols_allowed {
   my $self = shift;
@@ -81,7 +93,9 @@ sub database {
     return $self->{_database} = $db;
   }
   else {
-    return $self->{_database} // ($self->{_database} = 'neo4j');
+    # Neo4j::Driver defaults to Neo v3 endpoints, but switches to v4 endpoints if 'database' is set.
+    # so... don't set the attribute if unset (=> v3)
+    return $self->{_database};
   }
 }
 
@@ -111,7 +125,7 @@ sub connect {
       my ($u,$p) = split(/:/,$uri->userinfo);
       $self->credentials($uri->host,'',$u,$p);
     }
-    $self->server_url($uri->host.':'.$uri->port);
+    $self->server_url($uri->scheme."://".$uri->host.':'.$uri->port);
   }
   if (defined $dbname) {
     $self->database($dbname);
@@ -136,7 +150,7 @@ sub session {
   unless ($self->driver) {
     REST::Neo4p::LocalException->throw("No driver connection; can't create session ( try \$agent->connect() )\n");
   }
-  return $self->driver->session(database => $self->database);
+  return $self->driver->session( $self->database ? (database => $self->database) : () );
 }
 
 # run_in_session( $query_string, { parm => value, ... } )
@@ -145,7 +159,9 @@ sub run_in_session {
   my $self = shift;
   my ($qry, $params) = @_;
   $self->{_last_result} = $self->{_last_errors} = undef;
+  $params = {} unless defined $params;
   try {
+#    $DB::single=1;
     $self->{_last_result} = $self->session->run($qry, $params);
   } catch {
     $self->{_last_errors} = $_;
