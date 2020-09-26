@@ -7,6 +7,7 @@ use strict;
 
 my $VERBOSE = $ENV{NEOCON_VERBOSE} // 0;
 my $REUSE = $ENV{NEOCON_REUSE} // 1;
+my $RETRIES = $ENV{NEOCON_RETRIES} // 3;
 
 my ($in,$out,$err);
 my $TAG = 'neo4j:3.5';
@@ -27,7 +28,7 @@ sub new {
   $self->{tag} //= $TAG;
   $self->{name} //= "test$$";
   $self->{ports} //= {7687 => undef, 7474 => undef, 7473 => undef};
-  $self->{delay} //= 10;
+  $self->{delay} //= 5;
   $self->{reuse} //= 1;
   $self->{load} //= undef;
   return $self;
@@ -46,22 +47,38 @@ sub start {
   my $self = shift;
   my $pwd = getcwd();
   my @startcmd = split / /, "docker run -d -P --env NEO4J_AUTH=none -v $pwd:/import --name $$self{name} $$self{tag}";
-  if ($self->is_running && $self->reuse) {
-    1;
-  }
-  else {
+  unless ($self->is_running && $self->reuse) {
     print STDERR "Starting docker $$self{tag} as $$self{name}" if $VERBOSE;
     unless (run \@startcmd, \$in, \$out, \$err) {
       $self->{_error} = $err;
       return;
     }
+    print STDERR '*';
     sleep $self->delay;
-    if ($self->load) {
-      run ['docker', 'exec', $self->name, '/bin/bash', '-c', "cypher-shell < ".File::Spec->catfile('/import',$self->load)], \$in, \$out,\$err;
-      if ($err) {
-	$self->{_error} = $err;
-	return;
+    my $success;
+    for (my $i=0;$i<$RETRIES;$i++) {
+      if ( $success = run(['docker','exec', $self->name, '/bin/bash', '-c', 'cypher-shell'],\$in,\$out,\$err) ) {
+	last;
       }
+      else {
+	print STDERR "*";
+	sleep $self->delay;
+      }
+    }
+    if (!$success) {
+      $self->{_error} = "Failed to ping container after $RETRIES attempts\n";
+      return;
+    }
+    print STDERR "\n";
+  }
+  if ($self->load) {
+    run ['docker', 'exec', $self->name, '/bin/bash', '-c', "cypher-shell < ".File::Spec->catfile('/import',$self->load)], \$in, \$out,\$err;
+    if ($err) {
+      $self->{_error} = $err;
+      return;
+    }
+    else {
+      sleep $self->delay;
     }
   }
   $self->_get_ports;

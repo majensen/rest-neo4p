@@ -161,7 +161,6 @@ sub run_in_session {
   $self->{_last_result} = $self->{_last_errors} = undef;
   $params = {} unless defined $params;
   try {
-#    $DB::single=1;
     $self->{_last_result} = $self->session->run($qry, $params);
   } catch {
     $self->{_last_errors} = $_;

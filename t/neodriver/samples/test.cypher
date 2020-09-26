@@ -1,3 +1,4 @@
+match (n) detach delete n;
 create (n:person) set n.name="I";
 create (n:person) set n.name="you";
 create (n:person) set n.name="he";

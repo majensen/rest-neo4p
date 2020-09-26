@@ -162,23 +162,23 @@ sub get_node {
   my ($id,@other) = @_;
   my $result;
   unless (defined $id) {
-    REST::Neo4p::LocalExeception->throw("get_node requires id as arg1\n");    
+    REST::Neo4p::LocalException->throw("get_node requires id as arg1\n");    
   }
   if (!@other) {
-    $result = $self->run_in_session('match (n) where id(n)=$id return n', {id => $id});
+    $result = $self->run_in_session('match (n) where id(n)=$id return n', {id => 0+$id});
   }
   else {
     for ($other[0]) {
       /^labels$/ && do {
-	$result = $self->run_in_session('match (n) where id(n)=$id return labels(n)', { id => $id });
+	$result = $self->run_in_session('match (n) where id(n)=$id return labels(n)', { id => 0+$id });
 	last;
       };
       /^properties$/ && do {
 	if (!defined $other[1]) {
-	  $result = $self->run_in_session('match (n) where id(n)=$id return properties(n)', {id => $id});
+	  $result = $self->run_in_session('match (n) where id(n)=$id return properties(n)', {id => 0+$id});
 	}
 	else {
-	  $result = $self->run_in_session('match (n) where id(n)=$id return n[$prop]', {id => $id, prop => $other[1]});
+	  $result = $self->run_in_session('match (n) where id(n)=$id return n[$prop]', {id => 0+$id, prop => $other[1]});
 	}
 	last;
       };
@@ -206,7 +206,7 @@ sub get_node {
 	}
 	$result = $self->run_in_session(
 	  "match $ptn where id(n)=\$id $type_cond return r",
-	  { id => $id }
+	  { id => 0+$id }
 	 );
 	last;
       };
@@ -227,21 +227,21 @@ sub delete_node {
     REST::Neo4p::LocalExeception->throw("delete_node requires id as arg1\n");    
   }
   if (!@other) {
-    $result = $self->run_in_session('match (n) where id(n)=$id delete n', {id => $id});
+    $result = $self->run_in_session('match (n) where id(n)=$id delete n', {id => 0+$id});
   }
   else {
     for ($other[0]) {
       /^properties$/ && do {
 	if ($other[1]) {
-	  $result = $self->run_in_session("match (n) where id(n)=\$id remove n.$other[1]",{id => $id});
+	  $result = $self->run_in_session("match (n) where id(n)=\$id remove n.$other[1]",{id => 0+$id});
 	}
 	else {
-	  $result = $self->run_in_session('match (n) where id(n)=$id set n = {}',{id => $id})
+	  $result = $self->run_in_session('match (n) where id(n)=$id set n = {}',{id => 0+$id})
 	}
 	last;
       };
       /^labels$/ && do {
-	$result = $self->run_in_session("match (n) where id(n)=\$id remove n:$other[1]",{id => $id});
+	$result = $self->run_in_session("match (n) where id(n)=\$id remove n:$other[1]",{id => 0+$id});
 	last;
       };
       REST::Neo4p::LocalException->throw("delete_node action '$other[0]' is unknown\n");
@@ -279,7 +279,7 @@ sub post_node {
       /^labels$/ && do {
 	my @lbls = (ref $content ? @$content : $content);
 	$result = $self->run_in_session('match (n) where id(n)=$id set n:'.join(':',@lbls),
-					{ id => $id });
+					{ id => 0+$id });
 	last;
       };
       /^relationships$/ && do {
@@ -329,14 +329,14 @@ sub put_node {
     /^properties$/ && do {
       if (defined $rest[0]) {
 	REST::Neo4p::LocalException->throw('call with put_node([<id>,\'properties\',<prop>],$content) needs content to be plain scalar (the value of <prop>)') if ref($content);
-	$result = $self->run_in_session("match (n) where id(n)=\$id set n.$rest[0]=\$value return n", {id => $id, value => $content});
+	$result = $self->run_in_session("match (n) where id(n)=\$id set n.$rest[0]=\$value return n", {id => 0+$id, value => $content});
       }
       else {
 	_throw_unsafe_tok($_) for keys %$content;
 	_throw_unsafe_tok($_) for values %$content;	
 	my @assigns = map { "n.$_="._quote_maybe($$content{$_}) } sort keys %$content;
 	my $set_clause = "set ".join(',', @assigns);
-	$result = $self->run_in_session("match (n) where id(n)=\$id $set_clause return n", {id => $id});
+	$result = $self->run_in_session("match (n) where id(n)=\$id $set_clause return n", {id => 0+$id});
       }
       last;
     };
@@ -367,7 +367,7 @@ sub get_relationship {
   if (!@other) {
     for ($id) {
       /^[0-9]+$/ && do {
-	$result = $self->run_in_session('match ()-[r]->() where id(r)=$id return r', {id => $id});
+	$result = $self->run_in_session('match ()-[r]->() where id(r)=$id return r', {id => 0+$id});
 	last;
       };
       /^types$/ && do {
@@ -381,15 +381,18 @@ sub get_relationship {
     for ($other[0]) {
       /^properties$/ && do {
 	if (!defined $other[1]) {
-	  $result = $self->run_in_session('match ()-[r]->() where id(r)=$id return properties(r)',{id => $id});
+	  $result = $self->run_in_session('match ()-[r]->() where id(r)=$id return properties(r)',{id => 0+$id});
 	}
 	else {
-	  $result = $self->run_in_session('match ()-[r]->() where id(r)=$id return r[$prop]',{id => $id, prop => $other[1]});
+	  $result = $self->run_in_session('match ()-[r]->() where id(r)=$id return r[$prop]',{id => 0+$id, prop => $other[1]});
 	}
 	last;
       };
       REST::Neo4p::LocalException->throw("get_relationship action '$other[0]' is unknown\n");      
     }
+  }
+  if ($result) {
+    return $result;
   }
 }
 
@@ -402,16 +405,16 @@ sub delete_relationship {
     REST::Neo4p::LocalExeception->throw("delete_relationship requires id as arg1\n");    
   }
   if (!@other) {
-    $result = $self->run_in_session('match ()-[r]->() where id(r)=$id delete r', {id => $id});
+    $result = $self->run_in_session('match ()-[r]->() where id(r)=$id delete r', {id => 0+$id});
   }
   else {
     for ($other[0]) {
       /^properties$/ && do {
 	if ($other[1]) {
-	  $result = $self->run_in_session("match ()-[r]->() where id(r)=\$id remove r.$other[1]",{id => $id});
+	  $result = $self->run_in_session("match ()-[r]->() where id(r)=\$id remove r.$other[1]",{id => 0+$id});
 	}
 	else {
-	  $result = $self->run_in_session('match ()-[r]->() where id(r)=$id set r = {}',{id => $id})
+	  $result = $self->run_in_session('match ()-[r]->() where id(r)=$id set r = {}',{id => 0+$id})
 	}
 	last;
       };
@@ -442,14 +445,14 @@ sub put_relationship {
     /^properties$/ && do {
       if (defined $rest[0]) {
 	REST::Neo4p::LocalException->throw('call with put_relationship([<id>,\'properties\',<prop>],$content) needs content to be plain scalar (the value of <prop>)') if ref($content);
-	$result = $self->run_in_session("match ()-[r]->() where id(r)=\$id set r.$rest[0]=\$value return r", {id => $id, value => $content});
+	$result = $self->run_in_session("match ()-[r]->() where id(r)=\$id set r.$rest[0]=\$value return r", {id => 0+$id, value => $content});
       }
       else {
 	_throw_unsafe_tok($_) for keys %$content;
 	_throw_unsafe_tok($_) for values %$content;
 	my @assigns = map { "r.$_="._quote_maybe($$content{$_}) } sort keys %$content;
 	my $set_clause = "set ".join(',', @assigns);
-	$result = $self->run_in_session("match ()-[r]->() where id(r)=\$id $set_clause return r", {id => $id});
+	$result = $self->run_in_session("match ()-[r]->() where id(r)=\$id $set_clause return r", {id => 0+$id});
       }
       last;
     };
@@ -562,7 +565,7 @@ sub delete_index {
     my ($k, $v) = @other;
     my $remove = ($ent eq 'node' ? 'removeNode' : 'removeRelationship');
     my $args = (defined $k ? '$idx, $id, $key' : '$idx, $id' );
-    $result = $self->run_in_session("call db.index.explicit.$remove( $args )", {idx => $idx, id => $id, (defined $k ? (key => $k) : ())});
+    $result = $self->run_in_session("call db.index.explicit.$remove( $args )", {idx => $idx, id => 0+$id, (defined $k ? (key => $k) : ())});
   }
   if ($result) {
     return $result;
