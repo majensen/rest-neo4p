@@ -7,6 +7,10 @@ use REST::Neo4p::Agent;
 use strict;
 use warnings;
 
+my $neothing_ctrl = qclass( -implement => 'Neo4j::Driver::Thing',
+			    new => sub { shift; bless {}, 'Neo4j::Driver::Thing' },
+			    id => 1 );
+
 my $neorec_ctrl = qclass( -implement => 'Neo4j::Driver::Record',
 			  new => sub { shift; bless { items => [@_] },
 					 'Neo4j::Driver::Record' },
@@ -15,7 +19,8 @@ my $neorec_ctrl = qclass( -implement => 'Neo4j::Driver::Record',
 
 my $neores_ctrl = qclass( -implement => 'Neo4j::Driver::StatementResult',
 			  new => sub { shift; bless [@_],
-					  'Neo4j::Driver::StatementResult' },
+					 'Neo4j::Driver::StatementResult' },
+			  fetch => sub { shift; return Neo4j::Driver::Record->new( Neo4j::Driver::Thing->new()) },
 			 );
 
 my $neosess_ctrl = qclass( -implement => 'Neo4j::Driver::Session',
@@ -116,11 +121,11 @@ $agent->post_node([qw/42 labels/],'baz');
 is_deeply $agent->last_result, ['match (n) where id(n)=$id set n:baz',{id => 42}];
 
 $agent->post_node([qw/42 relationships/],{ to => 'http://localhost:7474/db/data/node/43', type => 'kludges'});
-is_deeply $agent->last_result, ['match (n), (m) where id(n)=$fromid and id(m)=$toid create (n)-[r:$type]->(m)  return r',{fromid => 42, toid => 43, type => 'kludges'}];
+is_deeply $agent->last_result, ['match (n), (m) where id(n)=$fromid and id(m)=$toid create (n)-[r:kludges]->(m)  return r',{fromid => 42, toid => 43}];
 
 $agent->post_node([qw/42 relationships/],{ to => 'http://localhost:7474/db/data/node/43', type => 'squirts', data => { foo => 12, bar => 'baz' }});
 
-is_deeply $agent->last_result, ['match (n), (m) where id(n)=$fromid and id(m)=$toid create (n)-[r:$type]->(m) set r.bar=\'baz\',r.foo=12 return r',{fromid => 42, toid => 43, type => 'squirts'}];
+is_deeply $agent->last_result, ['match (n), (m) where id(n)=$fromid and id(m)=$toid create (n)-[r:squirts]->(m) set r.bar=\'baz\',r.foo=12 return r',{fromid => 42, toid => 43}];
 
 
 $agent->put_node([qw/24 properties/], { foo => 'bar', baz => 'quux' });
@@ -150,19 +155,19 @@ $agent->post_node_index([],{name => 'blarf'});
 is_deeply $agent->last_result, ['call db.index.explicit.forNodes($name)', {name => 'blarf'}];
 
 $agent->post_node_index(['blarf'],{key => 'test', value => 1, uri => 'http://localhost:7474/db/data/node/10'});
-is_deeply $agent->last_result, ['match (n) where id(n)=$id with n call db.index.explicit.addNode($idx,n,$key,$value)', {key => 'test', value => 1, idx => 'blarf', id => 10}];
+is_deeply $agent->last_result, ['match (n) where id(n)=$id call db.index.explicit.addNode($idx,n,$key,$value) yield success return success', {key => 'test', value => 1, idx => 'blarf', id => 10}];
 
 $agent->post_relationship_index([],{name => 'flarb'});
 is_deeply $agent->last_result, ['call db.index.explicit.forRelationships($name)', {name => 'flarb'}];
 
 $agent->post_relationship_index(['flarb'],{key => 'test', value => 2, uri => 'http://localhost:7474/db/data/relationship/20'});
-is_deeply $agent->last_result, ['match ()-[r]->() where id(r)=$id with r call db.index.explicit.addRelationship($idx,r,$key,$value)', {key => 'test', value => 2, idx => 'flarb', id => 20}];
+is_deeply $agent->last_result, ['match ()-[r]->() where id(r)=$id call db.index.explicit.addRelationship($idx,r,$key,$value) yield success return success', {key => 'test', value => 2, idx => 'flarb', id => 20}];
 
 $neores_ctrl->override( has_next => 1 );
 
 $agent->post_node_index(['blarf'],{key => 'test', value=>1, properties => { this => 10, that => 'other' }}, { uniqueness => 'get_or_create' });
 
-is $agent->last_result->[0], "call db.index.explicit.seekNodes('blarf','test',1)";
+is $agent->last_result->[0], "call db.index.explicit.seekNodes('blarf', 'test', 1)";
 
 throws_ok { $agent->post_node_index(['blarf'],{key => 'test', value=>1, properties => { this => 10, that => 'other' }}, { uniqueness => 'create_or_fail' }); } 'REST::Neo4p::ConflictException';
 
@@ -170,17 +175,17 @@ $neores_ctrl->override( has_next => 0 );
 
 $agent->post_node_index(['blarf'],{key => 'test', value=>1, properties => { this => 10, that => 'other' }}, { uniqueness => 'get_or_create' });
 
-is_deeply $agent->last_result, ["create (n) set n.that='other',n.this=10 with n call db.index.explicit.addNode('blarf',n,\$key,\$value)", { key => 'test', value => 1 }];
+is $agent->last_result->[0], 'match (n) where id(n)=$id return n';
 
 $agent->post_node_index(['blarf'],{key => 'test', value=>1, properties => { this => 10, that => 'other' }}, { uniqueness => 'create_or_fail' });
 
-is_deeply $agent->last_result, ["create (n) set n.that='other',n.this=10 with n call db.index.explicit.addNode('blarf',n,\$key,\$value)", { key => 'test', value => 1 }];
+is $agent->last_result->[0], 'match (n) where id(n)=$id return n';
 
 $neores_ctrl->override( has_next => 1 );
 
 $agent->post_relationship_index(['flarb'],{key => 'test', value=>2, start => 'http://localhost:7474/db/data/node/10', end => 'http://localhost:7474/db/data/node/20', type => 'ISA'}, { uniqueness => 'get_or_create' });
 
-is $agent->last_result->[0], "call db.index.explicit.seekRelationships('flarb','test',2)";
+is $agent->last_result->[0], "call db.index.explicit.seekRelationships('flarb', 'test', 2)";
 
 throws_ok { $agent->post_relationship_index(['flarb'],{key => 'test', value=>2, start => 'http://localhost:7474/db/data/node/10', end => 'http://localhost:7474/db/data/node/20', type => 'ISA'}, { uniqueness => 'create_or_fail' }); } 'REST::Neo4p::ConflictException';
 
@@ -188,11 +193,11 @@ $neores_ctrl->override( has_next => 0 );
 
 $agent->post_relationship_index(['flarb'],{key => 'test', value=>2, start => 'http://localhost:7474/db/data/node/10', end => 'http://localhost:7474/db/data/node/20', type => 'ISA'}, { uniqueness => 'get_or_create' });
 
-is_deeply $agent->last_result, ['match (s), (t) where id(s)=$start and id(t)=$end create (s)-[r:$type]->(t) with r call db.index.explicit.addRelationship(\'flarb\',r,$key,$value)', { key => 'test', value => 2, start => 10, end => 20, type => 'ISA' }];
+is $agent->last_result->[0], 'match ()-[r]->() where id(r)=$id return r';
 
 $agent->post_relationship_index(['flarb'],{key => 'test', value=>2, start => 'http://localhost:7474/db/data/node/10', end => 'http://localhost:7474/db/data/node/20', type => 'ISA'}, { uniqueness => 'create_or_fail' });
 
-is_deeply $agent->last_result, ['match (s), (t) where id(s)=$start and id(t)=$end create (s)-[r:$type]->(t) with r call db.index.explicit.addRelationship(\'flarb\',r,$key,$value)', { key => 'test', value => 2, start => 10, end => 20, type => 'ISA' }];
+is $agent->last_result->[0], 'match ()-[r]->() where id(r)=$id return r';
 
 $agent->get_node_index();
 is $agent->last_result->[0], 'call db.index.explicit.list()';
