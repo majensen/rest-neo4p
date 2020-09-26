@@ -1,6 +1,7 @@
 use v5.10;
 use Test::More;
 use Test::Exception;
+use Test::Warn;
 use Set::Scalar;
 use File::Spec;
 use lib qw|. ../lib ../../lib/|;
@@ -49,7 +50,7 @@ while (my $rec = $result->fetch) {
   $got->insert( $rec->get(0) );
 }
 
-is $got, $exp;
+ok $got >= $exp;
 
 $result = $agent->get_node($ids{'you'});
 $node = $result->fetch->get(0);
@@ -248,21 +249,24 @@ $agent->post_relationship_index(['friendships'], {key => 'squirty', value => 2, 
 						    end => "node/".$ids{'he'}, type => 'squirts', properties => { mucho => "bueno" }},
 				{uniqueness => 'get_or_create'});
 
-$DB::single=1;
-
-
 $agent->get_relationship($agent->last_result->fetch->get(0)->id);
 is $agent->last_result->fetch->get(0)->get('mucho'), 'bueno';
 
-
-
 # schema constraints
-1;
 
-  
+$agent->post_schema_constraint(['person','uniqueness'], {property_keys => ['name']});
 
+warning_like {
+  $agent->post_schema_constraint(['alien','existence'], {property_keys => ['planet']})
+} qr/You must spend thousands of dollars a year/;
 
-1;
+$result = $agent->get_schema_constraint();
+ok grep { $_->{type} eq 'UNIQUENESS' } @$result;
+
+$agent->delete_schema_constraint('person','uniqueness','name');
+$result = $agent->get_schema_constraint();
+ok !@$result;
+
 done_testing;
 
 

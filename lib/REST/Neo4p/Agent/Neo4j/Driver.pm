@@ -167,7 +167,12 @@ sub run_in_session {
   };
   if ($self->{_last_errors}) {
     try {
-      REST::Neo4p::Neo4jException->throw( error => "Neo4j errors; see agent->last_errors()" );
+      if ($self->last_errors =~ /neo4j enterprise/i) {
+	REST::Neo4p::Neo4jTightwadException->throw( error => "You must spend thousands of dollars a year to use this feature; see agent->last_errors()");
+      }
+      else {
+	REST::Neo4p::Neo4jException->throw( error => "Neo4j errors; see agent->last_errors()" );
+      }
     } catch {
       warn $_->error;
       return;

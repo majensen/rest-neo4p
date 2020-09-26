@@ -6,6 +6,7 @@ use lib '../../../../../lib'; #testing
 use REST::Neo4p::Exceptions;
 use URI::Escape;
 use Scalar::Util qw/looks_like_number/;
+use Try::Tiny;
 use strict;
 use warnings;
 
@@ -591,7 +592,7 @@ sub post_index {
     REST::Neo4p::LocalException->throw("post_index add to index requires 'key','value'keys in \$content hash\n") unless ($content->{key} && $content->{value});
     if (defined $content->{uri}) { # add entity
       my ($id) = $content->{uri} =~ /(?:node|relationship)\/([0-9]+)$/;
-      REST::Neo4p::LocalException->throw("need a node or relationship uri for 'uri' key value in \$content hash\n") unless $id;
+      REST::Neo4p::LocalException->throw("need a node or relationship uri for 'uri' key value in \$content hash\n") unless defined $id;
       delete $content->{uri};
       $content->{id} = 0+$id;
       $content->{idx} = $idx;

@@ -58,7 +58,7 @@ use Exception::Class (
      },
   'REST::Neo4p::NotImplException' => {
     isa => 'REST::Neo4p::LocalException',
-    description => 'Attempt to call an currently unimplemented method'
+    description => 'Attempt to call a currently unimplemented method'
    },
   'REST::Neo4p::NotSuppException' => {
     isa => 'REST::Neo4p::LocalException',
@@ -103,7 +103,12 @@ use Exception::Class (
   'REST::Neo4p::ConstraintSpecException' => {
     isa => 'REST::Neo4p::LocalException',
     description => 'Constraint specification syntax incorrect',
-  }
+  },
+  'REST::Neo4p::Neo4jTightwadException' => {
+    isa => 'REST::Neo4p::LocalException',
+    description => 'This feature only works in enterprise edition'
+  },
+  
    );
 
 =head1 NAME
