@@ -1,8 +1,10 @@
 match (n) detach delete n;
+call db.index.explicit.drop("people");
+call db.index.explicit.drop("friendships");
 create (n:person) set n.name="I";
 create (n:person) set n.name="you";
 create (n:person) set n.name="he";
-create (n:person) set n.name="she";
+create (n:person) set n.name="she", n.value=10;
 create (n:person) set n.name="it";
 create (n:person) set n.name="noone", n.rem="bye";
 

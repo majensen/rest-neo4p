@@ -284,7 +284,7 @@ sub post_node {
       };
       /^relationships$/ && do {
 	my ($to_id) = $content->{to} =~ m|node/([0-9]+)$|;
-	unless ($to_id) {
+	unless (defined $to_id) {
 	  REST::Neo4p::LocalException->throw("Can't parse 'to' node id from content\n");
 	}
 	unless ($content->{type}) {
@@ -530,6 +530,7 @@ sub get_index {
 	REST::Neo4p::LocalException->throw("get_index : can't interpret parameters for either key-value or query search\n");
       }
       $value = uri_unescape($value);
+      looks_like_number $value && ($value = 0+$value);
       $result = $self->run_in_session("call db.index.explicit.$seek(\$idx,\$key,\$value)",
 				      { idx => $idx, key => $key, value => $value });
     }
@@ -592,15 +593,15 @@ sub post_index {
       my ($id) = $content->{uri} =~ /(?:node|relationship)\/([0-9]+)$/;
       REST::Neo4p::LocalException->throw("need a node or relationship uri for 'uri' key value in \$content hash\n") unless $id;
       delete $content->{uri};
-      $content->{id} = $id;
+      $content->{id} = 0+$id;
       $content->{idx} = $idx;
       for ($ent) {
 	/^node$/ && do {
-	  $result = $self->run_in_session('match (n) where id(n)=$id with n call db.index.explicit.addNode($idx,n,$key,$value)', $content);
+	  $result = $self->run_in_session('match (n) where id(n)=$id call db.index.explicit.addNode($idx,n,$key,$value) yield success return success', $content);
 	  last;
 	};
 	/^relationship/ && do {
-	  $result = $self->run_in_session('match ()-[r]->() where id(r)=$id with r call db.index.explicit.addRelationship($idx,r,$key,$value)', $content);
+	  $result = $self->run_in_session('match ()-[r]->() where id(r)=$id call db.index.explicit.addRelationship($idx,r,$key,$value) yield success return success', $content);
 	  last;
 	};
 	do {
@@ -613,7 +614,7 @@ sub post_index {
       my $props = delete $content->{properties};
       my $seek = ($ent eq 'node' ? 'seekNodes' : 'seekRelationships');
       # first, check index with key:value
-      $result = $self->run_in_session("call db.index.explicit.$seek('$idx','$$content{key}',$$content{value})");
+      $result = $self->run_in_session("call db.index.explicit.$seek(".join(', ', map { _quote_maybe($_) } ($idx, $$content{key}, $$content{value})).")");
       if ($result->has_next) { # found it
 	if (defined $addl_parameters && ($addl_parameters->{uniqueness} eq 'create_or_fail')) {
 	  REST::Neo4p::ConflictException->throw("found entity with create_or_fail specified");
@@ -623,27 +624,37 @@ sub post_index {
 	}
       }
       # didn't find it, create it
+      my $set_clause = '';
+      if (scalar(keys %$props)) {
+	_throw_unsafe_tok($_) for keys %$props;	    
+	_throw_unsafe_tok($_) for values %$props;
+	my @assigns = map { "n.$_="._quote_maybe($$props{$_}) } sort keys %$props;
+	$set_clause = "set ".join(',', @assigns);
+      }
       for ($ent) {
 	/^node$/ && do {
-	  my $set_clause = '';
-	  if (scalar(keys %$props)) {
-	    _throw_unsafe_tok($_) for keys %$props;	    
-	    _throw_unsafe_tok($_) for values %$props;
-	    my @assigns = map { "n.$_="._quote_maybe($$props{$_}) } sort keys %$props;
-	    $set_clause = "set ".join(',', @assigns);
-	  }
-	  $result = $self->run_in_session("create (n) $set_clause with n call db.index.explicit.addNode('$idx',n,\$key,\$value)", $content);
+	  $result = $self->run_in_session("create (n) $set_clause return n");
+	  return if ($self->last_errors);
+	  $content->{id} = 0+$result->fetch->get(0)->id;
+	  $result = $self->run_in_session("match (n) where id(n)=\$id call db.index.explicit.addNode('$idx',n,\$key,\$value) yield success return success", $content);
+	  return if ($self->last_errors);
+	  $result = $self->run_in_session('match (n) where id(n)=$id return n',$content);
 	  last;
 	};
 	/^relationship/ && do {
 	  my ($start) = $content->{start} =~ /node\/([0-9]+)$/;
 	  my ($end) = $content->{end} =~ /node\/([0-9]+)$/;
-	  REST::Neo4p::LocalException->throw("post_index create relationship requires 'start' and 'end' keys\n")
-	      unless (defined $start and defined $end);
-	  $content->{start} = $start;
-	  $content->{end} = $end;
 	  my $type = $content->{type};
-	  $result = $self->run_in_session("match (s), (t) where id(s)=\$start and id(t)=\$end create (s)-[r:$type]->(t) with r call db.index.explicit.addRelationship('$idx',r,\$key,\$value)", $content);
+	  REST::Neo4p::LocalException->throw("post_index create relationship requires 'start' and 'end' keys\n")
+	      unless (defined $start and defined $end and defined $type);
+	  $content->{start} = 0+$start;
+	  $content->{end} = 0+$end;
+	  $result = $self->run_in_session("match (s), (t) where id(s)=\$start and id(t)=\$end create (s)-[n:$type]->(t) $set_clause return n", $content);
+	  return if ($self->last_errors);
+	  $content->{id} = 0+$result->fetch->get(0)->id;
+	  $result = $self->run_in_session("match ()-[r]->() where id(r)=\$id call db.index.explicit.addRelationship('$idx',r,\$key,\$value) yield success return success", $content);
+	  return if ($self->last_errors);
+	  $result = $self->run_in_session('match ()-[r]->() where id(r)=$id return r',$content);
 	  last;
 	};
 	do {

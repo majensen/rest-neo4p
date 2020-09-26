@@ -178,13 +178,83 @@ $agent->get_relationship($r->id, 'properties');
 is_deeply $agent->last_result->fetch->get(0), {narf => 'crelb', bar => 'quux'};
 
 # get by label
-$DB::single=1;
+
 $agent->get_labels();
 is_deeply [ sort map {$_->get(0)} $agent->last_result->list], ['alien','person'];
 
+$agent->get_label('person');
+is scalar @{$agent->last_result->list}, 5;
 
+$agent->get_label('person', { value => 10 });
+is scalar @{$agent->last_result->list}, 1;
 
 # node, relationship explicit indexes
+
+$agent->post_node_index([], {name => 'people'});
+ok $agent->last_result->fetch->get(0);
+$agent->post_node_index(['people'], {key => 'they', value => 'I', uri => "node/$ids{I}"});
+ok $agent->last_result->fetch->get(0);
+$agent->post_node_index(['people'], {key => 'they', value => 'he', uri => "node/$ids{he}"});
+ok $agent->last_result->fetch->get(0);
+$agent->post_node_index(['people'], {key => 'they', value => 'it', uri => "node/$ids{it}"});
+ok $agent->last_result->fetch->get(0);
+
+$agent->get_node_index();
+ok grep { $_->get(1) eq 'people' } @{$agent->last_result->list};
+
+$agent->get_node_index('people','they','he');
+is $agent->last_result->fetch->get(0)->get('name'), 'he';
+
+throws_ok {
+  $agent->post_node_index(['people'], { key => 'they', value => 'I', properties => {name => 'alter'} },
+			  { uniqueness => 'create_or_fail' })
+} 'REST::Neo4p::ConflictException';
+
+$agent->post_node_index(['people'], { key => 'they', value => 'I', properties => {name => 'alter'} },
+			{ uniqueness => 'get_or_create' });
+$n = $agent->last_result->fetch->get(0);
+$agent->get_node($n->id);
+is $agent->last_result->fetch->get(0)->get('name'), 'I';
+
+$agent->post_node_index(['people'], { key => 'they', value => 'alter', properties => {name => 'alter'} },
+			{ uniqueness => 'get_or_create' });
+$n = $agent->last_result->fetch->get(0);
+$agent->get_node($n->id);
+is $agent->last_result->fetch->get(0)->get('name'), 'alter';
+
+$agent->post_relationship_index([],{name => 'friendships'});
+$agent->get_relationship_index();
+ok grep { $_->get(1) eq 'friendships' } @{$agent->last_result->list};
+
+$agent->post_relationship_index(['friendships'],{key => 'squirty', value => 1, uri => "relationship/".$r->id});
+ok $agent->last_result->fetch->get(0);
+
+$agent->get_relationship_index('friendships','squirty',1);
+is $agent->last_result->fetch->get(0)->type, 'squirts';
+
+throws_ok {
+  $agent->post_relationship_index(['friendships'], {key => 'squirty', value => 1, start => "node/".$ids{'she'},
+						    end => "node/".$ids{'he'}, properties => { mucho => "bueno" }},
+				  {uniqueness => 'create_or_fail'});
+} 'REST::Neo4p::ConflictException';
+
+$agent->post_relationship_index(['friendships'], {key => 'squirty', value => 1, start => "node/".$ids{'she'},
+						    end => "node/".$ids{'he'}, properties => { mucho => "bueno" }},
+				{uniqueness => 'get_or_create'});
+$agent->get_relationship($agent->last_result->fetch->get(0)->id);
+is $agent->last_result->fetch->get(0)->get('narf'), 'crelb';
+
+$agent->post_relationship_index(['friendships'], {key => 'squirty', value => 2, start => "node/".$ids{'she'},
+						    end => "node/".$ids{'he'}, type => 'squirts', properties => { mucho => "bueno" }},
+				{uniqueness => 'get_or_create'});
+
+$DB::single=1;
+
+
+$agent->get_relationship($agent->last_result->fetch->get(0)->id);
+is $agent->last_result->fetch->get(0)->get('mucho'), 'bueno';
+
+
 
 # schema constraints
 1;
