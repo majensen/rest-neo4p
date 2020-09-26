@@ -297,9 +297,10 @@ sub post_node {
 	  my @assigns = map { "r.$_="._quote_maybe($$props{$_}) } sort keys %$props;
 	  $set_clause = "set ".join(',', @assigns);
 	}
+	my $type=$content->{type};
 	$result = $self->run_in_session(
-	  "match (n), (m) where id(n)=\$fromid and id(m)=\$toid create (n)-[r:\$type]->(m) $set_clause return r",
-	  {fromid=>$id, toid=>$to_id,type=>$content->{type}}
+	  "match (n), (m) where id(n)=\$fromid and id(m)=\$toid create (n)-[r:$type]->(m) $set_clause return r",
+	  {fromid=>0+$id, toid=>0+$to_id}
 	 ); 
 	last;
       };
@@ -641,7 +642,8 @@ sub post_index {
 	      unless (defined $start and defined $end);
 	  $content->{start} = $start;
 	  $content->{end} = $end;
-	  $result = $self->run_in_session("match (s), (t) where id(s)=\$start and id(t)=\$end create (s)-[r:\$type]->(t) with r call db.index.explicit.addRelationship('$idx',r,\$key,\$value)", $content);
+	  my $type = $content->{type};
+	  $result = $self->run_in_session("match (s), (t) where id(s)=\$start and id(t)=\$end create (s)-[r:$type]->(t) with r call db.index.explicit.addRelationship('$idx',r,\$key,\$value)", $content);
 	  last;
 	};
 	do {

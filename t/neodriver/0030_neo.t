@@ -17,7 +17,6 @@ unless (eval "require NeoCon; 1") {
   done_testing;
 }
 
-$DB::single=1;
 my $docker = NeoCon->new(
   tag => $ENV{NEOCON_TAG} // 'neo4j:3.4',
   delay => 5,
@@ -140,8 +139,6 @@ is_deeply $r->properties, $agent->last_result->fetch->get(0);
 $agent->get_relationship($rids[0],'properties','state');
 is $r->get('state'),$agent->last_result->fetch->get(0);
 
-$DB::single=1;
-
 $agent->delete_relationship($rids[0],'properties','state');
 $agent->get_relationship($rids[0],'properties');
 is_deeply ['date'], [ keys %{$agent->last_result->fetch->get(0)} ];
@@ -154,6 +151,42 @@ $agent->delete_relationship($rids[0]);
 $agent->get_relationship($rids[0]);
 ok !$agent->last_result->fetch;
 
+# post node, relationship
+
+$agent->post_node();
+ok my $n = $agent->last_result->fetch->get(0);
+
+$agent->post_node([],{ foo => 'bar' });
+ok my $m = $agent->last_result->fetch->get(0);
+$agent->get_node($m->id,'properties');
+is_deeply $agent->last_result->fetch->get(0), { foo => 'bar' };
+
+$agent->post_node([$n->id, 'labels'],['alien']);
+$agent->get_node($n->id,'labels');
+is_deeply $agent->last_result->fetch->get(0), ['alien'];
+
+$agent->post_node([$n->id, 'relationships'], { to => 'node/'.$m->id, type => 'squirts', data => {narf => 'crelb'} });
+$agent->get_node($m->id, qw/relationships in/);
+$r = $agent->last_result->fetch->get(0);
+is $r->type, 'squirts';
+is_deeply $r->properties, {narf => 'crelb'};
+is $r->start_id, $n->id;
+is $r->end_id, $m->id;
+
+$agent->put_relationship([ $r->id, 'properties'], {bar => 'quux'});
+$agent->get_relationship($r->id, 'properties');
+is_deeply $agent->last_result->fetch->get(0), {narf => 'crelb', bar => 'quux'};
+
+# get by label
+$DB::single=1;
+$agent->get_labels();
+is_deeply [ sort map {$_->get(0)} $agent->last_result->list], ['alien','person'];
+
+
+
+# node, relationship explicit indexes
+
+# schema constraints
 1;
 
   
