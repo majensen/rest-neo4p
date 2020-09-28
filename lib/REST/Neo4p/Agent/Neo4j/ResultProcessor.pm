@@ -1,0 +1,177 @@
+package
+  REST::Neo4p::Agent::Neo4j::Driver;
+
+our %result_processors;
+
+# The parameters of each function is the parameter array @_ of the corresponing calling action function
+# (see DriverActions.pm). $_ is set to the Neo4j::Driver::StatementResult object returned by the Cypher
+# call made in the calling function.
+# Each function returns a Perl data structure that corresponds to (possibly a subset of) the JSON that would
+# have been returned by the old Neo4j REST endpoint.
+
+$result_processors{get_node} = sub {
+  my ($id, @other) = @_;
+  my $r;
+  if (!@other) {
+    $r = $_->single->get(0);
+    return { metadata => { id => $r->id, labels => [$r->labels] },
+	     self => 'node/'.$r->id,
+	     data => $r->properties };
+  }
+  else {
+    ($other[0] =~ /^labels|properties$/) && do {
+      $r = $_->single->get(0);
+      return $r;
+    };
+    ($other[0] eq 'relationships') && do {
+      my $ret = [];
+      while (my $rec = $_->fetch) {
+	$r = $rec->get(0);
+	push @$ret, {
+	  metadata => { id => $r-id, type => $r->type },
+	  self => 'relationship/'.$r->id,
+	  data => $r->properties,
+	  start => 'node/'.$r->start_id,
+	  end => 'node/'.$r->end_id,
+	  type => $r->type
+	 }
+      }
+      return $ret;
+    };
+  }
+};
+
+$result_processors{delete_node} = sub {
+  return;
+};
+
+$result_processors{post_node} = sub {
+  my ($utok, $content, $hdrs) = @_;
+  my $r;
+  if (!$utok || !@$utok) {
+    $r = $_->single->get(0);
+    return {
+      metadata => { id => $r->id, labels => [] },
+      self => 'node/'.$r->id,
+      data => {}
+     };
+  }
+  else {
+    my ($id, $ent, @rest) = @$utok;
+    ($ent eq 'labels') && do {
+      return;
+    };
+    ($ent eq 'relationships') && do {
+      $r = $_->single->get(0);
+      return {
+	  metadata => { id => $r-id, type => $r->type },
+	  self => 'relationship/'.$r->id,
+	  data => $r->properties,
+	  start => 'node/'.$r->start_id,
+	  end => 'node/'.$r->end_id,
+	  type => $r->type
+	 };
+    };
+  }
+};
+
+$result_processors{get_relationship} = sub {
+  my ($id, @other) = @_;
+  if (!@other) {
+    ($id eq 'types') && do {
+      return [ map { $_->get(0) } $_->list ];
+    };
+    do {
+      my $r = $_->single->get(0);
+      return {
+	  metadata => { id => $r-id, type => $r->type },
+	  self => 'relationship/'.$r->id,
+	  data => $r->properties,
+	  start => 'node/'.$r->start_id,
+	  end => 'node/'.$r->end_id,
+	  type => $r->type
+	 };
+    };
+  }
+  else {
+    ($other[0] eq 'properties') && do {
+      return $_->single->get(0);
+    };
+    return;
+  }
+};
+
+$result_processors{delete_relationship} = sub {
+  return;
+};
+
+$result_processors{put_relationship} = sub {
+  return;
+};
+
+$result_processors{get_labels} = sub {
+  return [ map { $_->get(0) } $_->fetch ];
+};
+
+$result_processors{get_label} = sub {
+  my $ret = [];
+  while (my $r = $_->fetch->get(0)) {
+    push @$ret, { metadata => { id => $r->id, labels => [$r->labels] },
+		  self => 'node/'.$r->id,
+		  data => $r->properties };
+  }
+  return $ret;
+};
+
+$result_processors{get_index} = sub {
+  my ($ent, $idx, @other) = @_;
+  if (!$idx) {
+    my $ret = {};
+    while (my $rec = $_->fetch) {
+      if ($rec->get('type') =~ /$ent/i) {
+	$ret->{$rec->get('name')} = $rec->get('config');
+      }
+    }
+    return $ret;
+  }
+  else {
+    my $ret = [];
+    while (my $r = $_->fetch->get(0)) {
+      push @$ret, { metadata => { id => $r->id, labels => [$r->labels] },
+		    self => 'node/'.$r->id,
+		    data => $r->properties };
+    }
+    return $ret;
+  }
+};
+
+$result_processors{delete_index} = sub {
+  return;
+};
+
+$result_processors{post_index} = sub {
+  my ($utok,$content,$hdrs) = @_;
+  my ($ent, $idx, @other) = @$utok;
+  if (!$idx) {
+    return { template => "index/$ent/$$content{name}/\{key\}/\{value\}" };
+  }
+  else {
+  }
+};
+
+$result_processors{delete_schema_constraint} = sub {
+};
+
+$result_processors{post_schema_constraint} = sub {
+};
+
+$result_processors{get_schema_index} = sub {
+};
+
+$result_processors{delete_schema_index} = sub {
+};
+
+$result_processors{post_schema_index} = sub {
+};
+
+1;

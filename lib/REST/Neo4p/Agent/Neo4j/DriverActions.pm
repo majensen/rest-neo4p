@@ -3,6 +3,7 @@ package
 
 use v5.10;
 use lib '../../../../../lib'; #testing
+use REST::Neo4p::Agent::Neo4j::ResultProcessor;
 use REST::Neo4p::Exceptions;
 use URI::Escape;
 use Scalar::Util qw/looks_like_number/;
@@ -10,6 +11,7 @@ use Try::Tiny;
 use strict;
 use warnings;
 
+our %result_processors;
 my $SAFE_TOK = qr/[\p{PosixAlnum}_]+/;
 
 my @action_tokens = qw/node labels relationship types index schema constraint cypher transaction/;
@@ -132,7 +134,8 @@ sub _throw_unsafe_tok {
   REST::Neo4p::LocalException->throw("token $_[0] is unsafe") unless ($_[0] =~ /^$SAFE_TOK$/);
   return;
 }
-# cypher
+
+# TODO: cypher
 
 sub post_cypher {
   my $self = shift;
@@ -148,12 +151,15 @@ sub post_transaction {
   my $self = shift;
 }
 
-
 # propertykeys
 
 sub get_propertykeys {
   my $self = shift;
-  return $self->run_in_session('call db.propertyKeys()');
+  my $result = $self->run_in_session('call db.propertyKeys()');
+  if ($result) {
+    return if !defined wantarray;
+    return $self->{_decoded_content} = [ map { $_->get(0) } $result->list ];
+  }
 }
 
 # node
@@ -215,7 +221,9 @@ sub get_node {
     }
   }
   if ($result) {
-    return $result; ###
+    return if !defined wantarray;
+    $_ = $result;
+    return $result_processors{get_node}->(@_);
   }
 }
 
@@ -249,7 +257,9 @@ sub delete_node {
     }
   }
   if ($result) {
-    return $result; ###
+    return if !defined wantarray;
+    $_ = $result;
+    return $result_processors{delete_node}->(@_);
   }
 }
 
@@ -313,7 +323,9 @@ sub post_node {
     }
   }
   if ($result) {
-    return $result; ###
+    return if !defined wantarray;
+    $_ = $result;
+    return $result_processors{post_node}->(@_);
   }
 }
 
@@ -394,7 +406,9 @@ sub get_relationship {
     }
   }
   if ($result) {
-    return $result;
+    return if !defined wantarray;
+    $_ = $result;
+    return $result_processors{get_relationship}->(@_);
   }
 }
 
@@ -424,7 +438,9 @@ sub delete_relationship {
     }
   }
   if ($result) {
-    return $result; ###
+    return if !defined wantarray;
+    $_ = $result;
+    return $result_processors{delete_relationship}->(@_);
   }
 }
 
@@ -471,7 +487,11 @@ sub put_relationship {
 sub get_labels {
   my $self = shift;
   my $result = $self->run_in_session('call db.labels()');
-  return $result;
+  if ($result) {
+    return if !defined wantarray;
+    $_ = $result;
+    return $result_processors{get_labels}->(@_);
+  }
 }
 
 sub get_label {
@@ -493,7 +513,9 @@ sub get_label {
     $result = $self->run_in_session("match (n:$lbl) return n");
   }
   if ($result) {
-    return $result;
+    return if !defined wantarray;
+    $_ = $result;
+    return $result_processors{get_label}->(@_);
   }
 }
 
@@ -549,7 +571,9 @@ sub get_index {
     }
   }
   if ($result) {
-    return $result;
+    return if !defined wantarray;
+    $_ = $result;
+    return $result_processors{get_index}->($ent, @_);
   }
 }
 
@@ -571,7 +595,9 @@ sub delete_index {
     $result = $self->run_in_session("call db.index.explicit.$remove( $args )", {idx => $idx, id => 0+$id, (defined $k ? (key => $k) : ())});
   }
   if ($result) {
-    return $result;
+    return if !defined wantarray;
+    $_ = $result;
+    return $result_processors{delete_index}->($ent, @_);
   }
 }
 
@@ -621,7 +647,9 @@ sub post_index {
 	  REST::Neo4p::ConflictException->throw("found entity with create_or_fail specified");
 	}
 	else {
-	  return $result;
+	  return if !defined wantarray;
+	  $_ = $result;
+	  return $result_processors{post_index}->(@_);
 	}
       }
       # didn't find it, create it
@@ -668,7 +696,9 @@ sub post_index {
     }
   }
   if ($result) {
-    return $result;
+    return if !defined wantarray;
+    $_ = $result;
+    return $result_processors{post_index}->(@_);
   }
 }
 
@@ -756,7 +786,9 @@ sub delete_schema_constraint {
   }
   my $result = $self->run_in_session("drop constraint on (n:$lbl) assert $type");
   if ($result) {
-    return $result;
+    return if !defined wantarray;
+    $_ = $result;
+    return $result_processors{delete_schema_constraint}->(@_);
   }
 }
 
@@ -784,7 +816,9 @@ sub post_schema_constraint {
   }
   my $result = $self->run_in_session("create constraint on (n:$lbl) assert $type");
   if ($result) {
-    return $result;
+    return if !defined wantarray;
+    $_ = $result;
+    return $result_processors{post_schema_constraint}->(@_);
   }
 }
 
@@ -800,7 +834,9 @@ sub get_schema_index {
   }
   my $result = $self->run_in_session('call db.indexes() yield tokenNames as labels, properties where $lbl in labels return { label:$lbl, property_keys:properties }', {lbl => $lbl});
   if ($result) {
-    return $result;
+    return if !defined wantarray;
+    $_ = $result;
+    return $result_processors{get_schema_index}->(@_);
   }
 }
 
@@ -812,7 +848,9 @@ sub delete_schema_index {
   }
   my $result = $self->run_in_session("drop index on :${lbl}(${prop})");
   if ($result) {
-    return $result;
+    return if !defined wantarray;
+    $_ = $result;
+    return $result_processors{delete_schema_index}->(@_);
   }
 }
 
@@ -831,7 +869,9 @@ sub post_schema_index {
     $result = $self->run_in_session("create index on :${lbl}(${prop})");
   }
   if ($result) {
-    return $result;
+    return if !defined wantarray;
+    $_ = $result;
+    return $result_processors{post_schema_index}->(@_);
   }
 }
 

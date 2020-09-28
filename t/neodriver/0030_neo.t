@@ -38,95 +38,95 @@ ok $agent->connect('http://localhost:'.$docker->ports->{7474});
 
 # get ids of nodes and relationships
 my %ids;
-$result = $agent->run_in_session('match (n) return n.name as name, id(n) as id');
-while (my $rec = $result->fetch) {
+$agent->run_in_session('match (n) return n.name as name, id(n) as id');
+while (my $rec = $agent->last_result->fetch) {
   $ids{$rec->get('name')} = 0+$rec->get('id');
 }
 
-$result = $agent->get_propertykeys;
+$agent->get_propertykeys;
 $got = Set::Scalar->new();
 $exp = Set::Scalar->new('state','date','name','rem');
-while (my $rec = $result->fetch) {
+while (my $rec = $agent->last_result->fetch) {
   $got->insert( $rec->get(0) );
 }
 
 ok $got >= $exp;
 
-$result = $agent->get_node($ids{'you'});
-$node = $result->fetch->get(0);
+$agent->get_node($ids{'you'});
+$node = $agent->last_result->fetch->get(0);
 is $node->id, $ids{you};
 is $node->get('name'), 'you';
 
-$result = $agent->get_node($ids{'she'},'labels');
-my $lbls = $result->fetch->get(0);
+$agent->get_node($ids{'she'},'labels');
+my $lbls = $agent->last_result->fetch->get(0);
 is_deeply $lbls, ['person'];
 
-$result = $agent->get_node($ids{'he'}, 'properties');
-my $props = $result->fetch->get(0);
+$agent->get_node($ids{'he'}, 'properties');
+my $props = $agent->last_result->fetch->get(0);
 is_deeply $props, { name => 'he' };
 
-$result = $agent->get_node($ids{'it'}, 'properties', 'name');
-is $result->fetch->get(0), 'it';
+$agent->get_node($ids{'it'}, 'properties', 'name');
+is $agent->last_result->fetch->get(0), 'it';
 
-$result = $agent->get_node($ids{'I'}, 'relationships', 'all');
+$agent->get_node($ids{'I'}, 'relationships', 'all');
 my @rec;
-while (my $rec = $result->fetch) {
+while (my $rec = $agent->last_result->fetch) {
   push @rec, $rec->get(0);
 }
 is scalar @rec, 4;
 
-$result = $agent->get_node($ids{'I'}, 'relationships', 'out');
+$agent->get_node($ids{'I'}, 'relationships', 'out');
 @rec = ();
-while (my $rec = $result->fetch) {
+while (my $rec = $agent->last_result->fetch) {
   push @rec, $rec->get(0);
 }
 is scalar @rec, 2;
 
-$result = $agent->get_node($ids{'I'}, 'relationships', 'in');
+$agent->get_node($ids{'I'}, 'relationships', 'in');
 @rec = ();
-while (my $rec = $result->fetch) {
+while (my $rec = $agent->last_result->fetch) {
   push @rec, $rec->get(0);
 }
 is scalar @rec, 2;
 
-$result = $agent->get_node($ids{'I'}, 'relationships', 'all', 'best');
+$agent->get_node($ids{'I'}, 'relationships', 'all', 'best');
 @rec = ();
-while (my $rec = $result->fetch) {
+while (my $rec = $agent->last_result->fetch) {
   push @rec, $rec->get(0);
 }
 is scalar @rec, 2;
 
-$result = $agent->get_node($ids{'I'}, 'relationships', 'in', 'good');
+$agent->get_node($ids{'I'}, 'relationships', 'in', 'good');
 @rec = ();
-while (my $rec = $result->fetch) {
+while (my $rec = $agent->last_result->fetch) {
   push @rec, $rec->get(0);
 }
 is scalar @rec, 1;
 
-$result = $agent->get_node($ids{'noone'},'properties','rem');
-is $result->fetch->get(0), 'bye';
+$agent->get_node($ids{'noone'},'properties','rem');
+is $agent->last_result->fetch->get(0), 'bye';
 
-$result = $agent->get_node($ids{'noone'}, 'labels'); # why does this query return no results (using HTTP endpoint), when executed after delete_node/properties/rem below?
-is $result->fetch->get(0)->[0], 'person';
+$agent->get_node($ids{'noone'}, 'labels'); # why does this query return no results (using HTTP endpoint), when executed after delete_node/properties/rem below?
+is $agent->last_result->fetch->get(0)->[0], 'person';
 
-$result = $agent->delete_node($ids{'noone'}, 'properties', 'rem');
-$result = $agent->get_node($ids{'noone'},'properties','rem');
-ok !$result->fetch->get(0);
+$agent->delete_node($ids{'noone'}, 'properties', 'rem');
+$agent->get_node($ids{'noone'},'properties','rem');
+ok !$agent->last_result->fetch->get(0);
 
 $agent->delete_node($ids{'noone'}, 'labels', 'person');
-$result = $agent->get_node($ids{'noone'}, 'labels');
-ok !@{$result->fetch->get(0)};
+$agent->get_node($ids{'noone'}, 'labels');
+ok !@{$agent->last_result->fetch->get(0)};
 
 ok $agent->get_node($ids{'noone'})->fetch;
 ok $agent->delete_node($ids{'noone'});
 ok !$agent->get_node($ids{'noone'})->fetch;
 
-$result = $agent->get_relationship('types');
-is_deeply [ sort map { $_->get(0) } $result->list ], [sort qw/bosom best umm fairweather good/];
+$agent->get_relationship('types');
+is_deeply [ sort map { $_->get(0) } $agent->last_result->list ], [sort qw/bosom best umm fairweather good/];
 
 my @rids;
-$result = $agent->run_in_session('match ()-[r]->() where type(r)=$type return id(r) as id',{type=>'best'});
-while (my $rec = $result->fetch) {
+$agent->run_in_session('match ()-[r]->() where type(r)=$type return id(r) as id',{type=>'best'});
+while (my $rec = $agent->last_result->fetch) {
   push @rids, 0+$rec->get('id');
 }
 
