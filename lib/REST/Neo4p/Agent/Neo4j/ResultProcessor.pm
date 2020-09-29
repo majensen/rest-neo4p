@@ -156,22 +156,39 @@ $result_processors{post_index} = sub {
     return { template => "index/$ent/$$content{name}/\{key\}/\{value\}" };
   }
   else {
+    if (defined $content->{id}) {
+      return {
+	metadata => { id => $content->{id} },
+	self => "$ent/$$content{id}",
+	indexed => "index/$ent/$idx/$$content{key}/$$content{value}/$$content{id}"
+       };
+    }
   }
 };
 
 $result_processors{delete_schema_constraint} = sub {
+  return;
 };
 
 $result_processors{post_schema_constraint} = sub {
+  my ($utok,$content,$hdrs) = @_;
+  my ($lbl, $type) = @$utok;
+  return { label => $lbl, type => uc $type, property_keys => $content->{property_keys} };
 };
 
 $result_processors{get_schema_index} = sub {
+  my ($lbl) = @_;
+  return [ map { $_->get(0) } $_->list ];
 };
 
 $result_processors{delete_schema_index} = sub {
+  return;
 };
 
 $result_processors{post_schema_index} = sub {
+  my ($utok,$content,$hdrs) = @_;
+  my ($lbl) = @$utok;
+  return { label => $lbl, property_keys => $content->{property_keys} };  
 };
 
 1;
