@@ -117,9 +117,11 @@ $agent->delete_node($ids{'noone'}, 'labels', 'person');
 $agent->get_node($ids{'noone'}, 'labels');
 ok !@{$agent->last_result->fetch->get(0)};
 
-ok $agent->get_node($ids{'noone'})->fetch;
-ok $agent->delete_node($ids{'noone'});
-ok !$agent->get_node($ids{'noone'})->fetch;
+$agent->get_node($ids{'noone'});
+ok $agent->last_result->fetch;
+$agent->delete_node($ids{'noone'});
+$agent->get_node($ids{'noone'});
+ok !$agent->last_result->fetch;
 
 $agent->get_relationship('types');
 is_deeply [ sort map { $_->get(0) } $agent->last_result->list ], [sort qw/bosom best umm fairweather good/];
@@ -194,11 +196,13 @@ is scalar @{$agent->last_result->list}, 1;
 $agent->post_node_index([], {name => 'people'});
 ok $agent->last_result->fetch->get(0);
 $agent->post_node_index(['people'], {key => 'they', value => 'I', uri => "node/$ids{I}"});
-ok $agent->last_result->fetch->get(0);
+is $agent->last_result->fetch->get(0)->get('name'), 'I';
+
 $agent->post_node_index(['people'], {key => 'they', value => 'he', uri => "node/$ids{he}"});
-ok $agent->last_result->fetch->get(0);
+is $agent->last_result->fetch->get(0)->get('name'),'he';
+
 $agent->post_node_index(['people'], {key => 'they', value => 'it', uri => "node/$ids{it}"});
-ok $agent->last_result->fetch->get(0);
+is $agent->last_result->fetch->get(0)->get('name'), 'it';
 
 $agent->get_node_index();
 ok grep { $_->get(1) eq 'people' } @{$agent->last_result->list};

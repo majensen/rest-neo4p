@@ -50,6 +50,7 @@ $got = Set::Scalar->new(@$msg);
 $exp = Set::Scalar->new('state','date','name','rem');
 ok $got >= $exp;
 
+
 $msg = $agent->get_node($ids{'you'});
 is_deeply $msg, { metadata => {id => $ids{you}, labels => ['person'] }, self => "node/$ids{you}", data => { name => 'you'} };
 
@@ -77,7 +78,7 @@ is scalar @$msg, 2;
 $msg = $agent->get_node($ids{'I'}, 'relationships', 'in', 'good');
 is scalar @$msg, 1;
 
-$agent->get_node($ids{'noone'},'properties','rem');
+$msg = $agent->get_node($ids{'noone'},'properties','rem');
 is $msg, 'bye';
 
 $msg = $agent->get_node($ids{'noone'}, 'labels'); 
@@ -93,7 +94,7 @@ $msg = $agent->delete_node($ids{'noone'});
 ok !$msg;
 
 $msg = $agent->get_relationship('types');
-is_deeply $msg, [sort qw/bosom best umm fairweather good/];
+is_deeply [sort @$msg], [sort qw/bosom best umm fairweather good/];
 
 my @rids;
 $agent->run_in_session('match (a)-[r]->(b) where type(r)=$type and a.name = "I" and b.name = "you" return id(r) as id',{type=>'best'});
@@ -128,7 +129,6 @@ ok !$msg;
 
 $msg = $agent->post_node();
 
-
 $msg = $agent->post_node([],{ foo => 'bar' });
 
 $msg = $agent->post_node([$msg->{metadata}{id}, 'labels'],['alien']);
@@ -144,7 +144,8 @@ $msg = $agent->post_node([$msg->{metadata}{id}, 'labels'],['alien']);
 # get by label
 
 $msg = $agent->get_labels();
-is_deeply $msg, ['alien','person'];
+is_deeply [sort @$msg], ['alien','person'];
+
 
 $msg = $agent->get_label('person');
 is scalar @$msg, 5;
@@ -159,18 +160,14 @@ is_deeply $msg, { template => 'index/node/people/{key}/{value}' };
 
 $msg = $agent->post_node_index(['people'], {key => 'they', value => 'I', uri => "node/$ids{I}"});
 is_deeply $msg, { metadata => { id => $ids{I} }, self => "node/$ids{I}",
+		  data => {name => 'I'},
 		  indexed => "index/node/people/they/I/$ids{I}" };
 
 $agent->post_node_index(['people'], {key => 'they', value => 'he', uri => "node/$ids{he}"});
 $agent->post_node_index(['people'], {key => 'they', value => 'it', uri => "node/$ids{it}"});
 
-$agent->get_node_index();
-ok grep { $_->get(1) eq 'people' } @{$agent->last_result->list};
 
-$agent->get_node_index('people','they','he');
-is $agent->last_result->fetch->get(0)->get('name'), 'he';
-
-$msg = $agent->post_node_index(['people'], { key => 'they', value => 'I', properties => {name => 'alter'} },
+$msg = $agent->post_node_index(['people'], { key => 'they', value => 'alter', properties => {name => 'alter'} },
 			{ uniqueness => 'get_or_create' });
 is_deeply $msg->{data}, {name => 'alter'};
 
@@ -189,7 +186,8 @@ $msg = $agent->post_relationship_index(['friendships'], {key => 'squirty', value
 
 my $rid = $msg->{metadata}{id};
 is_deeply $msg, { metadata => { id => $rid }, self => "relationship/$rid",
-		  indexed => "index/relationship/squirty/2/$rid" };
+		  data => { mucho => 'bueno' },
+		  indexed => "index/relationship/friendships/squirty/2/$rid" };
 
 # schema constraints
 
@@ -197,7 +195,7 @@ $msg = $agent->post_schema_constraint(['person','uniqueness'], {property_keys =>
 is_deeply $msg, { label => 'person', type => 'UNIQUENESS', property_keys => ['name'] };
 
 $msg = $agent->get_schema_constraint();
-ok grep { $_->{type} eq 'UNIQUENESS' } @$result;
+ok grep { $_->{type} eq 'UNIQUENESS' } @$msg;
 
 
 done_testing;

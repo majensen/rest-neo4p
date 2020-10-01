@@ -624,11 +624,11 @@ sub post_index {
       $content->{idx} = $idx;
       for ($ent) {
 	/^node$/ && do {
-	  $result = $self->run_in_session('match (n) where id(n)=$id call db.index.explicit.addNode($idx,n,$key,$value) yield success return success', $content);
+	  $result = $self->run_in_session('match (n) where id(n)=$id call db.index.explicit.addNode($idx,n,$key,$value) yield success with n, success return case success when true then n else false end as result', $content);
 	  last;
 	};
 	/^relationship/ && do {
-	  $result = $self->run_in_session('match ()-[r]->() where id(r)=$id call db.index.explicit.addRelationship($idx,r,$key,$value) yield success return success', $content);
+	  $result = $self->run_in_session('match ()-[r]->() where id(r)=$id call db.index.explicit.addRelationship($idx,r,$key,$value) yield success with r, success return case success when true then r else false end as result', $content);
 	  last;
 	};
 	do {

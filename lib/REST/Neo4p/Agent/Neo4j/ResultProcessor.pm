@@ -28,7 +28,7 @@ $result_processors{get_node} = sub {
       while (my $rec = $_->fetch) {
 	$r = $rec->get(0);
 	push @$ret, {
-	  metadata => { id => $r-id, type => $r->type },
+	  metadata => { id => $r->id, type => $r->type },
 	  self => 'relationship/'.$r->id,
 	  data => $r->properties,
 	  start => 'node/'.$r->start_id,
@@ -84,7 +84,7 @@ $result_processors{get_relationship} = sub {
     do {
       my $r = $_->single->get(0);
       return {
-	  metadata => { id => $r-id, type => $r->type },
+	  metadata => { id => $r->id, type => $r->type },
 	  self => 'relationship/'.$r->id,
 	  data => $r->properties,
 	  start => 'node/'.$r->start_id,
@@ -110,12 +110,13 @@ $result_processors{put_relationship} = sub {
 };
 
 $result_processors{get_labels} = sub {
-  return [ map { $_->get(0) } $_->fetch ];
+  return [ map { $_->get(0) } $_->list ];
 };
 
 $result_processors{get_label} = sub {
   my $ret = [];
-  while (my $r = $_->fetch->get(0)) {
+  while (my $rec = $_->fetch) {
+    my $r = $rec->get(0);
     push @$ret, { metadata => { id => $r->id, labels => [$r->labels] },
 		  self => 'node/'.$r->id,
 		  data => $r->properties };
@@ -156,13 +157,15 @@ $result_processors{post_index} = sub {
     return { template => "index/$ent/$$content{name}/\{key\}/\{value\}" };
   }
   else {
-    if (defined $content->{id}) {
-      return {
-	metadata => { id => $content->{id} },
-	self => "$ent/$$content{id}",
-	indexed => "index/$ent/$idx/$$content{key}/$$content{value}/$$content{id}"
-       };
-    }
+    my $n = $_->fetch->get(0);
+    return unless $n;
+    my $id = $n->id;
+    return {
+      metadata => { id => $id },
+      self => "$ent/$id",
+      ($n->properties ? (data => $n->properties) : ()),
+      indexed => "index/$ent/$idx/$$content{key}/$$content{value}/$id"
+     };
   }
 };
 
