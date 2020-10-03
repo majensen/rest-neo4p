@@ -1,6 +1,8 @@
 package
   REST::Neo4p::Agent::Neo4j::Driver;
 
+use REST::Neo4p::Exceptions;
+
 our %result_processors;
 
 # The parameters of each function is the parameter array @_ of the corresponing calling action function
@@ -13,14 +15,18 @@ $result_processors{get_node} = sub {
   my ($id, @other) = @_;
   my $r;
   if (!@other) {
-    $r = $_->single->get(0);
+    my @r = $_->list;
+    REST::Neo4p::NotFoundException->throw unless @r;
+    $r = $r[0]->get(0);
     return { metadata => { id => $r->id, labels => [$r->labels] },
 	     self => 'node/'.$r->id,
 	     data => $r->properties };
   }
   else {
     ($other[0] =~ /^labels|properties$/) && do {
-      $r = $_->single->get(0);
+      my @r = $_->list;
+      REST::Neo4p::NotFoundException->throw unless @r;
+      $r = $r[0]->get(0);
       return $r;
     };
     ($other[0] eq 'relationships') && do {
@@ -49,7 +55,9 @@ $result_processors{post_node} = sub {
   my ($utok, $content, $hdrs) = @_;
   my $r;
   if (!$utok || !@$utok) {
-    $r = $_->single->get(0);
+    my @r = $_->list;
+    REST::Neo4p::NotFoundException->throw unless @r;
+    $r = $r[0]->get(0);
     return {
       metadata => { id => $r->id, labels => [] },
       self => 'node/'.$r->id,
@@ -62,7 +70,9 @@ $result_processors{post_node} = sub {
       return;
     };
     ($ent eq 'relationships') && do {
-      $r = $_->single->get(0);
+      my @r = $_->list;
+      REST::Neo4p::NotFoundException->throw unless @r;
+      $r = $r[0]->get(0);
       return {
 	  metadata => { id => $r-id, type => $r->type },
 	  self => 'relationship/'.$r->id,
@@ -82,7 +92,9 @@ $result_processors{get_relationship} = sub {
       return [ map { $_->get(0) } $_->list ];
     };
     do {
-      my $r = $_->single->get(0);
+      my @r = $_->list;
+      REST::Neo4p::NotFoundException->throw() unless @r;
+      my $r = $r[0]->get(0);
       return {
 	  metadata => { id => $r->id, type => $r->type },
 	  self => 'relationship/'.$r->id,
@@ -95,7 +107,10 @@ $result_processors{get_relationship} = sub {
   }
   else {
     ($other[0] eq 'properties') && do {
-      return $_->single->get(0);
+      my @r = $_->list;
+      REST::Neo4p::NotFoundException->throw unless @r;
+      $r = $r[0]->get(0);
+      return $r;
     };
     return;
   }
@@ -130,18 +145,22 @@ $result_processors{get_index} = sub {
     my $ret = {};
     while (my $rec = $_->fetch) {
       if ($rec->get('type') =~ /$ent/i) {
-	$ret->{$rec->get('name')} = $rec->get('config');
+	my $name = $rec->get('name');
+	$ret->{$name} = $rec->get('config');
+	$ret->{$name}{ template } = "index/$ent/$name/\{key\}/\{value\}";
       }
     }
     return $ret;
   }
   else {
     my $ret = [];
-    while (my $r = $_->fetch->get(0)) {
+    while (my $rec = $_->fetch) {
+      my $r = $rec->get(0);
       push @$ret, { metadata => { id => $r->id, labels => [$r->labels] },
 		    self => 'node/'.$r->id,
 		    data => $r->properties };
     }
+    REST::Neo4p::NotFoundException->throw unless @$ret;
     return $ret;
   }
 };

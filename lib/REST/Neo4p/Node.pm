@@ -88,6 +88,7 @@ sub get_relationships {
     ref $@ ? $@->rethrow : die $@;
   }
   my @ret;
+  # TODO: handle Neo4j::Driver case 
   if (ref $decoded_resp eq 'HASH') {
     $decoded_resp = [$decoded_resp];
   }
@@ -167,6 +168,7 @@ sub get_labels {
   elsif ($@) {
     ref $@ ? $@->rethrow : die $@;
   }
+  # TODO: handle Neo4j::Driver case
   return @$decoded_resp;
 }
 

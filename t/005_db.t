@@ -41,7 +41,6 @@ SKIP : {
   is $$r, $$r12, 'same relationship';
   ok my @rtypes = REST::Neo4p->get_relationship_types, 'get relationship type list';
   ok grep(/bubba/,@rtypes), 'found relationship type in type list';
-
   ok my $node_idx = REST::Neo4p::Index->new('node', 'node_idx'), 'new node index';
  # push @cleanup, $node_idx if $node_idx;
   ok my $reln_idx = REST::Neo4p::Index->new('relationship', 'reln_idx'), 'new relationship index';

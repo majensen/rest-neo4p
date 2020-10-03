@@ -1,4 +1,3 @@
-#$Id$
 use v5.10;
 package REST::Neo4p::Agent::Mojo::UserAgent;
 use base qw/Mojo::UserAgent REST::Neo4p::Agent/;

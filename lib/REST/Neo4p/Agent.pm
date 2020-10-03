@@ -161,11 +161,17 @@ sub no_stream { shift->remove_header('X-Stream') }
 sub stream { shift->add_header('X-Stream' => 'true') }
 
 # autoload getters for discovered neo4j rest urls
+# when the agent module is Neo4j::Driver, all actions are explicitly defined,
+# so any call falling through to AUTOLOAD is an error
 
 sub AUTOLOAD {
   my $self = shift;
   my $method = $AUTOLOAD;
   $method =~ s/.*:://;
+  if ($self->isa('REST::Neo4p::Agent::Neo4j::Driver')) {
+    # an error
+    REST::Neo4p::LocalException->throw( "REST::Neo4p::Agent::Neo4j::Driver does not define method '$method'\n" );
+  }
   my ($rq, $action) = $method =~ /^(get_|post_|put_|delete_)*(.*)$/;
   unless (grep /^$action$/,keys %{$self->{_actions}}) {
     REST::Neo4p::LocalException->throw( __PACKAGE__." does not define method '$method'\n" );

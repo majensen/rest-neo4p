@@ -5,6 +5,7 @@ use Carp qw(croak carp);
 use lib '../../lib';
 use JSON;
 use URI::Escape;
+use Neo4j::Driver;
 use REST::Neo4p::Agent;
 use REST::Neo4p::Node;
 use REST::Neo4p::Index;
@@ -352,7 +353,6 @@ sub rollback {
   };
   if (my $e = REST::Neo4p::Exception->caught()) {
     # TODO : handle different classes
-    $DB::single=1;
     $e->rethrow;
   }
   elsif ($e = Exception::Class->caught()) {

@@ -574,7 +574,7 @@ sub get_index {
   if ($result) {
     return if !defined wantarray;
     $_ = $result;
-    return $result_processors{get_index}->($ent, @_);
+    return $result_processors{get_index}->(@_);
   }
 }
 
@@ -598,7 +598,7 @@ sub delete_index {
   if ($result) {
     return if !defined wantarray;
     $_ = $result;
-    return $result_processors{delete_index}->($ent, @_);
+    return $result_processors{delete_index}->(@_);
   }
 }
 

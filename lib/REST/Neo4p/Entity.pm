@@ -44,13 +44,14 @@ sub new {
   elsif ($e = Exception::Class->caught()) {
     (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
   }
-
+  # TODO: examine following line in Neo4j::Driver context
   $decoded_resp->{self} ||= $agent->location if ref $decoded_resp;
   return ref($decoded_resp) ?
     $class->new_from_json_response($decoded_resp) :
       $class->new_from_batch_response($decoded_resp, @$url_components);
 }
 
+# TODO: refactor for when response is from Neo4j::Driver (a Result)
 sub new_from_json_response {
   my $class = shift;
   my ($entity_type) = $class =~ /.*::(.*)/;
@@ -65,6 +66,7 @@ sub new_from_json_response {
   unless ($ENTITY_TABLE->{$entity_type}{_actions}) {
     # capture the url suffix patterns for the entity actions:
     for (keys %$decoded_resp) {
+      next unless defined $decoded_resp->{$_};
       my ($suffix) = $decoded_resp->{$_} =~ m|.*$entity_type/[0-9]+/(.*)|;
       $ENTITY_TABLE->{$entity_type}{_actions}{$_} = $suffix;
     }
@@ -202,6 +204,7 @@ sub get_property {
       (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
     }
     else {
+      # TODO: handle in Neo4j::Driver case
       _unescape($decoded_resp);
       push @ret, $decoded_resp;
     }
@@ -231,6 +234,7 @@ sub get_properties {
   elsif ($e = Exception::Class->caught()) {
     (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
   }
+  # TODO: handle in Neo4j::Driver case
   _unescape($decoded_resp);
   return $decoded_resp;
 }
@@ -336,6 +340,7 @@ sub _entity_by_id {
       elsif ($@) {
 	ref $@ ? $@->rethrow : die $@;
       }
+      # TODO: handle for Neo4j::Driver case
       $decoded_resp = $decoded_resp->{$id};
       unless (defined $decoded_resp) {
 	REST::Neo4p::NotFoundException->throw
@@ -363,6 +368,7 @@ sub _entity_by_id {
 	(ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
       }
     }
+    # TODO: check this works for Neo4j::Driver case after new_from_json_response refactor
     $new = ref($decoded_resp) ? $class->new_from_json_response($decoded_resp) :
       $class->new_from_batch_response($decoded_resp);
   }
