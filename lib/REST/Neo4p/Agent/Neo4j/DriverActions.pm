@@ -12,7 +12,7 @@ use strict;
 use warnings;
 
 our %result_processors;
-my $SAFE_TOK = qr/[\p{PosixAlnum}_]+/;
+my $SAFE_TOK = qr/[\p{PosixAlnum}:_]+/;
 
 my @action_tokens = qw/node labels relationship types index schema constraint cypher transaction/;
 
@@ -223,7 +223,7 @@ sub get_node {
   }
   if ($result) {
     return if !defined wantarray;
-    $_ = $result;
+    local $_ = $result;
     return $result_processors{get_node}->(@_);
   }
 }
@@ -259,7 +259,7 @@ sub delete_node {
   }
   if ($result) {
     return if !defined wantarray;
-    $_ = $result;
+    local $_ = $result;
     return $result_processors{delete_node}->(@_);
   }
 }
@@ -276,11 +276,12 @@ sub post_node {
       my $set_clause = '';
       if (scalar(keys %$content)) {
 	_throw_unsafe_tok($_) for keys %$content;
-	_throw_unsafe_tok($_) for values %$content;	
-	my @assigns = map { "n.$_ = "._quote_maybe($$content{$_}) } sort keys %$content;
+#	_throw_unsafe_tok($_) for values %$content;	
+	#	my @assigns = map { "n.$_ = "._quote_maybe($$content{$_}) } sort keys %$content;
+	my @assigns = map { "n.$_ = \$$_" } sort keys %$content;
 	$set_clause = "set ".join(',', @assigns);
       }
-      $result = $self->run_in_session("create (n) $set_clause return n");
+      $result = $self->run_in_session("create (n) $set_clause return n",$content);
     }
   }
   else {
@@ -325,7 +326,7 @@ sub post_node {
   }
   if ($result) {
     return if !defined wantarray;
-    $_ = $result;
+    local $_ = $result;
     return $result_processors{post_node}->(@_);
   }
 }
@@ -408,7 +409,7 @@ sub get_relationship {
   }
   if ($result) {
     return if !defined wantarray;
-    $_ = $result;
+    local $_ = $result;
     return $result_processors{get_relationship}->(@_);
   }
 }
@@ -440,7 +441,7 @@ sub delete_relationship {
   }
   if ($result) {
     return if !defined wantarray;
-    $_ = $result;
+    local $_ = $result;
     return $result_processors{delete_relationship}->(@_);
   }
 }
@@ -490,7 +491,7 @@ sub get_labels {
   my $result = $self->run_in_session('call db.labels()');
   if ($result) {
     return if !defined wantarray;
-    $_ = $result;
+    local $_ = $result;
     return $result_processors{get_labels}->(@_);
   }
 }
@@ -515,7 +516,7 @@ sub get_label {
   }
   if ($result) {
     return if !defined wantarray;
-    $_ = $result;
+    local $_ = $result;
     return $result_processors{get_label}->(@_);
   }
 }
@@ -579,7 +580,7 @@ sub get_index {
   }
   if ($result) {
     return if !defined wantarray;
-    $_ = $result;
+    local $_ = $result;
     return $result_processors{get_index}->(@_);
   }
 }
@@ -603,7 +604,7 @@ sub delete_index {
   }
   if ($result) {
     return if !defined wantarray;
-    $_ = $result;
+    local $_ = $result;
     return $result_processors{delete_index}->(@_);
   }
 }
@@ -661,7 +662,7 @@ sub post_index {
 	}
 	else {
 	  return if !defined wantarray;
-	  $_ = $result;
+	  local $_ = $result;
 	  return $result_processors{post_index}->(@_);
 	}
       }
@@ -710,7 +711,7 @@ sub post_index {
   }
   if ($result) {
     return if !defined wantarray;
-    $_ = $result;
+    local $_ = $result;
     return $result_processors{post_index}->(@_);
   }
 }
@@ -807,7 +808,7 @@ sub delete_schema_constraint {
   my $result = $self->run_in_session("drop constraint on (n:$lbl) assert $type");
   if ($result) {
     return if !defined wantarray;
-    $_ = $result;
+    local $_ = $result;
     return $result_processors{delete_schema_constraint}->(@_);
   }
 }
@@ -837,7 +838,7 @@ sub post_schema_constraint {
   my $result = $self->run_in_session("create constraint on (n:$lbl) assert $type");
   if ($result) {
     return if !defined wantarray;
-    $_ = $result;
+    local $_ = $result;
     return $result_processors{post_schema_constraint}->(@_);
   }
 }
@@ -855,7 +856,7 @@ sub get_schema_index {
   my $result = $self->run_in_session('call db.indexes() yield tokenNames as labels, properties where $lbl in labels return { label:$lbl, property_keys:properties }', {lbl => $lbl});
   if ($result) {
     return if !defined wantarray;
-    $_ = $result;
+    local $_ = $result;
     return $result_processors{get_schema_index}->(@_);
   }
 }
@@ -869,7 +870,7 @@ sub delete_schema_index {
   my $result = $self->run_in_session("drop index on :${lbl}(${prop})");
   if ($result) {
     return if !defined wantarray;
-    $_ = $result;
+    local $_ = $result;
     return $result_processors{delete_schema_index}->(@_);
   }
 }
@@ -890,7 +891,7 @@ sub post_schema_index {
   }
   if ($result) {
     return if !defined wantarray;
-    $_ = $result;
+    local $_ = $result;
     return $result_processors{post_schema_index}->(@_);
   }
 }
