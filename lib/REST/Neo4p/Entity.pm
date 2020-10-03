@@ -154,7 +154,7 @@ sub set_property {
   local $REST::Neo4p::HANDLE;
   REST::Neo4p->set_handle($self->_handle);
   my $agent = REST::Neo4p->agent;
-  my $suffix = $self->_get_url_suffix('property');
+  my $suffix = ($self->_get_url_suffix('property') // 'properties/{key}');
   my @ret;
   $suffix =~ s|/[^/]*$||; # strip the '{key}' placeholder
   for (keys %$props) {
@@ -188,7 +188,7 @@ sub get_property {
   REST::Neo4p->set_handle($self->_handle);
   my $agent = REST::Neo4p->agent;
   REST::Neo4p::CommException->throw("Not connected\n") unless $agent;
-  my $suffix = $self->_get_url_suffix('property');
+  my $suffix = ($self->_get_url_suffix('property') // 'properties/{key}');
   my @ret;
   $suffix =~ s|/[^/]*$||; # strip the '{key}' placeholder
   for (@props) {
@@ -221,7 +221,7 @@ sub get_properties {
   REST::Neo4p->set_handle($self->_handle);
   my $agent = REST::Neo4p->agent;
   REST::Neo4p::CommException->throw("Not connected\n") unless $agent;
-  my $suffix = $self->_get_url_suffix('property');
+  my $suffix = ($self->_get_url_suffix('property') // 'properties/{key}');
   $suffix =~ s|/[^/]*$||; # strip the '{key}' placeholder
   my $decoded_resp;
   eval {
@@ -267,7 +267,7 @@ sub remove_property {
   REST::Neo4p->set_handle($self->_handle);
   my $agent = REST::Neo4p->agent;
   REST::Neo4p::CommException->throw("Not connected\n") unless $agent;
-  my $suffix = $self->_get_url_suffix('property');
+  my $suffix = ($self->_get_url_suffix('property') // 'properties/{key}');
   $suffix =~ s|/[^/]*$||; # strip the '{key}' placeholder
   foreach (@props) {
     eval {

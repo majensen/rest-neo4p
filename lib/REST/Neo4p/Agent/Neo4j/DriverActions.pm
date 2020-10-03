@@ -608,6 +608,12 @@ sub post_index {
   my $result;
   REST::Neo4p::LocalException->throw('post_index requires arrayref of url components as arg1') unless (defined $url_components and ref($url_components) eq 'ARRAY');
   REST::Neo4p::LocalException->throw('post_index requires content hashref as arg2') unless (defined $content and ref($content) eq 'HASH');
+  # kludge
+  if ($url_components->[1] && $url_components->[1] =~ /[?]/) {
+    my ($nm,$pm,$val) = $url_components->[1] =~ /^(.*)\?(.*)=(.*)$/;
+    $addl_parameters->{$pm} = $val;
+    $url_components->[1] = $nm;
+  }
   _throw_unsafe_tok($_) for @$url_components;
   my ($ent, $idx, @other) = @$url_components;
   if (! defined $idx) { # create index

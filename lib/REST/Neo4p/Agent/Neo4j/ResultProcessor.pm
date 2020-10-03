@@ -183,6 +183,11 @@ $result_processors{post_index} = sub {
       metadata => { id => $id },
       self => "$ent/$id",
       ($n->properties ? (data => $n->properties) : ()),
+      ($n->can(start_id) ? (
+	start_id => $n->start_id,
+	end_id => $n->end_id,
+	type => $n->type
+       ) : ()),
       indexed => "index/$ent/$idx/$$content{key}/$$content{value}/$id"
      };
   }
