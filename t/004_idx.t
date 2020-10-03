@@ -10,14 +10,14 @@ use warnings;
 no warnings qw(once);
 my @cleanup;
 my $build;
-my ($user,$pass);
+my ($user,$pass) = @ENV{qw/REST_NEO4P_TEST_USER REST_NEO4P_TEST_PASS/};
 
 eval {
   $build = Module::Build->current;
   $user = $build->notes('user');
   $pass = $build->notes('pass');
 };
-my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
+my $TEST_SERVER = $build ? $build->notes('test_server') : $ENV{REST_NEO4P_TEST_SERVER} // 'http://127.0.0.1:7474';
 my $num_live_tests = 67;
 
 use_ok('REST::Neo4p');
@@ -134,7 +134,6 @@ SKIP : {
   ok my @nts = $nt_names->find_entries( fullname => 'adenine' ), 'find A on fullname key';
   cmp_ok scalar @nts,'>=', 1, 'found nt';
   is $nts[0]->get_property('name'),'A', 'found A as adenine';
-
   ok my @commented = $nt_comment->find_entries('comment:*spell*'), 'find T in comment index with lucene query';
   cmp_ok scalar @commented, '>=', 1, 'found one';
   is $commented[0]->get_property('name'), 'T', 'found T with comment';

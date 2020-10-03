@@ -548,7 +548,13 @@ sub get_index {
     # find things
     my $params = $other[-1];
     my $seek = ($ent eq 'node' ? 'seekNodes' : 'seekRelationships');
+    # kludge
+    if (!ref($params) && $params =~ /[?]/) {
+      my ($k,$v) = $params =~ /^.*\?(.*)=(.*)$/;
+      $params = { $k => $v };
+    }
     if (!ref $params) { # key/value
+
       my ($key, $value) = @other;
       unless (defined $key && defined $value) {
 	REST::Neo4p::LocalException->throw("get_index : can't interpret parameters for either key-value or query search\n");
