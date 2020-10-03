@@ -118,9 +118,9 @@ sub execute_batch {
 sub connect {
   my $self = shift;
   my ($server, $dbname) = @_;
-  my $drv;
+  my ($drv, $uri);
   if (defined $server) {
-    my $uri = URI->new($server);
+    $uri = URI->new($server);
     if ($uri->userinfo) {
       my ($u,$p) = split(/:/,$uri->userinfo);
       $self->credentials($uri->host,'',$u,$p);
@@ -142,6 +142,15 @@ sub connect {
     $drv->basic_auth($self->user, $self->pwd);
   }
   $self->{__driver} = $drv;
+  try {
+    if ($uri->scheme =~ /^http/) {
+      my $client = $drv->session->{transport}{client};
+      $client->GET('/');
+      die $client->responseContent unless $client->responseCode =~ /^2/;
+    }
+  } catch {
+    REST::Neo4p::CommException->throw($_);
+  };
   return 1;
 }
 

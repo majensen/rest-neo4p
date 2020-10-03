@@ -30,6 +30,7 @@ my @available_actions =
       post_node
       put_node
       get_relationship
+      get_relationship_types
       delete_relationship
       put_relationship
       get_labels
@@ -702,14 +703,21 @@ sub post_index {
   }
 }
 
+sub get_relationship_types { shift->get_relationship("types",@_) }
 sub get_node_index { shift->get_index("node",@_) }
+sub get_index_node { shift->get_node_index(@_) }
 sub delete_node_index { shift->delete_index("node",@_) }
+sub delete_index_node { shift->delete_node_index(@_) }
 sub post_node_index { unshift @{$_[1]},'node'; shift->post_index(@_) }
+sub post_index_node { shift->post_node_index(@_) }
 #sub put_node_index { shift->put_index("node",@_) }
 
 sub get_relationship_index { shift->get_index("relationship",@_) }
+sub get_index_relationship { shift->get_relationship_index(@_) }
 sub delete_relationship_index { shift->delete_index("relationship",@_) }
+sub delete_index_relationship { shift->delete_relationship_index(@_) }
 sub post_relationship_index { unshift @{$_[1]},'relationship'; shift->post_index(@_) }
+sub post_index_relationship { shift->post_relationship_index(@_) }
 #sub put_relationship_index { shift->put_index("relationship",@_) }
 
 # constraint
