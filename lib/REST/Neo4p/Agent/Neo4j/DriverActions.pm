@@ -14,7 +14,7 @@ use warnings;
 our %result_processors;
 my $SAFE_TOK = qr/[\p{PosixAlnum}:_]+/;
 
-my @action_tokens = qw/node labels relationship types index schema constraint cypher transaction/;
+my @action_tokens = qw/node label labels relationship types index schema constraint cypher transaction/;
 
 my @available_actions =
   qw{
@@ -359,7 +359,15 @@ sub put_node {
     /^labels$/ && do {
       # this action needs to remove all labels from node, and add
       # those that are in the call arguments.
-      REST::Neo4p::NotImplException->throw('put_node \'labels\' action not yet implemented'); 
+      _throw_unsafe_tok($_) for @$content;
+      $result = $self->run_in_session('match (n) where id(n)=$id return labels(n)',{id => 0+$id});
+      my $rec = $result->fetch;
+      if ($rec) {
+	for my $lbl (@{$rec->get(0)}) {
+	  $self->run_in_session('match (n) where id(n)=$id remove n:'.$lbl,{id => 0+$id});
+	}
+      }
+      $result = $self->run_in_session('match (n) where id(n)=$id set n:'.join(':',@$content),{id => 0+$id});
       last;
     };
     # else
@@ -507,6 +515,9 @@ sub get_label {
     my @cond;
     for my $p (sort keys %$params) {
       push @cond, "n.$p=\$$p";
+      $params->{$p} = uri_unescape($params->{$p});
+      $params->{$p} =~ s/^["']//;
+      $params->{$p} =~ s/["']$//;      
     }
     my $where_clause = 'where '.join(' and ',@cond);
     $result = $self->run_in_session("match (n:$lbl) $where_clause return n", $params)

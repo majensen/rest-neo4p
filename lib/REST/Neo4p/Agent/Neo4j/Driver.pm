@@ -3,6 +3,7 @@ use v5.10;
 use lib '../../../../../lib'; # testing
 use base qw/REST::Neo4p::Agent/;
 use Neo4j::Driver;
+use JSON::ize;
 use REST::Neo4p::Agent::Neo4j::DriverActions;
 use REST::Neo4p::Exceptions;
 use Try::Tiny;
@@ -147,6 +148,12 @@ sub connect {
       my $client = $drv->session->{transport}{client};
       $client->GET('/');
       die $client->responseContent unless $client->responseCode =~ /^2/;
+      unless ($self->{_actions}{neo4j_version} =
+		J($client->responseContent)->{neo4j_version}) {
+	$client->GET('/db/data');
+	$self->{_actions}{neo4j_version} = J($client->responseContent)->{neo4j_version} or
+	  die "Can't find neo4j_version from server";
+      }
     }
   } catch {
     REST::Neo4p::CommException->throw($_);
@@ -180,6 +187,7 @@ sub run_in_session {
 	REST::Neo4p::Neo4jTightwadException->throw( error => "You must spend thousands of dollars a year to use this feature; see agent->last_errors()");
       }
       else {
+	$DB::single=1;
 	REST::Neo4p::Neo4jException->throw( error => "Neo4j errors; see agent->last_errors()" );
       }
     } catch {
