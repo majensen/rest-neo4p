@@ -106,10 +106,10 @@ sub batch_mode {
 
 # subclass override 
 sub batch_length {
-  REST::Neo4p::LocalExeception->throw("Batch mode not available with Neo4j::Driver as agent\n");
+  REST::Neo4p::LocalException->throw("Batch mode not available with Neo4j::Driver as agent\n");
 }
 sub execute_batch {
-  REST::Neo4p::LocalExeception->throw("Batch mode not available with Neo4j::Driver as agent\n");
+  REST::Neo4p::LocalException->throw("Batch mode not available with Neo4j::Driver as agent\n");
 }
 
 # subclass override
