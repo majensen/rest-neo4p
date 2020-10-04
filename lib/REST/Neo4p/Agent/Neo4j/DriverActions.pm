@@ -864,7 +864,15 @@ sub get_schema_index {
   unless (defined $lbl) {
     REST::Neo4p::LocalException->throw("get_schema_index requires label as arg1\n");
   }
-  my $result = $self->run_in_session('call db.indexes() yield tokenNames as labels, properties where $lbl in labels return { label:$lbl, property_keys:properties }', {lbl => $lbl});
+  my ($maj, $min, $pat, $mile) = $self->neo4j_version;
+  my $q;
+  if ($maj>=3 && $min>=5) { # patch
+    $q = 'call db.indexes() yield tokenNames as labels, properties where $lbl in labels return { label:$lbl, property_keys:properties }';
+  }
+  else {
+    $q = 'call db.indexes() yield label, properties where label = $lbl return { label:$lbl, property_keys:properties }';
+  }
+  my $result = $self->run_in_session($q, {lbl => $lbl});
   if ($result) {
     return if !defined wantarray;
     local $_ = $result;

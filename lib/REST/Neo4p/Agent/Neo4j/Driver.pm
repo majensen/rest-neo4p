@@ -186,18 +186,34 @@ sub run_in_session {
       if ($self->last_errors =~ /neo4j enterprise/i) {
 	REST::Neo4p::Neo4jTightwadException->throw( error => "You must spend thousands of dollars a year to use this feature; see agent->last_errors()");
       }
+      elsif ($self->last_errors =~ /ConstraintValidationFailed/) {
+	REST::Neo4p::ConflictException->throw();
+      }
       else {
-	$DB::single=1;
 	REST::Neo4p::Neo4jException->throw( error => "Neo4j errors; see agent->last_errors()" );
       }
     } catch {
-      warn $_->error;
+      if (ref =~ /Conflict/) {
+	$_->rethrow;
+      }
+      else {
+	warn $_->error;
+      }
       return;
     };
   }
   else {
     return $self->{_last_result} // 1;
   }
+}
+
+sub neo4j_version {
+  my $self = shift;
+  my $v = my $a = $self->{_actions}{neo4j_version};
+  return unless defined $v;
+  my ($major, $minor, $patch, $milestone) =
+    $a =~ /^(?:([0-9]+)\.)(?:([0-9]+)\.)?([0-9]+)?(?:-M([0-9]+))?/;
+  wantarray ? ($major,$minor,$patch,$milestone) : $v;
 }
 
 # $rq : [get|post|put|delete]
