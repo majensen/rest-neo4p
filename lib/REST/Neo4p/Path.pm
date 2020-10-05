@@ -16,6 +16,7 @@ sub new {
 sub new_from_json_response {
   my $class = shift;
   my ($decoded_resp) = @_;
+  return $class->new_from_driver_obj(@_) if (ref($decoded_resp) =~ /Neo4j::Driver/);
   REST::Neo4p::LocalException->throw("Arg does not describe a Neo4j path response\n") unless $decoded_resp->{start} && $decoded_resp->{end} && $decoded_resp->{relationships} && $decoded_resp->{nodes};
   my $obj = bless {}, $class;
   $obj->{_length} = $decoded_resp->{length};
@@ -54,6 +55,11 @@ sub new_from_json_response {
   return $obj;
 }
 
+sub new_from_driver_obj {
+  my $class = shift;
+  my ($obj) = @_;
+  
+}
 sub as_simple {
   my $self = shift;
   my $ret;

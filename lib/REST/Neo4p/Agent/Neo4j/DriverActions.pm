@@ -24,6 +24,7 @@ my @available_actions =
       put_data
       post_cypher
       post_transaction
+      delete_transaction
       get_propertykeys
       get_node
       delete_node
@@ -140,7 +141,7 @@ sub _throw_unsafe_tok {
 
 sub post_cypher {
   my $self = shift;
-  my ($ary, $qry) = @_;
+  my ($ary, $qry, $addl_headers) = @_;
   # $ary not used
   my $result = $self->session->run( $qry->{query}, $qry->{params} // () );
   return $result; # ?
@@ -148,8 +149,62 @@ sub post_cypher {
 
 # TODO: transaction
 
+# Keep track of transactions with a cache hash and an arbitrary
+# sequence. Neo4j::Driver doesn't maintain the actual transaction
+# id of the server, but uses the Session to isolate transactions
+# So the transaction number in the returned (partial) "commit" url
+# is a kludge (the index in the cache)
+
 sub post_transaction {
   my $self = shift;
+  my ($ary, $qry_h, $addl_headers) = @_;
+  state $txn = 0;
+  if (!@$ary) { # begin
+    try {
+      $txn++;
+      $self->{_txns}{$txn} = $self->session->begin_transaction;
+      return { commit => "transaction/$txn/commit" };
+    } catch {
+      $txn--;
+      return { errors => [$_] };
+    };
+  }
+  elsif ($ary->[1] eq 'commit') { # commit
+    my $tx = delete $self->{_txns}->{$$ary[0]};
+    unless (defined $tx) {
+      REST::Neo4p::LocalException->throw("Transaction has vanished\n");
+    }
+    try {
+      $tx->commit;
+    } catch {
+      REST::Neo4p::Neo4jException->throw($_);
+    };
+  }
+  else { # run
+    my $tx = $self->{_txns}{$$ary[0]};
+    my $stmt = $qry_h->{statements}->[0]->{statement};
+    my $params = $qry_h->{statements}->[0]->{parameters};
+    try {
+      my $result = $tx->run($stmt, $params);
+      return $result;
+    } catch {
+      REST::Neo4p::Neo4jException->throw($_);
+    };
+  }
+}
+
+sub delete_transaction {
+  my $self = shift;
+  my ($txn) = @_;
+  unless (defined $txn) {
+    REST::Neo4p::LocalException->throw("delete_transaction requires txn number as arg 1\n");
+  }
+  $tx = delete $self->{_txns}->{$txn};
+  unless (defined $tx) {
+    REST::Neo4p::LocalException->throw("Transaction has vanished\n");
+  }
+  $tx->rollback;
+  return;
 }
 
 # propertykeys

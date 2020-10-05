@@ -1,5 +1,3 @@
-
-#$Id$
 use v5.10;
 package REST::Neo4p::Query;
 use REST::Neo4p::Path;
@@ -14,7 +12,7 @@ use strict;
 use warnings;
 no warnings qw(once);
 BEGIN {
-  $REST::Neo4p::Query::VERSION = '0.3030';
+  $REST::Neo4p::Query::VERSION = '0.4000';
 }
 
 our $BUFSIZE = 50000;
@@ -57,7 +55,7 @@ sub execute {
   my $agent = REST::Neo4p->agent;
 
   if ($agent->batch_mode) {
-    REST::Neo4p::NotSuppException->throw("Query execution not supported in batch mode (yet)\n");
+    REST::Neo4p::NotSuppException->throw("Query execution not supported in batch mode\n");
   }
   delete $self->{_error};
   delete $self->{_error_list};
@@ -116,6 +114,72 @@ sub execute {
   elsif ( $e = Exception::Class->caught) {
     (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
   }
+  if ( ref(REST::Neo4p->agent) !~ /Neo4j::Driver/ ) {
+    return $self->_parse_response;
+  }
+  else { # Neo4j::Driver
+    return $self->_wrap_statement_result;
+  }
+  1;
+}
+
+sub fetchrow_arrayref { 
+  my $self = shift;
+  unless ( defined $self->{_iterator} ) {
+    REST::Neo4p::LocalException->throw("Can't run fetch(), query not execute()'d yet\nCheck query object for error with err()/errstr()\n");
+  }
+  $self->{_iterator}->();
+}
+
+sub fetch { shift->fetchrow_arrayref(@_) }
+
+sub column_names {
+  my $self = shift;
+  return $self->{_column_names} && @{$self->{_column_names}};
+}
+
+sub err { 
+  my $self = shift;
+  return $self->{_error} && ($self->{_error}->code || 599);
+}
+
+sub errstr { 
+  my $self = shift;
+  return $self->{_error} && ( $self->{_error}->message || $self->{_error}->neo4j_message );
+}
+
+sub errobj { shift->{_error} }
+
+sub err_list {
+  my $self = shift;
+  return $self->{_error} && $self->{_error_list};
+}
+
+
+sub query { shift->{_query} }
+sub params { shift->{_params} }
+
+
+sub _wrap_statement_result {
+  my $self = shift;
+  my $result = REST::Neo4p->agent->last_result;
+  my $errors = REST::Neo4p->agent->last_errors;
+  $self->{NAME} = $result->keys;
+  $self->{NUM_OF_FIELDS} = scalar @{$self->{NAME}};
+  return sub {
+    my $rec = $result->fetch;
+    return unless defined $rec;
+    
+  };
+}
+
+# _parse_response sets up an iterator that pulls a row's worth of objects from
+# the servers JSON stream, parses the row into objects, and returns the row.
+# this iterator is placed in $self->{_iterator} as a side effect.
+# It is hit in fetchrow_arrayref.
+
+sub _parse_response {
+  my $self = shift;
   my $jsonr = JSON::XS->new->utf8;
   my ($buf,$res,$str,$rowstr,$obj);
   my $row_count;
@@ -309,45 +373,7 @@ sub execute {
       }
     }
   }
-  1;
 }
-
-sub fetchrow_arrayref { 
-  my $self = shift;
-  unless ( defined $self->{_iterator} ) {
-    REST::Neo4p::LocalException->throw("Can't run fetch(), query not execute()'d yet\nCheck query object for error with err()/errstr()\n");
-  }
-  $self->{_iterator}->();
-}
-
-sub fetch { shift->fetchrow_arrayref(@_) }
-
-sub column_names {
-  my $self = shift;
-  return $self->{_column_names} && @{$self->{_column_names}};
-}
-
-sub err { 
-  my $self = shift;
-  return $self->{_error} && ($self->{_error}->code || 599);
-}
-
-sub errstr { 
-  my $self = shift;
-  return $self->{_error} && ( $self->{_error}->message || $self->{_error}->neo4j_message );
-}
-
-sub errobj { shift->{_error} }
-
-sub err_list {
-  my $self = shift;
-  return $self->{_error} && $self->{_error_list};
-}
-
-
-sub query { shift->{_query} }
-sub params { shift->{_params} }
-
 sub _response_entity {
   my ($resp) = @_;
   use experimental qw/smartmatch/;
