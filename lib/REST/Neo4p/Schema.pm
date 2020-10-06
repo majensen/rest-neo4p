@@ -53,8 +53,9 @@ sub get_indexes {
   my $self = shift;
   my ($label) = @_;
   REST::Neo4p::LocalException->throw("Arg 1 must be a label\n") unless defined $label;
+  my $decoded_resp;
   eval {
-    $self->_agent->get_data(qw/schema index/, $label);
+    $decoded_resp = $self->_agent->get_data(qw/schema index/, $label);
   };
   if (my $e = REST::Neo4p::NotFoundException->caught) {
     return;
@@ -63,7 +64,8 @@ sub get_indexes {
     (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
   }
   my @ret;
-  foreach (@{$self->_agent->decoded_content}) {
+  # kludge for Neo4j::Driver
+  foreach (@{$self->_agent->decoded_content // $decoded_resp}) {
     push @ret, $_->{property_keys}[0];
   }
   return @ret;
@@ -122,8 +124,9 @@ sub get_constraints {
   my ($label, $c_type) = @_;
   $c_type ||= 'uniqueness';
   REST::Neo4p::LocalException->throw("Arg 1 must be a label\n") unless defined $label;
+  my $decoded_resp;
   eval {
-    $self->_agent->get_data(qw/schema constraint/, $label, $c_type);
+    $decoded_resp = $self->_agent->get_data(qw/schema constraint/, $label, $c_type);
   };
   if (my $e = REST::Neo4p::NotFoundException->caught) {
     return;
@@ -132,7 +135,8 @@ sub get_constraints {
     (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
   }
   my @ret;
-  foreach (@{$self->_agent->decoded_content}) {
+  # kludge for Neo4j::Driver
+  foreach (@{$self->_agent->decoded_content // $decoded_resp}) {
     push @ret, $_->{property_keys}[0];
   }
   return @ret;

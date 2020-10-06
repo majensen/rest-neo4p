@@ -155,8 +155,27 @@ sub connect {
 	  die "Can't find neo4j_version from server";
       }
     }
+    elsif ($uri->scheme =~ /^bolt/) {
+      1;
+    }
   } catch {
     REST::Neo4p::CommException->throw($_);
+  };
+  # set actions
+  try {
+    my $tx = $self->session->begin_transaction;
+    my $n = $tx->run('create (n) return n')->single;
+    my $actions = $n->{rest}[0];
+    $tx->rollback;
+    foreach (keys %$actions) {
+      next if /^extensions|metadata|self$/;
+      # strip any trailing slash
+      $actions->{$_} =~ s|/+$||;
+      my ($suffix) = $actions->{$_} =~ m|.*node/[0-9]+/(.*)|;
+      $self->{_actions}{$_} = $suffix;
+    }
+  } catch {
+    REST::Neo4p::LocalException->throw("While determining actions: $_");
   };
   return 1;
 }
@@ -187,17 +206,22 @@ sub run_in_session {
 	REST::Neo4p::Neo4jTightwadException->throw( error => "You must spend thousands of dollars a year to use this feature; see agent->last_errors()");
       }
       elsif ($self->last_errors =~ /ConstraintValidationFailed/) {
-	REST::Neo4p::ConflictException->throw();
+	REST::Neo4p::ConflictException->throw( code => 409,
+					      neo4j_message => $self->last_errors);
+      }
+      elsif ($self->last_errors =~ /NotFound/) {
+	REST::Neo4p::NotFoundException->throw( code => 404,
+					       neo4j_message => $self->last_errors );
       }
       else {
-	REST::Neo4p::Neo4jException->throw( error => "Neo4j errors; see agent->last_errors()" );
+	REST::Neo4p::Neo4jException->throw( error => "Neo4j errors:\n".$self->last_errors );
       }
     } catch {
       if (ref =~ /Conflict/) {
 	$_->rethrow;
       }
       else {
-	warn $_->error;
+	warn $_;
       }
       return;
     };

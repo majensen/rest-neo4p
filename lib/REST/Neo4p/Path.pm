@@ -57,9 +57,43 @@ sub new_from_json_response {
 
 sub new_from_driver_obj {
   my $class = shift;
-  my ($obj) = @_;
-  
+  my ($pth_obj) = @_;
+  my $obj = bless {}, $class;
+
+  my @nodes = $obj->nodes;
+  my @relns = $obj->relationships;
+  $obj->{_length} = scalar @relns;
+
+  while (my $n = shift @nodes) {
+    my $r = shift @relns;
+    my ($node, $relationship);
+    eval {
+      $node = REST::Neo4p::Node->_entity_by_id($n->id);
+    };
+    if (my $e = REST::Neo4p::Exception->caught()) {
+      # TODO : handle different classes
+      $e->rethrow;
+    }
+    elsif ($e = Exception::Class->caught()) {
+      (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
+    }
+    push @{$obj->{_nodes}}, $node;
+    eval {
+      $relationship =  REST::Neo4p::Relationship->_entity_by_id($r->id) if defined $r;
+    };
+    if (my $e = REST::Neo4p::Exception->caught()) {
+      # TODO : handle different classes
+      $e->rethrow;
+    }
+    elsif ($e = Exception::Class->caught()) {
+      (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
+    }
+    push @{$obj->{_relationships}}, $relationship if $relationship;
+  }
+  REST::Neo4p::LocalException->throw("Extra relationships in path\n") if @relns;
+  return $obj;
 }
+
 sub as_simple {
   my $self = shift;
   my $ret;

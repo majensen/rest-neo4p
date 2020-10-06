@@ -76,8 +76,9 @@ sub get_relationships {
     };
   }
   my $decoded_resp;
-  eval { 
-    $decoded_resp = $agent->get_node($$self,$self->_get_url_suffix($action) );
+  eval {
+    my @a = split /\//,$self->_get_url_suffix($action);
+    $decoded_resp = $agent->get_node($$self,@a);
   };
   my $e;
   if ($e = Exception::Class->caught('REST::Neo4p::Exception')) {

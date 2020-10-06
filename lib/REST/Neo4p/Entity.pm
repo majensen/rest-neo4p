@@ -399,8 +399,8 @@ sub _get_url_suffix {
   my ($action) = @_;
   my $entity_type = ref $self;
   $entity_type =~ s/.*::(.*)/\L$1\E/;
-  return unless $ENTITY_TABLE->{$entity_type}{_actions};
-  my $suffix = $ENTITY_TABLE->{$entity_type}{_actions}{$action};
+  my $a = $ENTITY_TABLE->{$entity_type}{_actions};
+  my $suffix = ($a && $a->{$action}) // REST::Neo4p->agent->{_actions}{$action};
 }
 
 # get the $ENTITY_TABLE entry for the object

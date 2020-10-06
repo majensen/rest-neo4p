@@ -115,10 +115,10 @@ sub execute {
     (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
   }
   if ( ref(REST::Neo4p->agent) !~ /Neo4j::Driver/ ) {
-    return $self->_parse_response;
+    $self->_parse_response;
   }
   else { # Neo4j::Driver
-    return $self->_wrap_statement_result;
+    $self->_wrap_statement_result;
   }
   1;
 }
@@ -166,11 +166,10 @@ sub _wrap_statement_result {
   my $errors = REST::Neo4p->agent->last_errors;
   $self->{NAME} = $result->keys;
   $self->{NUM_OF_FIELDS} = scalar @{$self->{NAME}};
-  return sub {
-    my $rec = $result->fetch;
-    return unless defined $rec;
-    
+  $self->{_iterator} = sub {
+    return $result->fetch;
   };
+  return;
 }
 
 # _parse_response sets up an iterator that pulls a row's worth of objects from

@@ -163,19 +163,20 @@ sub post_transaction {
     try {
       $txn++;
       $self->{_txns}{$txn} = $self->session->begin_transaction;
-      return { commit => "transaction/$txn/commit" };
+      return { commit => "transaction/$txn/commit", errors => [] };
     } catch {
       $txn--;
       return { errors => [$_] };
     };
   }
-  elsif ($ary->[1] eq 'commit') { # commit
+  elsif ($ary->[1] && ($ary->[1] eq 'commit')) { # commit
     my $tx = delete $self->{_txns}->{$$ary[0]};
     unless (defined $tx) {
       REST::Neo4p::LocalException->throw("Transaction has vanished\n");
     }
     try {
       $tx->commit;
+      return { results => [], errors => [] }; # would there ever be a non-trival return from a commit?
     } catch {
       REST::Neo4p::Neo4jException->throw($_);
     };
@@ -185,10 +186,11 @@ sub post_transaction {
     my $stmt = $qry_h->{statements}->[0]->{statement};
     my $params = $qry_h->{statements}->[0]->{parameters};
     try {
-      my $result = $tx->run($stmt, $params);
-      return $result;
+      return $tx->run($stmt, $params);
     } catch {
+      $DB::single=1;
       REST::Neo4p::Neo4jException->throw($_);
+      
     };
   }
 }
@@ -199,7 +201,7 @@ sub delete_transaction {
   unless (defined $txn) {
     REST::Neo4p::LocalException->throw("delete_transaction requires txn number as arg 1\n");
   }
-  $tx = delete $self->{_txns}->{$txn};
+  my $tx = delete $self->{_txns}->{$txn};
   unless (defined $tx) {
     REST::Neo4p::LocalException->throw("Transaction has vanished\n");
   }
@@ -722,6 +724,7 @@ sub post_index {
       my $seek = ($ent eq 'node' ? 'seekNodes' : 'seekRelationships');
       # first, check index with key:value
       $result = $self->run_in_session("call db.index.explicit.$seek(".join(', ', map { _quote_maybe($_) } ($idx, $$content{key}, $$content{value})).")");
+      return if $self->last_errors;
       if ($result->has_next) { # found it
 	if (defined $addl_parameters && ($addl_parameters->{uniqueness} eq 'create_or_fail')) {
 	  REST::Neo4p::ConflictException->throw("found entity with create_or_fail specified");

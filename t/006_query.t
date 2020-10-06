@@ -16,7 +16,7 @@ use_ok('REST::Neo4p');
 
 # $SIG{__DIE__} = sub { if (ref $_[0]) { $_[0]->rethrow } else { print $_[0] }};
 my $build;
-my ($user,$pass);
+my ($user,$pass) = @ENV{qw/REST_NEO4P_TEST_USER REST_NEO4P_TEST_PASS/};
 
 eval {
   $build = Module::Build->current;
@@ -24,7 +24,8 @@ eval {
   $pass = $build->notes('pass');
 };
 
-my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
+my $TEST_SERVER = $build ? $build->notes('test_server') : $ENV{REST_NEO4P_TEST_SERVER} // 'http://127.0.0.1:7474';
+
 my $num_live_tests = 1;
 
 my $not_connected = connect($TEST_SERVER,$user,$pass);

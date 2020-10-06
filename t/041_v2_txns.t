@@ -1,6 +1,5 @@
-#$Id$
-# use Test::More tests => 29;
-use Test::More skip_all => 'Neo4j 3.2.1 issue with transaction endpoint';
+
+use Test::More tests => 29;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
@@ -16,7 +15,7 @@ my @cleanup;
 
 #$SIG{__DIE__} = sub { print $_[0] };
 my $build;
-my ($user,$pass);
+my ($user,$pass) = @ENV{qw/REST_NEO4P_TEST_USER REST_NEO4P_TEST_PASS/};
 
 eval {
   $build = Module::Build->current;
@@ -24,7 +23,8 @@ eval {
   $pass = $build->notes('pass');
 };
 
-my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
+my $TEST_SERVER = $build ? $build->notes('test_server') : $ENV{REST_NEO4P_TEST_SERVER} // 'http://127.0.0.1:7474';
+
 my $num_live_tests = 29;
 my $not_connected = connect($TEST_SERVER,$user,$pass);
 diag "Test server unavailable (".$not_connected->message.") : tests skipped" if $not_connected;
@@ -44,20 +44,20 @@ SKIP : {
   my $idx_name = $t->nix->name;
   my $stmt1 =<<STMT1;
  START n = node:${idx_name}(name = 'I')
- MATCH n-[r:good]-m
- CREATE n-[s:bosom]->m
+ MATCH (n)-[r:good]-(m)
+ CREATE (n)-[s:bosom]->(m)
 STMT1
   my $stmt2 =<<STMT2;
   START n = node:${idx_name}(name = { name })
-  MATCH n-[:umm]-m
-  CREATE UNIQUE m-[:prettygood]->u
+  MATCH (n)-[:umm]-(m)
+  CREATE UNIQUE (m)-[:prettygood]->(u)
   RETURN u
 STMT2
   my $uuid = $t->uuid;
   my $stmt3=<<STMT3;
   START m = node:${idx_name}("name:*")
-  MATCH m,u
-  WHERE m-[:prettygood]->u
+  MATCH (m),(u)
+  WHERE (m)-[:prettygood]->(u)
   SET u.name='Fred',u.uuid='$uuid'
   RETURN u, u.name
 STMT3
@@ -89,6 +89,7 @@ STMT3
   is scalar $m->get_relationships, 1, 'he has 1 relationship before rollback';
   ok $neo4p->begin_work, 'begin transaction';
   ok defined $q->execute(name => 'she'), 'exec stmt 2';
+  $DB::single=1;
   ok defined $w->execute, 'exec stmt 3';
   my $row = $w->fetch;
   is_deeply $row, [ { name => 'Fred', uuid => $uuid }, 'Fred' ], 'check simple txn row return';
