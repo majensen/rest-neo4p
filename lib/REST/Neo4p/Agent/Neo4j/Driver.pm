@@ -20,7 +20,9 @@ BEGIN {
 
 sub new {
   my ($class, @args) = @_;
-  my $self = {};
+  my $self = {
+    _args => (@args ? \@args : undef), # pass args through to driver
+   };
   return bless $self, $class;
 }
 
@@ -136,6 +138,7 @@ sub connect {
   }
   try {
     $drv = Neo4j::Driver->new($self->server_url);
+    $drv->config( @{$self->{_args}} ) if $self->{_args};
   } catch {
     REST::Neo4p::LocalException->throw("Problem creating new Neo4j::Driver: $_");
   };

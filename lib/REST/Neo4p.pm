@@ -36,8 +36,9 @@ sub set_handle {
 
 sub create_and_set_handle {
   my $class = shift;
+  my @args = @_;
   $HANDLE = @HANDLES;
-  $HANDLES[$HANDLE]->{_agent} = REST::Neo4p::Agent->new(agent_module => $AGENT_MODULE);
+  $HANDLES[$HANDLE]->{_agent} = REST::Neo4p::Agent->new(agent_module => $AGENT_MODULE, @args);
   $HANDLES[$HANDLE]->{_q_endpoint} = 'cypher';
   return $HANDLE;
 }
@@ -107,9 +108,10 @@ sub handle {
 
 sub agent {
   my $neo4p = shift;
+  my @args = @_;
   unless (defined $HANDLES[$HANDLE]->{_agent}) {
     eval {
-      $HANDLES[$HANDLE]->{_agent} = REST::Neo4p::Agent->new(agent_module => $AGENT_MODULE);
+      $HANDLES[$HANDLE]->{_agent} = REST::Neo4p::Agent->new(agent_module => $AGENT_MODULE, @args);
     };
     if (my $e = REST::Neo4p::Exception->caught()) {
       # TODO : handle different classes

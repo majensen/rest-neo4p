@@ -186,11 +186,10 @@ sub post_transaction {
     my $stmt = $qry_h->{statements}->[0]->{statement};
     my $params = $qry_h->{statements}->[0]->{parameters};
     try {
-      return $tx->run($stmt, $params);
+      $self->{_last_result} = $tx->run($stmt, $params);
     } catch {
-      $DB::single=1;
+      $self->{_last_errors} = $_;
       REST::Neo4p::Neo4jException->throw($_);
-      
     };
   }
 }

@@ -36,6 +36,8 @@ my $neo4p = 'REST::Neo4p';
 my ($n, $m);
 SKIP : {
   skip 'no local connection to neo4j', $num_live_tests if $not_connected;
+  REST::Neo4p->create_and_set_handle(cypher_filter => 'params');
+  connect($TEST_SERVER, $user, $pass);
   ok my $t = Neo4p::Test->new, 'test graph object';
   ok $t->create_sample, 'create sample graph';
   is $neo4p->q_endpoint, 'cypher', 'endpt starts out as cypher';
@@ -74,6 +76,7 @@ STMT3
   @r = $n->get_relationships;
   is @r, 5, 'committed, now 5 relationships';
   $q = REST::Neo4p::Query->new($stmt2);
+  $DB::single=1;
   $q->{RaiseError} = 1;
   my $w = REST::Neo4p::Query->new($stmt3);
   $w->{RaiseError} = 1;
@@ -89,12 +92,17 @@ STMT3
   is scalar $m->get_relationships, 1, 'he has 1 relationship before rollback';
   ok $neo4p->begin_work, 'begin transaction';
   ok defined $q->execute(name => 'she'), 'exec stmt 2';
-  $DB::single=1;
+    $DB::single=1;
   ok defined $w->execute, 'exec stmt 3';
+  $w->{ResponseAsObjects} = undef;
   my $row = $w->fetch;
+  # kludge for Driver
+  delete $row->[0]->{_meta};
   is_deeply $row, [ { name => 'Fred', uuid => $uuid }, 'Fred' ], 'check simple txn row return';
   ok $neo4p->commit, 'commit';
-  is scalar($m->get_relationships), 2, 'now he has 2 relationships';  
+  is scalar($m->get_relationships), 2, 'now he has 2 relationships';
+
+
   $_->remove for $n->get_relationships;
   $_->remove for $m->get_relationships;
 }

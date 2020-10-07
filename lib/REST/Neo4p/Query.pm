@@ -165,9 +165,31 @@ sub _wrap_statement_result {
   my $result = REST::Neo4p->agent->last_result;
   my $errors = REST::Neo4p->agent->last_errors;
   $self->{NAME} = $result->keys;
-  $self->{NUM_OF_FIELDS} = scalar @{$self->{NAME}};
+  my $n = $self->{NUM_OF_FIELDS} = scalar @{$self->{NAME}};
   $self->{_iterator} = sub {
-    return $result->fetch;
+    my $rec =  $result->fetch;
+    my @row;
+    my $as_object = $self->{ResponseAsObjects};
+    for (my $i=0;$i<$n;$i++) {
+      my $elt = $rec->get($i);
+      for (ref($elt)) {
+	/Node$/ && do {
+	  push @row, $as_object ? REST::Neo4p::Node->new_from_json_response($elt) : $elt;
+	  last;
+	};
+	/Relationship/ && do {
+	  push @row, $as_object ? REST::Neo4p::Relationship->new_from_json_response($elt) : $elt;
+	  last;
+	};
+	/Path/ && do {
+	  push @row, $as_object ? REST::Neo4p::Path->new_from_json_response($elt) : $elt;
+	  last;
+	};
+	#else
+	push @row, $elt;
+      }
+    }
+    return \@row;
   };
   return;
 }
