@@ -4,6 +4,7 @@
 use Test::More qw(no_plan);
 use Module::Build;
 use lib '../lib';
+use lib 'lib';
 use lib 't/lib';
 use Neo4p::Connect;
 use strict;
