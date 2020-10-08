@@ -3,6 +3,7 @@ use Test::More tests => 29;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
+use lib 'lib';
 use lib 't/lib';
 use Neo4p::Connect;
 use REST::Neo4p;
