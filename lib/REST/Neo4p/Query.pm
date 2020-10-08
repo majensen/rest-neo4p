@@ -70,16 +70,16 @@ sub execute {
      );
   }
   eval {
-    use experimental qw/smartmatch/;
-    given ($endpt) {
-      when (/cypher/) {
+    for ($endpt) {
+      /cypher/ && do {
 	$agent->$endpt(
 	  [], 
 	  { query => $self->query, params => $self->params },
 	  {':content_file' => $self->tmpf->filename}
 	 );
-      }
-      when (/transaction/) {
+	last;
+      };
+      /transaction/ && do {
 	# unfortunately, the order of 'statement' and 'parameters'
 	# is strict in the content (2.0.0-M06)
 	tie my %stmt, 'Tie::IxHash';
@@ -92,8 +92,9 @@ sub execute {
 	   },
 	  {':content_file' => $self->tmpf->filename}
 	 );
-      }
-      default {
+	last;
+      };
+      do {
 	REST::Neo4p::TxException->throw(
 	  "Unknown query REST endpoint '".REST::Neo4p->q_endpoint."'\n"
 	 );
@@ -167,28 +168,48 @@ sub _wrap_statement_result {
   $self->{NAME} = $result->keys;
   my $n = $self->{NUM_OF_FIELDS} = scalar @{$self->{NAME}};
   $self->{_iterator} = sub {
-    my $rec =  $result->fetch;
     my @row;
-    my $as_object = $self->{ResponseAsObjects};
-    for (my $i=0;$i<$n;$i++) {
-      my $elt = $rec->get($i);
-      for (ref($elt)) {
-	/Node$/ && do {
-	  push @row, $as_object ? REST::Neo4p::Node->new_from_json_response($elt) : $elt;
-	  last;
-	};
-	/Relationship/ && do {
-	  push @row, $as_object ? REST::Neo4p::Relationship->new_from_json_response($elt) : $elt;
-	  last;
-	};
-	/Path/ && do {
-	  push @row, $as_object ? REST::Neo4p::Path->new_from_json_response($elt) : $elt;
-	  last;
-	};
-	#else
-	push @row, $elt;
+    my $rec =  $result->fetch;
+    return unless $rec;
+    eval {
+      my $as_object = $self->{ResponseAsObjects};
+      for (my $i=0;$i<$n;$i++) {
+	my $elt = $rec->get($i);
+	for (ref($elt)) {
+	  /Node$/ && do {
+	    push @row, $as_object ?
+	      REST::Neo4p::Node->new_from_json_response($elt) :
+		REST::Neo4p::Node->simple_from_json_response($elt);
+	    last;
+	  };
+	  /Relationship/ && do {
+	    push @row, $as_object ?
+	      REST::Neo4p::Relationship->new_from_json_response($elt) : 
+		REST::Neo4p::Relationship->simple_from_json_response($elt);
+	    last;
+	  };
+	  /Path/ && do {
+	    push @row, $as_object ?
+	      REST::Neo4p::Path->new_from_json_response($elt) : 
+		REST::Neo4p::Path->simple_from_json_response($elt);
+	    last;
+	  };
+	  #else
+	  push @row, $elt;
+	}
       }
-    }
+    };
+    if (my $e = Exception::Class->caught()) {
+      if ($e =~ /j_parse|json/i) {
+	$e = REST::Neo4p::StreamException->new(message => $e);
+	$self->{_error} = $e;
+	$e->throw if $self->{RaiseError};
+	return;
+      }
+      else {
+	die $e;
+      }
+    }      
     return \@row;
   };
   return;

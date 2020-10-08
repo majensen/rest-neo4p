@@ -222,10 +222,23 @@ sub simple_from_json_response {
   my $class = shift;
   my ($decoded_resp) = @_;
   my $ret;
-  # node id
-  ($ret->{_node}) = $decoded_resp->{self} =~ m{.*/([0-9]+)$};
-  # node properties
-  $ret->{$_} = $decoded_resp->{data}->{$_} for keys %{$decoded_resp->{data}};
+  for (ref $decoded_resp) {
+    /HASH/ && do {
+      # node id
+      ($ret->{_node}) = $decoded_resp->{self} =~ m{.*/([0-9]+)$};
+      # node properties
+      $ret->{$_} = $decoded_resp->{data}->{$_} for keys %{$decoded_resp->{data}};
+      last;
+    };
+    /Driver/ && do {
+      $ret->{_node} = $decoded_resp->id;
+      $ret->{$_} = $decoded_resp->properties->{$_} for keys %{$decoded_resp->properties};
+      last;
+    };
+    do {
+      die "?";
+    };
+  }
   return $ret;
 }
 

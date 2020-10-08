@@ -143,7 +143,7 @@ sub post_cypher {
   my $self = shift;
   my ($ary, $qry, $addl_headers) = @_;
   # $ary not used
-  my $result = $self->session->run( $qry->{query}, $qry->{params} // () );
+  my $result = $self->run_in_session( $qry->{query}, $qry->{params} // () );
   return $result; # ?
 }
 

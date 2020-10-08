@@ -60,8 +60,8 @@ sub new_from_driver_obj {
   my ($pth_obj) = @_;
   my $obj = bless {}, $class;
 
-  my @nodes = $obj->nodes;
-  my @relns = $obj->relationships;
+  my @nodes = $pth_obj->nodes;
+  my @relns = $pth_obj->relationships;
   $obj->{_length} = scalar @relns;
 
   while (my $n = shift @nodes) {

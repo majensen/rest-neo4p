@@ -59,7 +59,6 @@ SKIP : {
   ok my $r8 = $n4->relate_to($n5, 'parent_of');
 
   push @cleanup, ($r1,$r2,$r3,$r4,$r5,$r6,$r7,$r8);
-
   ok my $q = REST::Neo4p::Query->new("START n=node($$n1) MATCH (n)-->(x) RETURN x.name, x"), 'new node query';
  $q->{RaiseError} = 1;
 
@@ -88,6 +87,7 @@ SKIP : {
   ok $q = REST::Neo4p::Query->new("START n=node($$n5), m=node($$n3) MATCH path = (n)-[:child_of]->()-[:pal_of]->()-[:parent_of]->(m)  RETURN path");
 #  is $q->execute, 1, 'execute and return 1 path';
   ok $q->execute, 'execute';
+
   while (my $row = $q->fetch) {
       my $path = $row->[0];
       isa_ok $path, 'REST::Neo4p::Path';
@@ -96,7 +96,7 @@ SKIP : {
   }
 
   # test responses as simple structs
-  $DB::single=1;
+
   ok $q = REST::Neo4p::Query->new("START n=node($$n1) MATCH (n)-[:married_to]->(x) RETURN x.name, x"), 'node query';
   $q->{ResponseAsObjects} = 0;
   ok $q->execute, 'execute (node)';
