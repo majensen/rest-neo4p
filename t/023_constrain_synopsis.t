@@ -5,6 +5,7 @@ use Test::Exception;
 use File::Temp qw(tempfile);
 use Module::Build;
 use lib '../lib';
+use lib 'lib';
 use lib 't/lib';
 use Neo4p::Connect;
 use REST::Neo4p;
