@@ -71,7 +71,7 @@ sub get_data {
   my @args = @_;
   my ($action, $args) = _parse_action(\@args);
   unless ($action) {
-    REST::Neo4p::LocalException->throw('get_data requires arg');
+    REST::Neo4p::NotFoundException->throw(code => 404, message => "get_data: action unrecognized");
   }
   my $dispatch = "get_$action";
   $self->$dispatch(@$args);
@@ -82,7 +82,7 @@ sub delete_data {
   my @args = @_;
   my ($action, $args) = _parse_action(\@args);
   unless ($action) {
-    REST::Neo4p::LocalException->throw('delete_data requires arg');
+    REST::Neo4p::NotFoundException->throw(code => 404, message => "delete_data: action unrecognized");
   }
   my $dispatch = "delete_$action";
   $self->$dispatch(@$args);
@@ -93,7 +93,7 @@ sub post_data {
   my @args = @_;
   my ($action, $args) = _parse_action($args[0]);
   unless ($action) {
-    REST::Neo4p::LocalException->throw('post_data requires arg');
+    REST::Neo4p::NotFoundException->throw(code => 404, message => "post_data: action unrecognized");
   }
   my $dispatch = "post_$action";
   $self->$dispatch(@args);
@@ -104,7 +104,7 @@ sub put_data {
   my @args = @_;
   my ($action, $args) = _parse_action($args[0]);
   unless ($action) {
-    REST::Neo4p::LocalException->throw('post_data requires arg');
+    REST::Neo4p::NotFoundException->throw(code => 404, message => "put_data: action unrecognized");
   }
   my $dispatch = "put_$action";
   $self->$dispatch(@args);

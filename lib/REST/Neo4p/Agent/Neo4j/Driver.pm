@@ -14,6 +14,8 @@ use HTTP::Response;
 use strict;
 use warnings;
 
+my $WARN_ON_ERROR;
+
 BEGIN {
   $REST::Neo4p::Agent::Neo4j::Driver::VERSION = '0.4000';
 }
@@ -205,26 +207,32 @@ sub run_in_session {
   };
   if ($self->{_last_errors}) {
     try {
-      if ($self->last_errors =~ /neo4j enterprise/i) {
-	REST::Neo4p::Neo4jTightwadException->throw( error => "You must spend thousands of dollars a year to use this feature; see agent->last_errors()");
-      }
-      elsif ($self->last_errors =~ /ConstraintValidationFailed/) {
-	REST::Neo4p::ConflictException->throw( code => 409,
-					      neo4j_message => $self->last_errors);
-      }
-      elsif ($self->last_errors =~ /NotFound/) {
-	REST::Neo4p::NotFoundException->throw( code => 404,
-					       neo4j_message => $self->last_errors );
-      }
-      else {
-	REST::Neo4p::Neo4jException->throw( error => "Neo4j errors:\n".$self->last_errors );
+      for ($self->last_errors) {
+	/neo4j enterprise/ && do {
+	  REST::Neo4p::Neo4jTightwadException->throw( code=>599, error => "You must spend thousands of dollars a year to use this feature; see agent->last_errors()");
+	};
+	/ConstraintValidationFailed/ && do {
+	  REST::Neo4p::ConflictException->throw( code => 409,
+						 neo4j_message => $self->last_errors);
+	};
+	/NotFound/ && do {
+	  REST::Neo4p::NotFoundException->throw( code => 404,
+						 neo4j_message => $self->last_errors );
+	};
+	/SyntaxError/ && do {
+	  REST::Neo4p::QuerySyntaxException->throw( code => 400,
+						    neo4j_message => $self->last_errors);
+	};
+	do {
+	  REST::Neo4p::Neo4jException->throw( error => "Neo4j errors:\n".$self->last_errors );
+	};
       }
     } catch {
-      if (ref =~ /Conflict/) {
-	$_->rethrow;
+      if ($WARN_ON_ERROR) {
+	warn $_;
       }
       else {
-	warn $_;
+	$_->rethrow;
       }
       return;
     };
