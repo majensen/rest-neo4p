@@ -2,6 +2,7 @@
 #$Id$
 use Test::More;
 use Module::Build;
+use lib 'lib';
 use lib '../lib';
 use lib 't/lib';
 use Neo4p::Connect;
@@ -11,14 +12,14 @@ use warnings;
 no warnings qw(once);
 
 my $build;
-my ($user,$pass);
+my ($user,$pass) = @ENV{qw/REST_NEO4P_TEST_USER REST_NEO4P_TEST_PASS/};
 
 eval {
     $build = Module::Build->current;
     $user = $build->notes('user');
     $pass = $build->notes('pass');
 };
-my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
+my $TEST_SERVER = $build ? $build->notes('test_server') : $ENV{REST_NEO4P_TEST_SERVER} // 'http://127.0.0.1:7474';
 my $num_live_tests = 1;
 
 use_ok('REST::Neo4p');

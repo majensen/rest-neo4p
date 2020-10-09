@@ -1,7 +1,7 @@
 #-*-perl-*-
 use Test::More tests => 38;
 use Module::Build;
-use lib '../lib';
+use lib qw|../lib lib|;
 use lib 't/lib';
 use Neo4p::Connect;
 use strict;

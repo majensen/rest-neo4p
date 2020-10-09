@@ -11,6 +11,7 @@ my $build =  Module::Build->new
       requires => {
 	'JSON' => 2.0,
 	'JSON::XS' => 2.0,
+	'JSON::ize' => 0.202,
 	'HOP::Stream' => 0,
 	'URI::Escape' => 3.3,
 	'LWP::UserAgent' => 6.04,
@@ -22,7 +23,8 @@ my $build =  Module::Build->new
        },
       recommends => {
 	'Mojo::UserAgent' => 0,
-	'HTTP::Thin' => 0
+	'HTTP::Thin' => 0,
+	'Neo4j::Driver' => '0.16',
        },
       configure_requires => {
 	'Module::Build' => 0
@@ -31,18 +33,22 @@ my $build =  Module::Build->new
 	'Module::Build' => 0,
 	'Test::More' => 0,
 	'Test::Exception' => 0,
+	'Test::Warn' => 0, 
 	'Test::NoWarnings' => 0,
 	'Mock::Quick' => 0,
 	'List::MoreUtils' => 0,
 	'Mojo::Exception' => 0,
-	experimental => 0
+	experimental => 0,
+	'IPC::Run' => 0,
+	'IO::Pty' => 0,
 
        },
       build_recommends => {
 	 'Test::Pod' => 1.0,
 #         'Test::Memory::Usage' => 0,
 	 'Mojo::UserAgent' => 0,
-	 'HTTP::Thin' => 0
+	 'HTTP::Thin' => 0,
+	 'Neo4j::Driver' => '0.16',
 	},
       meta_merge => {
 	resources => {
@@ -56,4 +62,5 @@ my $build =  Module::Build->new
 $build->notes( test_server => $ENV{REST_NEO4P_TEST_SERVER} // $build->prompt("Server for live tests:", "http://127.0.0.1:7474"));
 $build->notes( user => $ENV{REST_NEO4P_TEST_USER} // $build->prompt("Username:", "neo4j") );
 $build->notes( pass => $ENV{REST_NEO4P_TEST_PASS} // $build->prompt("Pass:", "neo4j") );
+$build->notes( agent_mod => $ENV{REST_NEO4P_AGENT_MODULE} // $build->prompt("Agent module:", "LWP::UserAgent") );
 $build->create_build_script;

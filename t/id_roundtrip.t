@@ -2,13 +2,13 @@
 use Test::More tests => 35;
 use Test::Exception;
 use Module::Build;
-use lib '../lib';
+use lib qw|../lib lib|;
 use lib 't/lib';
 use Neo4p::Connect;
 use strict;
 use warnings;
 my @cleanup;
-use_ok('REST::Neo4p');
+my ($user,$pass) = @ENV{qw/REST_NEO4P_TEST_USER REST_NEO4P_TEST_PASS/};
 
 my $build;
 my ($user,$pass);
@@ -19,7 +19,7 @@ eval {
   $pass = $build->notes('pass');
 };
 
-my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
+my $TEST_SERVER = $build ? $build->notes('test_server') : $ENV{REST_NEO4P_TEST_SERVER} // 'http://127.0.0.1:7474';
 
 my $not_connected = connect($TEST_SERVER,$user,$pass);
 diag "Test server unavailable (".$not_connected->message.") : tests skipped" if $not_connected;

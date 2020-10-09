@@ -15,7 +15,7 @@ no warnings qw(once);
 my @cleanup;
 
 my $build;
-my ($user,$pass);
+my ($user,$pass) = @ENV{qw/REST_NEO4P_TEST_USER REST_NEO4P_TEST_PASS/};
 
 eval {
   $build = Module::Build->current;
@@ -23,7 +23,7 @@ eval {
   $pass = $build->notes('pass');
 };
 
-my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
+my $TEST_SERVER = $build ? $build->notes('test_server') : $ENV{REST_NEO4P_TEST_SERVER} // 'http://127.0.0.1:7474';
 my $num_live_tests = 27;
 my $not_connected = connect($TEST_SERVER,$user,$pass);
 diag "Test server unavailable (".$not_connected->message.") : tests skipped" if $not_connected;
