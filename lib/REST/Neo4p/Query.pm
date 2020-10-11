@@ -175,24 +175,26 @@ sub _wrap_statement_result {
       my $as_object = $self->{ResponseAsObjects};
       for (my $i=0;$i<$n;$i++) {
 	my $elt = $rec->get($i);
+	my $cvt = sub {
+	  return $_[0] unless ref($_[0]) =~ /Driver/;
+	  my ($type) = ref($_[0]) =~ /::([^:]+)$/;
+	  my $cls = "REST::Neo4p::$type";
+	  return $as_object ? $cls->new_from_json_response($_[0]) :
+	    $cls->simple_from_json_response($_[0]);
+	  };
 	for (ref($elt)) {
-	  /Node$/ && do {
-	    push @row, $as_object ?
-	      REST::Neo4p::Node->new_from_json_response($elt) :
-		REST::Neo4p::Node->simple_from_json_response($elt);
-	    last;
+	  /Driver/ && do {
+	    $elt = $cvt->($elt);
 	  };
-	  /Relationship/ && do {
-	    push @row, $as_object ?
-	      REST::Neo4p::Relationship->new_from_json_response($elt) : 
-		REST::Neo4p::Relationship->simple_from_json_response($elt);
-	    last;
+	  /HASH/ && do {
+	    for (keys %$elt) {
+	      $elt->{$_} = $cvt->($elt->{$_})
+	    }
 	  };
-	  /Path/ && do {
-	    push @row, $as_object ?
-	      REST::Neo4p::Path->new_from_json_response($elt) : 
-		REST::Neo4p::Path->simple_from_json_response($elt);
-	    last;
+	  /ARRAY/ && do {
+	    for (@$elt) {
+	      $_ = $cvt->($_);
+	    }
 	  };
 	  #else
 	  push @row, $elt;
@@ -209,8 +211,14 @@ sub _wrap_statement_result {
       else {
 	die $e;
       }
-    }      
-    return \@row;
+    }
+    # flatten if single array ref returned
+    if (@row==1 and ref($row[0]) eq 'ARRAY') {
+      return $row[0];
+    }
+    else {
+      return \@row;
+    }
   };
   return;
 }

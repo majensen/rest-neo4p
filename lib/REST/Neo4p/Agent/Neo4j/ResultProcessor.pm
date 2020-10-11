@@ -156,7 +156,8 @@ $result_processors{get_index} = sub {
     my $ret = [];
     while (my $rec = $_->fetch) {
       my $r = $rec->get(0);
-      push @$ret, { metadata => { id => $r->id, labels => [$r->labels] },
+      my @labels = (ref($r) =~ /Node/ ? (labels => [$r->labels]) : ());
+      push @$ret, { metadata => { id => $r->id, @labels },
 		    self => 'node/'.$r->id,
 		    data => $r->properties };
     }
