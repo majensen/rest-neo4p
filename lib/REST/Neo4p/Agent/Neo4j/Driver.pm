@@ -40,9 +40,19 @@ sub credentials  {
 
 sub user { shift->{_user} }
 sub pwd { shift->{_pwd} }
+sub server_uri { shift->{_server_uri} }
 sub last_result { shift->{_last_result} }
 sub last_errors { shift->{_last_errors} }
-
+sub ssl_opts {
+  my $self = shift;
+  my %args = @_;
+  if (%args) {
+    return $self->{_ssl_opts} = \%args;
+  }
+  else {
+    return %{$self->{_ssl_opts}};
+  }
+}
 sub driver { shift->{__driver} }
 
 # these are no-ops
@@ -77,18 +87,17 @@ sub protocols_allowed {
 
 sub timeout {
   my $self=shift;
-  $self->driver && $self->driver->config(timeout => shift());
-  return;
+  return ($_[0] ? $self->{_timeout} = $_[0] : $self->{_timeout});
 }
 
 sub tls {
   my $self=shift;
-  $self->driver && $self->driver->config( tls => shift());
+  return ($_[0] ? $self->{_tls} = $_[0] : $self->{_tls});
 }
 
 sub tls_ca {
   my $self = shift;
-  $self->driver && $self->driver->config( tls_ca => shift());
+  return ($_[0] ? $self->{_tls_ca} = $_[0] : $self->{_tls_ca});
 }
 
 sub database {
@@ -125,7 +134,7 @@ sub connect {
   my ($server, $dbname) = @_;
   my ($drv, $uri);
   if (defined $server) {
-    $uri = URI->new($server);
+    $uri = $self->{_server_uri} = URI->new($server);
     if ($uri->userinfo) {
       my ($u,$p) = split(/:/,$uri->userinfo);
       $self->credentials($uri->host,'',$u,$p);
@@ -148,24 +157,34 @@ sub connect {
     $drv->basic_auth($self->user, $self->pwd);
   }
   $self->{__driver} = $drv;
-  try {
-    if ($uri->scheme =~ /^http/) {
-      my $client = $drv->session->{transport}{client};
-      $client->GET('/');
-      die $client->responseContent unless $client->responseCode =~ /^2/;
-      unless ($self->{_actions}{neo4j_version} =
-		J($client->responseContent)->{neo4j_version}) {
-	$client->GET('/db/data');
-	$self->{_actions}{neo4j_version} = J($client->responseContent)->{neo4j_version} or
-	  die "Can't find neo4j_version from server";
+  for (my $i = $REST::Neo4p::Agent::RQ_RETRIES; $i>0; $i--) {
+    my $f;
+    try {
+      if ($uri->scheme =~ /^http/) {
+	my $client = $drv->session->{transport}{client};
+	$client->GET('/');
+	die $client->responseContent unless $client->responseCode =~ /^2/;
+	unless ($self->{_actions}{neo4j_version} =
+		  J($client->responseContent)->{neo4j_version}) {
+	  $client->GET('/db/data');
+	  $self->{_actions}{neo4j_version} = J($client->responseContent)->{neo4j_version} or
+	    die "Can't find neo4j_version from server";
+	}
       }
-    }
-    elsif ($uri->scheme =~ /^bolt/) {
-      1;
-    }
-  } catch {
-    REST::Neo4p::CommException->throw($_);
-  };
+      elsif ($uri->scheme =~ /^bolt/) {
+	1;
+      }
+      $f=1;
+    } catch {
+      if ($i > 1) {
+	sleep $REST::Neo4p::Agent::RETRY_WAIT;
+      }
+      else {
+	REST::Neo4p::CommException->throw(message => "$_ (after $REST::Neo4p::Agent::RQ_RETRIES retries)");
+      }
+    };
+    last if $f;
+  }
   # set actions
   try {
     my $tx = $self->session->begin_transaction;
@@ -190,7 +209,19 @@ sub session {
   unless ($self->driver) {
     REST::Neo4p::LocalException->throw("No driver connection; can't create session ( try \$agent->connect() )\n");
   }
-  return $self->driver->session( $self->database ? (database => $self->database) : () );
+  my $session = $self->driver->session( $self->database ? (database => $self->database) : () );
+  if ($self->server_uri->scheme =~ /^http/) {
+    my $client = $session->{transport}{client};
+    $client->setTimeout($self->timeout);
+    $client->setCa($self->tls_ca);
+    if ($self->{_ssl_opts}) {
+      $client->getUseragent->ssl_opts($self->ssl_opts);
+    }
+  }
+  elsif ($self->server_uri->scheme =~ /^bolt/) {
+    1;
+  }
+  return $session;
 }
 
 # run_in_session( $query_string, { parm => value, ... } )

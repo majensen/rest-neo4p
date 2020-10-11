@@ -19,6 +19,8 @@ eval {
 my $TEST_SERVER = $build ? $build->notes('test_server') : $ENV{REST_NEO4P_TEST_SERVER} // 'http://127.0.0.1:7474';
 my $num_live_tests = 3;
 
+
+
 use_ok('REST::Neo4p');
 
 my $not_connected;
@@ -42,8 +44,9 @@ diag "No local connection to Neo4j; tests skipped" if $not_connected;
 
 SKIP : {
   skip 'no local connection to neo4j', $num_live_tests if $not_connected;
+  skip 'Agent is Neo4j::Driver' if $ENV{REST_NEO4P_AGENT_MODULE} eq 'Neo4j::Driver';
   my $AGENT = REST::Neo4p->agent;
-  ok $AGENT->{_actions}{node} =~ s/747[34]/8474/, 'change post port to 8474 (should refuse connection)';
+  ok $AGENT->{_actions}{node} =~ s/:[0-9]+/:8474/, 'change post port to 8474 (should refuse connection)';
   $REST::Neo4p::AGENT::RETRY_WAIT=1; # speed it up for test
   throws_ok { $AGENT->get_node(1) } 'REST::Neo4p::CommException';
   like $@, qr/after 3 retries/, 'error message indicates retries attempted';

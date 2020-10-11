@@ -9,9 +9,7 @@ use strict;
 use warnings;
 my @cleanup;
 my ($user,$pass) = @ENV{qw/REST_NEO4P_TEST_USER REST_NEO4P_TEST_PASS/};
-
 my $build;
-my ($user,$pass);
 
 eval {
   $build = Module::Build->current;
