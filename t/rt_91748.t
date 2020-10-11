@@ -28,7 +28,9 @@ diag "Test server unavailable (".$not_connected->message.") : tests skipped" if 
 SKIP : {
   skip 'no local connection to neo4j', $num_live_tests if $not_connected;
   $index = REST::Neo4p::Index->new('node', $test_index); 
-  lives_ok { $n = $index->create_unique(bar => "0", {bar => "0"}) };
+  lives_ok {
+    $n = $index->create_unique(bar => "0", {bar => "0"})
+  };
   is $n->get_property('bar'),0, 'property set to 0';
 }
 

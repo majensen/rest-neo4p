@@ -31,6 +31,7 @@ SKIP : {
   my $source = 'flerb';
   SKIP : {
     skip "Server version $version < 2.0", $num_live_tests unless $VERSION_OK;
+    skip 'batch unimplemented for Neo4j::Driver', $num_live_tests if ref(REST::Neo4p->agent) =~ /Neo4j::Driver/;
     eval {
       batch {
       ok $dealerNode = REST::Neo4p::Node->new({source => $source}), 'create node in batch';

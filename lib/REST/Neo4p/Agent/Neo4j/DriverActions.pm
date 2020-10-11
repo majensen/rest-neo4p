@@ -696,7 +696,7 @@ sub post_index {
     $result = $self->run_in_session("call db.index.explicit.$for(\$name)",$content);
   }
   else {
-    REST::Neo4p::LocalException->throw("post_index add to index requires 'key','value'keys in \$content hash\n") unless ($content->{key} && $content->{value});
+    REST::Neo4p::LocalException->throw("post_index add to index requires 'key','value'keys in \$content hash\n") unless (defined $content->{key} && defined $content->{value});
     if (defined $content->{uri}) { # add entity
       my ($id) = $content->{uri} =~ /(?:node|relationship)\/([0-9]+)$/;
       REST::Neo4p::LocalException->throw("need a node or relationship uri for 'uri' key value in \$content hash\n") unless defined $id;
