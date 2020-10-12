@@ -81,6 +81,7 @@ STMT1
 }
 #}
 
-END {
-  $t && $t->delete_sample;
-}
+  END {
+    
+    eval { $t && $t->delete_sample; };
+  }
