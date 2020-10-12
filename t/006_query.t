@@ -115,7 +115,7 @@ SKIP : {
   $q->{ResponseAsObjects} = 0;
   ok $q->execute, 'execute (path)';
   $ret  = $q->fetch;
-  is scalar @{$ret->[0]}, 7, 'got nodes and relationships simple array';
+  is scalar @{$ret}, 7, 'got nodes and relationships simple array';
   1;
   
 
