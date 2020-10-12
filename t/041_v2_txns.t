@@ -39,6 +39,7 @@ SKIP : {
   REST::Neo4p->create_and_set_handle(cypher_filter => 'params');
   connect($TEST_SERVER, $user, $pass);
   ok my $t = Neo4p::Test->new, 'test graph object';
+  $DB::single=1;
   ok $t->create_sample, 'create sample graph';
   is $neo4p->q_endpoint, 'cypher', 'endpt starts out as cypher';
   ok $neo4p->begin_work, 'begin transaction';
@@ -96,9 +97,7 @@ STMT3
   ok defined $w->execute, 'exec stmt 3';
   $w->{ResponseAsObjects} = undef;
   my $row = $w->fetch;
-  # kludge for Driver
-  delete $row->[0]->{_meta};
-  is_deeply $row, [ { name => 'Fred', uuid => $uuid }, 'Fred' ], 'check simple txn row return';
+  is_deeply $row, [ { _node => $row->[0]{_node}, name => 'Fred', uuid => $uuid }, 'Fred' ], 'check simple txn row return';
   ok $neo4p->commit, 'commit';
   is scalar($m->get_relationships), 2, 'now he has 2 relationships';
 
