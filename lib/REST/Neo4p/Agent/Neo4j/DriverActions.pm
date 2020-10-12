@@ -12,7 +12,7 @@ use strict;
 use warnings;
 
 our %result_processors;
-my $SAFE_TOK = qr/[\p{PosixAlnum}:_]+/;
+my $SAFE_TOK = qr{[^[!#\$&()*+,./:;<=>@\]^`{|}~\\]+}; # allows %?-_'"
 
 my @action_tokens = qw/node label labels relationship types index schema constraint cypher transaction/;
 
@@ -58,6 +58,14 @@ my @available_actions =
 # args:
 # get|delete : my @url_components = @args;
 # post|put : my ($url_components, $content, $addl_headers) = @args;
+
+# throw local errors in place
+# capture neo4j / query errors and dispatch from a single routine (= run_in_session) 
+
+# note: most actions will return silently if called in void context. The result is then available in last_result(),
+# and is not processed. If called in a non-void context, the result is processed (via ResultProcessors) into a
+# json/Perl format suitable for parsing by REST::Neo4p
+# 
 
 # data
 
@@ -144,10 +152,8 @@ sub post_cypher {
   my ($ary, $qry, $addl_headers) = @_;
   # $ary not used
   my $result = $self->run_in_session( $qry->{query}, $qry->{params} // () );
-  return $result; # ?
+  return $result;
 }
-
-# TODO: transaction
 
 # Keep track of transactions with a cache hash and an arbitrary
 # sequence. Neo4j::Driver doesn't maintain the actual transaction
@@ -185,12 +191,8 @@ sub post_transaction {
     my $tx = $self->{_txns}{$$ary[0]};
     my $stmt = $qry_h->{statements}->[0]->{statement};
     my $params = $qry_h->{statements}->[0]->{parameters};
-    try {
-      $self->{_last_result} = $tx->run($stmt, $params);
-    } catch {
-      $self->{_last_errors} = $_;
-      REST::Neo4p::Neo4jException->throw($_);
-    };
+    my $result = $self->run_in_transaction($tx, $stmt, $params);
+    return $result;
   }
 }
 
@@ -573,7 +575,8 @@ sub get_label {
       push @cond, "n.$p=\$$p";
       $params->{$p} = uri_unescape($params->{$p});
       $params->{$p} =~ s/^["']//;
-      $params->{$p} =~ s/["']$//;      
+      $params->{$p} =~ s/["']$//;
+      $params->{$p}+=0 if looks_like_number $params->{$p};
     }
     my $where_clause = 'where '.join(' and ',@cond);
     $result = $self->run_in_session("match (n:$lbl) $where_clause return n", $params)
@@ -628,7 +631,7 @@ sub get_index {
 	REST::Neo4p::LocalException->throw("get_index : can't interpret parameters for either key-value or query search\n");
       }
       $value = uri_unescape($value);
-      looks_like_number $value && ($value = 0+$value);
+      $value +=0 if looks_like_number $value;
       $result = $self->run_in_session("call db.index.explicit.$seek(\$idx,\$key,\$value)",
 				      { idx => $idx, key => $key, value => $value });
     }
@@ -722,9 +725,11 @@ sub post_index {
       my $props = delete $content->{properties};
       my $seek = ($ent eq 'node' ? 'seekNodes' : 'seekRelationships');
       # first, check index with key:value
-      $result = $self->run_in_session("call db.index.explicit.$seek(".join(', ', map { _quote_maybe($_) } ($idx, $$content{key}, $$content{value})).")");
-      return if $self->last_errors;
-      if ($result->has_next) { # found it
+      eval {
+	$result = $self->run_in_session("call db.index.explicit.$seek(".join(', ', map { _quote_maybe($_) } ($idx, $$content{key}, $$content{value})).")");
+	$result = undef unless $result->has_next;
+      };
+      if ($result) { # found it
 	if (defined $addl_parameters && ($addl_parameters->{uniqueness} eq 'create_or_fail')) {
 	  REST::Neo4p::ConflictException->throw("found entity with create_or_fail specified");
 	}
@@ -745,11 +750,11 @@ sub post_index {
       for ($ent) {
 	/^node$/ && do {
 	  $result = $self->run_in_session("create (n) $set_clause return n");
-	  return if ($self->last_errors);
 	  $content->{id} = 0+$result->fetch->get(0)->id;
 	  $result = $self->run_in_session("match (n) where id(n)=\$id call db.index.explicit.addNode('$idx',n,\$key,\$value) yield success return success", $content);
-	  return if ($self->last_errors);
-	  $result = $self->run_in_session('match (n) where id(n)=$id return n',$content);
+	  if ($result->peek->get(0)) {
+	    $result = $self->run_in_session('match (n) where id(n)=$id return n',$content);
+	  }
 	  last;
 	};
 	/^relationship/ && do {
@@ -761,11 +766,11 @@ sub post_index {
 	  $content->{start} = 0+$start;
 	  $content->{end} = 0+$end;
 	  $result = $self->run_in_session("match (s), (t) where id(s)=\$start and id(t)=\$end create (s)-[n:$type]->(t) $set_clause return n", $content);
-	  return if ($self->last_errors);
 	  $content->{id} = 0+$result->fetch->get(0)->id;
 	  $result = $self->run_in_session("match ()-[r]->() where id(r)=\$id call db.index.explicit.addRelationship('$idx',r,\$key,\$value) yield success return success", $content);
-	  return if ($self->last_errors);
-	  $result = $self->run_in_session('match ()-[r]->() where id(r)=$id return r',$content);
+	  if ($result->peek->get(0)) {
+	    $result = $self->run_in_session('match ()-[r]->() where id(r)=$id return r',$content);
+	  }
 	  last;
 	};
 	do {

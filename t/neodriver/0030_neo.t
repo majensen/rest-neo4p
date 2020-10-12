@@ -260,9 +260,9 @@ is $agent->last_result->fetch->get(0)->get('mucho'), 'bueno';
 
 $agent->post_schema_constraint(['person','uniqueness'], {property_keys => ['name']});
 
-warning_like {
+throws_ok {
   $agent->post_schema_constraint(['alien','existence'], {property_keys => ['planet']})
-} qr/You must spend thousands of dollars a year/;
+} 'REST::Neo4p::Neo4jTightwadException';
 
 $result = $agent->get_schema_constraint();
 ok grep { $_->{type} eq 'UNIQUENESS' } @$result;

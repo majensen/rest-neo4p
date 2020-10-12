@@ -211,11 +211,12 @@ sub session {
   }
   my $session = $self->driver->session( $self->database ? (database => $self->database) : () );
   if ($self->server_uri->scheme =~ /^http/) {
-    my $client = $session->{transport}{client};
-    $client->setTimeout($self->timeout);
-    $client->setCa($self->tls_ca);
-    if ($self->{_ssl_opts}) {
-      $client->getUseragent->ssl_opts($self->ssl_opts);
+    if (my $client = $session->{transport}{client}) {
+      $client->setTimeout($self->timeout);
+      $client->setCa($self->tls_ca);
+      if ($self->{_ssl_opts}) {
+	$client->getUseragent->ssl_opts($self->ssl_opts);
+      }
     }
   }
   elsif ($self->server_uri->scheme =~ /^bolt/) {
@@ -225,6 +226,9 @@ sub session {
 }
 
 # run_in_session( $query_string, { parm => value, ... } )
+# run_in_transaction( $driver_txn, $query_string, { parm => value, ... } )
+# these throw REST::Neo4p::Exceptions on Neo4j errors
+# and otherwise return a Neo4j::Driver::StatementResult
 
 sub run_in_session {
   my $self = shift;
@@ -236,40 +240,46 @@ sub run_in_session {
   } catch {
     $self->{_last_errors} = $_;
   };
-  if ($self->{_last_errors}) {
-    try {
-      for ($self->last_errors) {
-	/neo4j enterprise/ && do {
-	  REST::Neo4p::Neo4jTightwadException->throw( code=>599, error => "You must spend thousands of dollars a year to use this feature; see agent->last_errors()");
-	};
-	/ConstraintValidationFailed/ && do {
-	  REST::Neo4p::ConflictException->throw( code => 409,
-						 neo4j_message => $self->last_errors);
-	};
-	/NotFound/ && do {
-	  REST::Neo4p::NotFoundException->throw( code => 404,
-						 neo4j_message => $self->last_errors );
-	};
-	/SyntaxError/ && do {
-	  REST::Neo4p::QuerySyntaxException->throw( code => 400,
-						    neo4j_message => $self->last_errors);
-	};
-	do {
-	  REST::Neo4p::Neo4jException->throw( error => "Neo4j errors:\n".$self->last_errors );
-	};
-      }
-    } catch {
-      if ($WARN_ON_ERROR) {
-	warn $_;
-      }
-      else {
-	$_->rethrow;
-      }
-      return;
+  $self->maybe_throw_neo4p_error;
+  return $self->{_last_result} // 1;
+}
+
+sub run_in_transaction {
+  my $self = shift;
+  my ($tx, $qry, $params) = @_;
+  $self->{_last_result} = $self->{_last_errors} = undef;
+  $params = {} unless defined $params;
+  try {
+    $self->{_last_result} = $tx->run($qry, $params);
+  } catch {
+    $self->{_last_errors} = $_;
+  };
+  $self->maybe_throw_neo4p_error;
+  return $self->{_last_result} // 1;
+}
+
+sub maybe_throw_neo4p_error {
+  my $self = shift;
+  return unless $self->last_errors;
+  for ($self->last_errors) {
+    /neo4j enterprise/i && do {
+      REST::Neo4p::Neo4jTightwadException->throw( code=>599, error => "You must spend thousands of dollars a year to use this feature; see agent->last_errors()");
     };
-  }
-  else {
-    return $self->{_last_result} // 1;
+    /ConstraintValidationFailed/ && do {
+      REST::Neo4p::ConflictException->throw( code => 409,
+					     neo4j_message => $self->last_errors);
+    };
+    /NotFound/ && do {
+      REST::Neo4p::NotFoundException->throw( code => 404,
+					     neo4j_message => $self->last_errors );
+    };
+    /SyntaxError/ && do {
+      REST::Neo4p::QuerySyntaxException->throw( code => 400,
+						neo4j_message => $self->last_errors);
+    };
+    do {
+      REST::Neo4p::Neo4jException->throw( error => "Neo4j errors:\n".$self->last_errors );
+    };
   }
 }
 
