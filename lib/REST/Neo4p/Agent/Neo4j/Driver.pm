@@ -160,20 +160,10 @@ sub connect {
   for (my $i = $REST::Neo4p::Agent::RQ_RETRIES; $i>0; $i--) {
     my $f;
     try {
-      if ($uri->scheme =~ /^http/) {
-	my $client = $drv->session->{transport}{client};
-	$client->GET('/');
-	die $client->responseContent unless $client->responseCode =~ /^2/;
-	unless ($self->{_actions}{neo4j_version} =
-		  J($client->responseContent)->{neo4j_version}) {
-	  $client->GET('/db/data');
-	  $self->{_actions}{neo4j_version} = J($client->responseContent)->{neo4j_version} or
-	    die "Can't find neo4j_version from server";
-	}
-      }
-      elsif ($uri->scheme =~ /^bolt/) {
-	1;
-      }
+      my $version = $drv->session->server->version;
+      $version =~ s|^\S+/||;  # server version strings look like "Neo4j/3.2.1"
+      $self->{_actions}{neo4j_version} = $version or
+        die "Can't find neo4j_version from server";
       $f=1;
     } catch {
       if ($i > 1) {
