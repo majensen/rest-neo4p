@@ -21,6 +21,7 @@ unless (eval "require NeoCon; 1") {
 my $docker = NeoCon->new(
   tag => $ENV{NEOCON_TAG} // 'neo4j:3.4',
   delay => 5,
+  reuse => 0,
   load => File::Spec->catfile($dir,'samples/test.cypher'),
  );
 
@@ -185,9 +186,14 @@ $msg = $agent->post_relationship_index(['friendships'], {key => 'squirty', value
 				{uniqueness => 'get_or_create'});
 
 my $rid = $msg->{metadata}{id};
-is_deeply $msg, { metadata => { id => $rid }, self => "relationship/$rid",
-		  data => { mucho => 'bueno' },
-		  indexed => "index/relationship/friendships/squirty/2/$rid" };
+my %part;
+@part{qw/metadata self data type indexed/} = @{$msg}{qw/metadata self data type indexed/};
+is_deeply \%part, { metadata => { id => $rid }, self => "relationship/$rid",
+		  data => { mucho => 'bueno' }, type => 'squirts',
+		    indexed => "index/relationship/friendships/squirty/2/$rid" };
+ok $msg->{start_id};
+ok $msg->{end_id};
+
 
 # schema constraints
 

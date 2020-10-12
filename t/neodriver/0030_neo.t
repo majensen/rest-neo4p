@@ -22,6 +22,7 @@ my $docker = NeoCon->new(
   tag => $ENV{NEOCON_TAG} // 'neo4j:3.4',
   delay => 5,
   load => File::Spec->catfile($dir,'samples/test.cypher'),
+  reuse => 0
  );
 
 if (!$docker->start) {

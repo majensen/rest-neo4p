@@ -28,7 +28,7 @@ sub new {
   $self->{tag} //= $TAG;
   $self->{name} //= "test$$";
   $self->{ports} //= {7687 => undef, 7474 => undef, 7473 => undef};
-  $self->{delay} //= 5;
+  $self->{delay} //= 10;
   $self->{reuse} //= 1;
   $self->{load} //= undef;
   return $self;

@@ -21,6 +21,7 @@ my $neores_ctrl = qclass( -implement => 'Neo4j::Driver::StatementResult',
 			  new => sub { shift; bless [@_],
 					 'Neo4j::Driver::StatementResult' },
 			  fetch => sub { shift; return Neo4j::Driver::Record->new( Neo4j::Driver::Thing->new()) },
+			  peek => sub { shift; return Neo4j::Driver::Record->new( Neo4j::Driver::Thing->new()) },			  
 			 );
 
 my $neosess_ctrl = qclass( -implement => 'Neo4j::Driver::Session',
@@ -177,16 +178,16 @@ $neores_ctrl->override( has_next => 0 );
 
 $agent->post_node_index(['blarf'],{key => 'test', value=>1, properties => { this => 10, that => 'other' }}, { uniqueness => 'get_or_create' });
 
-is $agent->last_result->[0], "call db.index.explicit.seekNodes('blarf', 'test', 1)"; # 'match (n) where id(n)=$id return n';
+is $agent->last_result->[0], 'match (n) where id(n)=$id return n'; # "call db.index.explicit.seekNodes('blarf', 'test', 1)";
 
-TODO : {
-  local $TODO = 'mock correctly';
+#TODO : {
+#  local $TODO = 'mock correctly';
   eval {
     $agent->post_node_index(['blarf'],{key => 'test', value=>1, properties => { this => 10, that => 'other' }}, { uniqueness => 'create_or_fail' });
   };
     
   is $agent->last_result->[0], 'match (n) where id(n)=$id return n';
-}
+#}
 
 
 $neores_ctrl->override( has_next => 1 );
@@ -201,15 +202,15 @@ $neores_ctrl->override( has_next => 0 );
 
 $agent->post_relationship_index(['flarb'],{key => 'test', value=>2, start => 'http://localhost:7474/db/data/node/10', end => 'http://localhost:7474/db/data/node/20', type => 'ISA'}, { uniqueness => 'get_or_create' });
 
-is $agent->last_result->[0], "call db.index.explicit.seekRelationships('flarb', 'test', 2)"; #'match ()-[r]->() where id(r)=$id return r';
+is $agent->last_result->[0], 'match ()-[r]->() where id(r)=$id return r'; #"call db.index.explicit.seekRelationships('flarb', 'test', 2)";
 
-TODO: {
-  local $TODO = 'mock correctly';
+#TODO: {
+#  local $TODO = 'mock correctly';
   eval {
     $agent->post_relationship_index(['flarb'],{key => 'test', value=>2, start => 'http://localhost:7474/db/data/node/10', end => 'http://localhost:7474/db/data/node/20', type => 'ISA'}, { uniqueness => 'create_or_fail' });
   };
   is $agent->last_result->[0], 'match ()-[r]->() where id(r)=$id return r';
-}
+# }
 
 $agent->get_node_index();
 is $agent->last_result->[0], 'call db.index.explicit.list()';
