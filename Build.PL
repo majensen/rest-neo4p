@@ -59,8 +59,8 @@ my $build =  Module::Build->new
       perl => 5.010
      );
 
-$build->notes( test_server => $ENV{REST_NEO4P_TEST_SERVER} // $build->prompt("Server for live tests:", "http://127.0.0.1:7474"));
-$build->notes( user => $ENV{REST_NEO4P_TEST_USER} // $build->prompt("Username:", "neo4j") );
-$build->notes( pass => $ENV{REST_NEO4P_TEST_PASS} // $build->prompt("Pass:", "neo4j") );
-$build->notes( agent_mod => $ENV{REST_NEO4P_AGENT_MODULE} // $build->prompt("Agent module:", "LWP::UserAgent") );
+$build->notes( test_server =>  $build->prompt("Server for live tests:", $ENV{REST_NEO4P_TEST_SERVER} // "http://127.0.0.1:7474"));
+$build->notes( user =>  $build->prompt("Username:", $ENV{REST_NEO4P_TEST_USER} // "neo4j") );
+$build->notes( pass =>  $build->prompt("Pass:", $ENV{REST_NEO4P_TEST_PASS} // "neo4j") );
+$build->notes( agent_mod => $build->prompt("Agent module:", $ENV{REST_NEO4P_AGENT_MODULE} // "LWP::UserAgent") );
 $build->create_build_script;

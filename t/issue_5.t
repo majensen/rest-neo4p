@@ -1,4 +1,4 @@
-use Test::More;
+use Test::More skip_all => '';
 use Test::Exception;
 use Module::Build;
 use lib 'lib';

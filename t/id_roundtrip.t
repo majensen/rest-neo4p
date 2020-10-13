@@ -1,5 +1,5 @@
 #-*-perl-*-
-use Test::More tests => 35;
+use Test::More;
 use Test::Exception;
 use Module::Build;
 use lib qw|../lib lib|;
