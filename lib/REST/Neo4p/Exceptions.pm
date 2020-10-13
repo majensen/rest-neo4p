@@ -56,6 +56,12 @@ use Exception::Class (
 		  'neo4j_exception', 'neo4j_stacktrace' ],
       description => 'Cypher query language syntax error'
      },
+  'REST::Neo4p::SchemaConstraintExistsException' =>
+    {
+      isa => 'REST::Neo4p::Neo4jException',
+      fields => [qw/error_list neo4j_message code/],
+      description => 'Attempt to create a schema constraint that already exists'
+     },
   'REST::Neo4p::NotImplException' => {
     isa => 'REST::Neo4p::LocalException',
     description => 'Attempt to call a currently unimplemented method'
@@ -106,6 +112,7 @@ use Exception::Class (
   },
   'REST::Neo4p::Neo4jTightwadException' => {
     isa => 'REST::Neo4p::LocalException',
+    fields => ['code','message'],
     description => 'This feature only works in enterprise edition'
   },
   

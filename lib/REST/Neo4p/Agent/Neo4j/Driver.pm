@@ -263,7 +263,10 @@ sub maybe_throw_neo4p_error {
   return unless $self->last_errors;
   for ($self->last_errors) {
     /neo4j enterprise/i && do {
-      REST::Neo4p::Neo4jTightwadException->throw( code=>599, error => "You must spend thousands of dollars a year to use this feature; see agent->last_errors()");
+      REST::Neo4p::Neo4jTightwadException->throw( code=>599, message => "You must spend thousands of dollars a year to use this feature; see agent->last_errors()");
+    };
+    /ConstraintAlreadyExists/ && do {
+      REST::Neo4p::SchemaConstraintExistsException->throw( code=>599, neo4j_message => $self->last_errors );
     };
     /ConstraintValidationFailed/ && do {
       REST::Neo4p::ConflictException->throw( code => 409,
@@ -278,7 +281,7 @@ sub maybe_throw_neo4p_error {
 						neo4j_message => $self->last_errors);
     };
     do {
-      REST::Neo4p::Neo4jException->throw( error => "Neo4j errors:\n".$self->last_errors );
+      REST::Neo4p::Neo4jException->throw( code => 599, neo4j_message => $self->last_errors );
     };
   }
 }

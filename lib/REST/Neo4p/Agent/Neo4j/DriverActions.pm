@@ -819,7 +819,7 @@ sub get_schema_constraint {
     while (my $rec = $result->fetch) {
       my ($node_label,$reln_type,$x_prop, $u_prop) =
       $rec->get(0) =~
-      /CONSTRAINT ON (?:\( *(?:$SAFE_TOK):($SAFE_TOK) *\)|\(\)-\[(?:$SAFE_TOK):($SAFE_TOK)\]-\(\)) ASSERT (?:exists\((?:$SAFE_TOK)\.($SAFE_TOK)|(?:$SAFE_TOK)\.($SAFE_TOK) IS UNIQUE)/;
+      /CONSTRAINT ON (?:\( (?:$SAFE_TOK):($SAFE_TOK) \)|\(\)-\[(?:$SAFE_TOK):($SAFE_TOK)\]-\(\)) ASSERT (?:exists\((?:$SAFE_TOK)\.($SAFE_TOK)|(?:$SAFE_TOK)\.($SAFE_TOK) IS UNIQUE)/;
       if (defined $node_label) {
 	if (defined $x_prop) {
 	  push @constraints, {
