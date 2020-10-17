@@ -8,6 +8,7 @@ use URI;
 use URI::Escape;
 use HTTP::Tiny;
 use Neo4j::Driver;
+use JSON::ize;
 use REST::Neo4p::Agent;
 use REST::Neo4p::Node;
 use REST::Neo4p::Index;
@@ -131,7 +132,8 @@ sub connect {
   my $neo4p = shift;
   my ($server_address, $user, $pass) = @_;
   my $uri = URI->new($server_address);
-  my ($u, $p) = split(/:/,$uri->userinfo);
+  my ($u, $p);
+  $uri->userinfo and ($u, $p) = split(/:/,$uri->userinfo);
   $HANDLES[$HANDLE]->{_user} = $user // $u;
   $HANDLES[$HANDLE]->{_pass} = $pass // $p;
   REST::Neo4p::LocalException->throw("Server address not set\n")  unless $server_address;
@@ -166,7 +168,7 @@ sub get_neo4j_version {
     $version = $content->{neo4j_version};
     unless (defined $version) {
       $resp = HTTP::Tiny->new( default_headers => { 'Content-Type' => 'application/json'})
-	->get("$url/db/data");
+	->get("$url/db/data/");
       if ($resp->{success}) {
 	$content = J($resp->{content});
 	$version = $content->{neo4j_version};
