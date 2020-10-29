@@ -613,12 +613,20 @@ sub get_index {
 
   if (!$idx) {
     # TODO: returns all indexes - should filter based on $ent
-    $result = $self->run_in_session('call db.index.explicit.list()');
+    $result = $self->is_version_4 ?
+      $self->run_in_session('call db.indexes yield name, type, entityType where type = "FULLTEXT" and entityType = $ent return name',{ent => uc $ent}) :
+      $self->run_in_session('call db.index.explicit.list()');
   }
   else {
     # find things
     my $params = $other[-1];
-    my $seek = ($ent eq 'node' ? 'seekNodes' : 'seekRelationships');
+    my $seek;
+    if ($self->is_version_4) {
+      $seek =  ($ent eq 'node' ? 'queryNodes' : 'queryRelationships');
+    }
+    else {
+      $seek = ($ent eq 'node' ? 'seekNodes' : 'seekRelationships');
+    }
     # kludge
     if (!ref($params) && $params =~ /[?]/) {
       my ($k,$v) = $params =~ /^.*\?(.*)=(.*)$/;
@@ -632,10 +640,23 @@ sub get_index {
       }
       $value = uri_unescape($value);
       $value +=0 if looks_like_number $value;
-      $result = $self->run_in_session("call db.index.explicit.$seek(\$idx,\$key,\$value)",
-				      { idx => $idx, key => $key, value => $value });
+      if ($self->is_version_4) {
+	my $yld = ($ent eq 'node' ? 'node' : 'relationship');
+	$result = $self->run_in_session(
+	  "call db.index.fulltext.$seek(\$idx,\$key) yield $yld
+           where ${yld}[\$valprop] = $value return $yld",
+	  { idx => $idx, key => $key, valprop => "__${idx}__value",
+	    value => $value });
+      }
+      else {
+	$result = $self->run_in_session("call db.index.explicit.$seek(\$idx,\$key,\$value)",
+					{ idx => $idx, key => $key, value => $value });
+      }
     }
     elsif (ref $params eq 'HASH') { # query
+      if ($self->is_version_4) {
+	REST::Neo4p::LocalException->throw("get_index : refusing a fulltext query on emulated explicit index; create a true fulltext index instead\n")
+      }
       unless (defined $params->{query}) {
 	REST::Neo4p::LocalException->throw("get_index : key 'query' required in param hash");
       }
@@ -663,14 +684,36 @@ sub delete_index {
   REST::Neo4p::LocalException->throw("delete_index required index name at arg 2\n")
       unless defined $idx;
   if (!@other) {
-    $result = $self->run_in_session('call db.index.explicit.drop($idx)',{idx => $idx});
+    if ($self->is_version_4) {
+      # remove index and cleanup helper label and properties
+      my $tx = $self->session->begin_transaction;
+      $result = $tx->run('call db.index.fulltext.drop($idx)', {idx => $idx});
+      $tx->run("match (a:__${idx}__index) remove a.__{$idx}__key remove a.__${idx}__value");
+      $tx->run("match (a:__${idx}__index) remove a:__${idx}__index");
+      $tx->commit;
+    }
+    else {
+      $result = $self->run_in_session('call db.index.explicit.drop($idx)',{idx => $idx});
+    }
   }
   else {
     my $id = pop @other;
     my ($k, $v) = @other;
-    my $remove = ($ent eq 'node' ? 'removeNode' : 'removeRelationship');
-    my $args = (defined $k ? '$idx, $id, $key' : '$idx, $id' );
-    $result = $self->run_in_session("call db.index.explicit.$remove( $args )", {idx => $idx, id => 0+$id, (defined $k ? (key => $k) : ())});
+    if ($self->is_version_4) {
+      my $ptn  = ($ent eq 'node' ? '(n)' : '()-[n]->()');
+      $result = $self->run_in_session(
+	"match $ptn where id(n)=\$id remove n.__${idx}__key remove n.__${idx}__value ".
+	  ($ent eq 'node' ? "remove n:__${idx}__index" : ""), { id => $id } );
+    }
+    else {
+      my $remove = ($ent eq 'node' ? 'removeNode' : 'removeRelationship');
+      my $ptn = ($ent eq 'node' ? '(n)' : '()-[n]->()');
+      my $args = (defined $k ? '$idx, n, $key' : '$idx, n' );
+      $result = $self->run_in_session(
+	"match $ptn where id(n)=\$id call db.index.explicit.$remove( $args )
+         yield success return n",
+	{idx => $idx, id => 0+$id, (defined $k ? (key => $k) : ())});
+    }
   }
   if ($result) {
     return if !defined wantarray;
@@ -694,9 +737,22 @@ sub post_index {
   _throw_unsafe_tok($_) for @$url_components;
   my ($ent, $idx, @other) = @$url_components;
   if (! defined $idx) { # create index
-    my $for = ($ent eq 'node') ? 'forNodes' : 'forRelationships';
     REST::Neo4p::LocalException->throw("post_index create index requires 'name' key in \$content hash\n") unless defined $content->{name};
-    $result = $self->run_in_session("call db.index.explicit.$for(\$name)",$content);
+    if ($self->is_version_4) {
+      if ($ent eq 'relationship') {
+	REST::Neo4p::LocalException->throw("post_index (Neo4j v4.0+) :create relationship index requres 'type' key in \$content hash\n") unless defined $content->{type};
+      }
+      my $type = ($ent eq 'node') ? 'Node' : 'Relationship';
+      $result = $self->run_in_session("call db.index.fulltext.create${type}Index(\$name, \$token, [\$prop], {analyzer:'keyword'}", {
+	name => $content->{name},
+	token => $content->{type} // "__$$content{name}__index",
+	prop => "__$$content{name}__key"
+       });
+    }
+    else {
+      my $for = ($ent eq 'node') ? 'forNodes' : 'forRelationships';
+      $result = $self->run_in_session("call db.index.explicit.$for(\$name)",$content);
+    }
   }
   else {
     REST::Neo4p::LocalException->throw("post_index add to index requires 'key','value'keys in \$content hash\n") unless (defined $content->{key} && defined $content->{value});
@@ -708,11 +764,21 @@ sub post_index {
       $content->{idx} = $idx;
       for ($ent) {
 	/^node$/ && do {
-	  $result = $self->run_in_session('match (n) where id(n)=$id call db.index.explicit.addNode($idx,n,$key,$value) yield success with n, success return case success when true then n else false end as result', $content);
+	  if ($self->is_version_4) {
+	    $result = $self->run_in_session("match (n) where id(n)=\$id set n:__${idx}__index set n.__${idx}__key = \$key set n.__${idx}__value = \$value", $content);
+	  }
+	  else {
+	    $result = $self->run_in_session('match (n) where id(n)=$id call db.index.explicit.addNode($idx,n,$key,$value) yield success with n, success return case success when true then n else false end as result', $content);
+	  }
 	  last;
 	};
 	/^relationship/ && do {
-	  $result = $self->run_in_session('match ()-[r]->() where id(r)=$id call db.index.explicit.addRelationship($idx,r,$key,$value) yield success with r, success return case success when true then r else false end as result', $content);
+	  if ($self->is_version_4) {
+	    $result = $self->run_in_session("match ()-[r]->() where id(r)=\$id set r.__${idx}__key = \$key set r.__${idx}__value = \$value", $content);
+	  }
+	  else {
+	    $result = $self->run_in_session('match ()-[r]->() where id(r)=$id call db.index.explicit.addRelationship($idx,r,$key,$value) yield success with r, success return case success when true then r else false end as result', $content);
+	  }
 	  last;
 	};
 	do {
@@ -723,10 +789,25 @@ sub post_index {
     elsif (defined $content->{properties} or
 	     defined $content->{type}) { # merge entity
       my $props = delete $content->{properties};
-      my $seek = ($ent eq 'node' ? 'seekNodes' : 'seekRelationships');
+      my $seek;
+      if ($self->is_version_4) {
+	$seek =  ($ent eq 'node' ? 'queryNodes' : 'queryRelationships');
+      } else {
+	$seek = ($ent eq 'node' ? 'seekNodes' : 'seekRelationships');
+      }
       # first, check index with key:value
       eval {
-	$result = $self->run_in_session("call db.index.explicit.$seek(".join(', ', map { _quote_maybe($_) } ($idx, $$content{key}, $$content{value})).")");
+	if ($self->is_version_4) {
+	  my $yld = ($ent eq 'node' ? 'node' : 'relationship');
+	  $result = $self->run_in_session(
+	    "call db.index.fulltext.$seek(\$idx,\$key) yield $yld
+           where ${yld}[\$valprop] = \$value return $yld",
+	    { idx => $idx, key => $$content{key}, valprop => "__${idx}__value",
+	      value => $$content{value} });
+	}
+	else {
+	  $result = $self->run_in_session("call db.index.explicit.$seek(".join(', ', map { _quote_maybe($_) } ($idx, $$content{key}, $$content{value})).")");
+	}
 	$result = undef unless $result->has_next;
       };
       if ($result) { # found it
@@ -751,7 +832,12 @@ sub post_index {
 	/^node$/ && do {
 	  $result = $self->run_in_session("create (n) $set_clause return n");
 	  $content->{id} = 0+$result->fetch->get(0)->id;
-	  $result = $self->run_in_session("match (n) where id(n)=\$id call db.index.explicit.addNode('$idx',n,\$key,\$value) yield success return success", $content);
+	  if ($self->is_version_4) {
+	    $result = $self->run_in_session("match (n) where id(n)=\$id set n:__${idx}__index set n.__${idx}__key = \$key set n.__${idx}__value = \$value return true", $content);
+	  }
+	  else {
+	    $result = $self->run_in_session("match (n) where id(n)=\$id call db.index.explicit.addNode('$idx',n,\$key,\$value) yield success return success", $content);
+	  }
 	  if ($result->peek->get(0)) {
 	    $result = $self->run_in_session('match (n) where id(n)=$id return n',$content);
 	  }
@@ -767,7 +853,12 @@ sub post_index {
 	  $content->{end} = 0+$end;
 	  $result = $self->run_in_session("match (s), (t) where id(s)=\$start and id(t)=\$end create (s)-[n:$type]->(t) $set_clause return n", $content);
 	  $content->{id} = 0+$result->fetch->get(0)->id;
-	  $result = $self->run_in_session("match ()-[r]->() where id(r)=\$id call db.index.explicit.addRelationship('$idx',r,\$key,\$value) yield success return success", $content);
+	  if ($self->is_version_4) {
+	    $result = $self->run_in_session("match ()-[r]->() where id(r)=\$id set r.__${idx}__key = \$key set r.__${idx}__value = \$value return true", $content);	    
+	  }
+	  else {
+	    $result = $self->run_in_session("match ()-[r]->() where id(r)=\$id call db.index.explicit.addRelationship('$idx',r,\$key,\$value) yield success return success", $content);
+	  }
 	  if ($result->peek->get(0)) {
 	    $result = $self->run_in_session('match ()-[r]->() where id(r)=$id return r',$content);
 	  }

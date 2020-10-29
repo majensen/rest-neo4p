@@ -1,4 +1,3 @@
-#$Id$
 use v5.10;
 package REST::Neo4p::Agent;
 use REST::Neo4p::Exceptions;

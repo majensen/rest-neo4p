@@ -65,7 +65,7 @@ sub agent {
   return $_[0] ? $self->{_agent} = $_[0] : $self->{_agent};
 }
 
-# TODO: pass stream info along to Neo4j::DRiver object
+# TODO: pass stream info along to Neo4j::Driver object
 
 sub stream {
   my $self = shift;
@@ -293,6 +293,11 @@ sub neo4j_version {
   my ($major, $minor, $patch, $milestone) =
     $a =~ /^(?:([0-9]+)\.)(?:([0-9]+)\.)?([0-9]+)?(?:-M([0-9]+))?/;
   wantarray ? ($major,$minor,$patch,$milestone) : $v;
+}
+
+sub is_version_4 {
+  my ($maj,@rest) = shift->neo4j_version;
+  return $maj >= 4;
 }
 
 # $rq : [get|post|put|delete]
