@@ -85,6 +85,8 @@ t/neodriver/0010_load.t
 t/neodriver/0020_calls.t
 t/neodriver/0030_neo.t
 t/neodriver/0040_json.t
+t/neodriver/0050_neo4.t
 t/neodriver/samples/test.cypher
+t/neodriver/samples/test.4.cypher
 META.yml
 META.json

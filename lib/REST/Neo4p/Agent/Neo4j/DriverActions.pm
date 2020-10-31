@@ -614,7 +614,7 @@ sub get_index {
   if (!$idx) {
     # TODO: returns all indexes - should filter based on $ent
     $result = $self->is_version_4 ?
-      $self->run_in_session('call db.indexes yield name, type, entityType where type = "FULLTEXT" and entityType = $ent return name',{ent => uc $ent}) :
+      $self->run_in_session('call db.indexes() yield name, type, entityType where type = "FULLTEXT" and entityType = $ent return entityType, name, type',{ent => uc $ent}) :
       $self->run_in_session('call db.index.explicit.list()');
   }
   else {
@@ -644,7 +644,7 @@ sub get_index {
 	my $yld = ($ent eq 'node' ? 'node' : 'relationship');
 	$result = $self->run_in_session(
 	  "call db.index.fulltext.$seek(\$idx,\$key) yield $yld
-           where ${yld}[\$valprop] = $value return $yld",
+           where ${yld}[\$valprop] = \$value return $yld",
 	  { idx => $idx, key => $key, valprop => "__${idx}__value",
 	    value => $value });
       }
@@ -740,10 +740,10 @@ sub post_index {
     REST::Neo4p::LocalException->throw("post_index create index requires 'name' key in \$content hash\n") unless defined $content->{name};
     if ($self->is_version_4) {
       if ($ent eq 'relationship') {
-	REST::Neo4p::LocalException->throw("post_index (Neo4j v4.0+) :create relationship index requres 'type' key in \$content hash\n") unless defined $content->{type};
+	REST::Neo4p::LocalException->throw("post_index (Neo4j v4.0+) create relationship index requres 'type' key in \$content hash\n") unless defined $content->{type};
       }
       my $type = ($ent eq 'node') ? 'Node' : 'Relationship';
-      $result = $self->run_in_session("call db.index.fulltext.create${type}Index(\$name, \$token, [\$prop], {analyzer:'keyword'}", {
+      $result = $self->run_in_session("call db.index.fulltext.create${type}Index(\$name, [\$token], [\$prop], {analyzer:'keyword'}) return 1", {
 	name => $content->{name},
 	token => $content->{type} // "__$$content{name}__index",
 	prop => "__$$content{name}__key"
@@ -765,7 +765,7 @@ sub post_index {
       for ($ent) {
 	/^node$/ && do {
 	  if ($self->is_version_4) {
-	    $result = $self->run_in_session("match (n) where id(n)=\$id set n:__${idx}__index set n.__${idx}__key = \$key set n.__${idx}__value = \$value", $content);
+	    $result = $self->run_in_session("match (n) where id(n)=\$id set n:__${idx}__index set n.__${idx}__key = \$key set n.__${idx}__value = \$value return 1", $content);
 	  }
 	  else {
 	    $result = $self->run_in_session('match (n) where id(n)=$id call db.index.explicit.addNode($idx,n,$key,$value) yield success with n, success return case success when true then n else false end as result', $content);
@@ -774,7 +774,7 @@ sub post_index {
 	};
 	/^relationship/ && do {
 	  if ($self->is_version_4) {
-	    $result = $self->run_in_session("match ()-[r]->() where id(r)=\$id set r.__${idx}__key = \$key set r.__${idx}__value = \$value", $content);
+	    $result = $self->run_in_session("match ()-[r]->() where id(r)=\$id set r.__${idx}__key = \$key set r.__${idx}__value = \$value return 1", $content);
 	  }
 	  else {
 	    $result = $self->run_in_session('match ()-[r]->() where id(r)=$id call db.index.explicit.addRelationship($idx,r,$key,$value) yield success with r, success return case success when true then r else false end as result', $content);
@@ -909,8 +909,8 @@ sub get_schema_constraint {
   if ($result) {
     while (my $rec = $result->fetch) {
       my ($node_label,$reln_type,$x_prop, $u_prop) =
-      $rec->get(0) =~
-      /CONSTRAINT ON (?:\( (?:$SAFE_TOK):($SAFE_TOK) \)|\(\)-\[(?:$SAFE_TOK):($SAFE_TOK)\]-\(\)) ASSERT (?:exists\((?:$SAFE_TOK)\.($SAFE_TOK)|(?:$SAFE_TOK)\.($SAFE_TOK) IS UNIQUE)/;
+      $rec->get($self->is_version_4 ? 'description' : 0) =~
+      /CONSTRAINT ON (?:\( (?:$SAFE_TOK):($SAFE_TOK) \)|\(\)-\[(?:$SAFE_TOK):($SAFE_TOK)\]-\(\)) ASSERT (?:exists\((?:$SAFE_TOK)\.($SAFE_TOK)|\(?(?:$SAFE_TOK)\.($SAFE_TOK)\)? IS UNIQUE)/;
       if (defined $node_label) {
 	if (defined $x_prop) {
 	  push @constraints, {
