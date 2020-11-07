@@ -178,7 +178,7 @@ $result_processors{post_index} = sub {
   }
   else {
     my $n = $_->fetch->get(0);
-    return unless $n;
+    return unless ref $n;
     my $id = $n->id;
     return {
       metadata => { id => $id },

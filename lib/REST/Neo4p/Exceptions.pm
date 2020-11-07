@@ -62,6 +62,12 @@ use Exception::Class (
       fields => [qw/error_list neo4j_message code/],
       description => 'Attempt to create a schema constraint that already exists'
      },
+  'REST::Neo4p::IndexExistsException' =>
+    {
+      isa => 'REST::Neo4p::Neo4jException',
+      fields => [qw/error_list neo4j_message code/],
+      description => 'Attempt to create an index that already exists'
+     },
   'REST::Neo4p::NotImplException' => {
     isa => 'REST::Neo4p::LocalException',
     description => 'Attempt to call a currently unimplemented method'

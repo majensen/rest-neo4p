@@ -19,6 +19,7 @@ my $build =  Module::Build->new
 	'Exception::Class' => 1.3,
 	'Tie::IxHash' => 0,
 	'experimental' => 0,
+	'MIME::Base64' => 0,
 	perl => 5.010001
        },
       recommends => {

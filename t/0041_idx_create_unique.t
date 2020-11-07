@@ -30,6 +30,7 @@ SKIP : {
   if ( my $i = REST::Neo4p->get_index_by_name('nidx555','node') ) { $i->remove }
   if ( my $i = REST::Neo4p->get_index_by_name('ridx555','relationship') ) { $i->remove }
   ok my $n1 = REST::Neo4p::Node->new({name => 'A', type => 'purine'}), "create a new node";
+  $DB::single=1;
   push @cleanup, $n1;
   ok my $nidx = REST::Neo4p::Index->new('node', 'nidx555'), "create a node index";
   ok $nidx->add_entry( $n1, name => 'A' ), 'add created node to index';
@@ -44,7 +45,7 @@ SKIP : {
   $n4 = $nidx->create_unique( name => 'T', { name => 'T', type => 'pyrimidine'}, 'fail');
   ok !$n4, 'create_unique returned nothing with on_not_found == fail';
   push @cleanup, $n4 unless !$n4;
-  ok my $ridx = REST::Neo4p::Index->new('relationship', 'ridx555'), "create a relationship index";
+  ok my $ridx = REST::Neo4p::Index->new('relationship', 'ridx555', { type => 'transversion'}), "create a relationship index";
   push @cleanup, $ridx;
   ok my $r = $n1->relate_to($n2, 'transversion'), 'create relationship';
   push @cleanup, $r;
@@ -53,7 +54,7 @@ SKIP : {
   is $$r, $$r1, '.. and get the same relationship object returned';
   push @cleanup, $r1 unless $$r == $$r1;
   my $r2;
-  $DB::single=1;
+
     ok $r2 = $ridx->create_unique( name => 'transversion_back', $n2 => $n1, 'transversion', { extra => 'screlb' }), 'create_unique relationship with properties';
     is $r2->get_property('extra'), 'screlb', 'property correctly set';
   isnt $$r1, $$r2, 'this is a different, new relationship';

@@ -33,7 +33,7 @@ sub credentials  {
   my ($srv, $realm, $user, $pwd) = @_;
   $self->{_user} = $user;
   $self->{_pwd} = $pwd;
-  $self->{_userinfo} = "$user:$pwd";
+  $self->{_userinfo} = "$user:$pwd" if ($user && $pwd);
   $self->{_realm} = $realm;
   return;
 }
@@ -264,6 +264,9 @@ sub maybe_throw_neo4p_error {
   for ($self->last_errors) {
     /neo4j enterprise/i && do {
       REST::Neo4p::Neo4jTightwadException->throw( code=>599, message => "You must spend thousands of dollars a year to use this feature; see agent->last_errors()");
+    };
+    /SchemaRuleAlreadyExists/ && do {
+      REST::Neo4p::IndexExistsException->throw( code=>599, neo4j_message => $self->last_errors );
     };
     /ConstraintAlreadyExists/ && do {
       REST::Neo4p::SchemaConstraintExistsException->throw( code=>599, neo4j_message => $self->last_errors );

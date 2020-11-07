@@ -6,6 +6,7 @@ use lib '../../../../../lib'; #testing
 use REST::Neo4p::Agent::Neo4j::ResultProcessor;
 use REST::Neo4p::Exceptions;
 use URI::Escape;
+use MIME::Base64 qw/encode_base64url/;
 use Scalar::Util qw/looks_like_number/;
 use Try::Tiny;
 use strict;
@@ -642,10 +643,11 @@ sub get_index {
       $value +=0 if looks_like_number $value;
       if ($self->is_version_4) {
 	my $yld = ($ent eq 'node' ? 'node' : 'relationship');
+	my $hkey = encode_base64url($key,'');
 	$result = $self->run_in_session(
 	  "call db.index.fulltext.$seek(\$idx,\$key) yield $yld
            where ${yld}[\$valprop] = \$value return $yld",
-	  { idx => $idx, key => $key, valprop => "__${idx}__value",
+	  { idx => $idx, key => $hkey, valprop => "_xi_${hkey}",
 	    value => $value });
       }
       else {
@@ -685,25 +687,58 @@ sub delete_index {
       unless defined $idx;
   if (!@other) {
     if ($self->is_version_4) {
-      # remove index and cleanup helper label and properties
+      # cleanup helper label and properties and remove index
       my $tx = $self->session->begin_transaction;
-      $result = $tx->run('call db.index.fulltext.drop($idx)', {idx => $idx});
-      $tx->run("match (a:__${idx}__index) remove a.__{$idx}__key remove a.__${idx}__value");
-      $tx->run("match (a:__${idx}__index) remove a:__${idx}__index");
+      # problem in vanilla cypher - cannot _set_ map values using computed keys
+      # - you can _get_ values only
+      # collect all the distinct keys over the indexed nodes
+            
+      if ($ent eq 'node') {
+	$result = $tx->run("match (a:__${idx}__index) return distinct a.__${idx}__keys");
+      }
+      else {
+	$result = $tx->run("match ()-[r]->() where exists(r.__${idx}__keys) return distinct r.__${idx}__keys");
+      }
+      my (%k,%remove);
+      for my $k ($result->list()) {
+	$k{$_}++ for split(/\s+/,$k);
+      }
+      my @k = map { "_xi_$_" } keys %k;
+      @remove{@k} = (undef) x scalar @k;
+      # now \%remove is a parameter that can remove all the index's value props
+      if ($ent eq 'node') {
+	$tx->run("match (a:__${idx}__index) set a += \$rm remove a.__${idx}__keys",
+		 { rm => \%remove });
+      }
+      else { #relationship
+	$tx->run("match ()-[r]->() where exists(r.__${idx}__keys) set r += \$rm remove r.__${idx}__keys",
+		 { rm => \%remove });
+      }
       $tx->commit;
+      $result = $self->run_in_session('call db.index.fulltext.drop($idx)', {idx => $idx});
     }
     else {
       $result = $self->run_in_session('call db.index.explicit.drop($idx)',{idx => $idx});
     }
   }
-  else {
+  else { # FIXME
     my $id = pop @other;
     my ($k, $v) = @other;
     if ($self->is_version_4) {
       my $ptn  = ($ent eq 'node' ? '(n)' : '()-[n]->()');
+      my $hkey = encode_base64url($k,'');
       $result = $self->run_in_session(
-	"match $ptn where id(n)=\$id remove n.__${idx}__key remove n.__${idx}__value ".
-	  ($ent eq 'node' ? "remove n:__${idx}__index" : ""), { id => $id } );
+	"match $ptn where id(n)=\$id return n.__${idx}__keys", {id => 0+$id}
+       );
+      my $keys = $result->single()->get(0);
+      $keys =~ s/$hkey//; # remove this key
+      $result = $self->run_in_session(
+	"match $ptn where id(n)=\$id set n.__${idx}__keys = \$keys remove n._xi_${hkey} ", { id => $id, keys=>$keys } );
+      if ($keys =~ /^\s*$/) { # last key removed
+	$result = $self->run_in_session(
+	  "match $ptn where id(n)=\$id remove n.__${idx}__keys ".($ent eq 'node' ? "remove n:__${idx}__index" : ""), { id => $id }
+	 );
+      }
     }
     else {
       my $remove = ($ent eq 'node' ? 'removeNode' : 'removeRelationship');
@@ -743,10 +778,10 @@ sub post_index {
 	REST::Neo4p::LocalException->throw("post_index (Neo4j v4.0+) create relationship index requres 'type' key in \$content hash\n") unless defined $content->{type};
       }
       my $type = ($ent eq 'node') ? 'Node' : 'Relationship';
-      $result = $self->run_in_session("call db.index.fulltext.create${type}Index(\$name, [\$token], [\$prop], {analyzer:'keyword'}) return 1", {
+      $result = $self->run_in_session("call db.index.fulltext.create${type}Index(\$name, [\$token], [\$prop], {analyzer:'whitespace'}) return 1", {
 	name => $content->{name},
 	token => $content->{type} // "__$$content{name}__index",
-	prop => "__$$content{name}__key"
+	prop => "__$$content{name}__keys"
        });
     }
     else {
@@ -762,28 +797,17 @@ sub post_index {
       delete $content->{uri};
       $content->{id} = 0+$id;
       $content->{idx} = $idx;
-      for ($ent) {
-	/^node$/ && do {
-	  if ($self->is_version_4) {
-	    $result = $self->run_in_session("match (n) where id(n)=\$id set n:__${idx}__index set n.__${idx}__key = \$key set n.__${idx}__value = \$value return 1", $content);
-	  }
-	  else {
-	    $result = $self->run_in_session('match (n) where id(n)=$id call db.index.explicit.addNode($idx,n,$key,$value) yield success with n, success return case success when true then n else false end as result', $content);
-	  }
-	  last;
-	};
-	/^relationship/ && do {
-	  if ($self->is_version_4) {
-	    $result = $self->run_in_session("match ()-[r]->() where id(r)=\$id set r.__${idx}__key = \$key set r.__${idx}__value = \$value return 1", $content);
-	  }
-	  else {
-	    $result = $self->run_in_session('match ()-[r]->() where id(r)=$id call db.index.explicit.addRelationship($idx,r,$key,$value) yield success with r, success return case success when true then r else false end as result', $content);
-	  }
-	  last;
-	};
-	do {
-	  REST::Neo4p::LocalException->throw("'$ent' is not an indexable entity\n");
-	};
+      my $ptn = ($ent eq 'node' ? '(n)' : '()-[n]->()');
+      my $lbl = ($ent eq 'node' ? "set n:__${idx}__index" : '');
+      my $add = ($ent eq 'node' ? 'addNode' : 'addRelationship');
+      if ($self->is_version_4) {
+	my $hkey = encode_base64url($content->{key},'');
+	my $xi_prop = "_xi_$hkey";
+	$content->{xi_hkey} = $hkey;
+	$result = $self->run_in_session("match $ptn where id(n)=\$id $lbl set n += { __${idx}__keys: case n['__${idx}__keys'] when null then \$xi_hkey else n['__${idx}__keys']+' '+\$xi_hkey end, $xi_prop:\$value } return 1", $content);
+      }
+      else {
+	$result = $self->run_in_session('match $ptn where id(n)=$id call db.index.explicit.$add($idx,n,$key,$value) yield success with n, success return case success when true then n else false end as result', $content);
       }
     }
     elsif (defined $content->{properties} or
@@ -799,10 +823,11 @@ sub post_index {
       eval {
 	if ($self->is_version_4) {
 	  my $yld = ($ent eq 'node' ? 'node' : 'relationship');
+	  my $hkey = encode_base64url($content->{key},'');
 	  $result = $self->run_in_session(
-	    "call db.index.fulltext.$seek(\$idx,\$key) yield $yld
+	    "call db.index.fulltext.$seek(\$idx,\$hkey) yield $yld
            where ${yld}[\$valprop] = \$value return $yld",
-	    { idx => $idx, key => $$content{key}, valprop => "__${idx}__value",
+	    { idx => $idx, hkey => $hkey, valprop => "_xi_${hkey}",
 	      value => $$content{value} });
 	}
 	else {
@@ -833,7 +858,13 @@ sub post_index {
 	  $result = $self->run_in_session("create (n) $set_clause return n");
 	  $content->{id} = 0+$result->fetch->get(0)->id;
 	  if ($self->is_version_4) {
-	    $result = $self->run_in_session("match (n) where id(n)=\$id set n:__${idx}__index set n.__${idx}__key = \$key set n.__${idx}__value = \$value return true", $content);
+	    my $hkey = encode_base64url($content->{key},'');
+	    my $xi_prop = "_xi_$hkey";
+	    $content->{xi_hkey} = $hkey;
+	    $result = $self->run_in_session(
+	      "match (n) where id(n)=\$id set n:__${idx}__index ".
+		"set n.__${idx}__key = \$xi_hkey ".
+		"set n += { `${xi_prop}`:\$value } return true", $content);
 	  }
 	  else {
 	    $result = $self->run_in_session("match (n) where id(n)=\$id call db.index.explicit.addNode('$idx',n,\$key,\$value) yield success return success", $content);
@@ -854,7 +885,13 @@ sub post_index {
 	  $result = $self->run_in_session("match (s), (t) where id(s)=\$start and id(t)=\$end create (s)-[n:$type]->(t) $set_clause return n", $content);
 	  $content->{id} = 0+$result->fetch->get(0)->id;
 	  if ($self->is_version_4) {
-	    $result = $self->run_in_session("match ()-[r]->() where id(r)=\$id set r.__${idx}__key = \$key set r.__${idx}__value = \$value return true", $content);	    
+	    my $hkey = encode_base64url($content->{key},'');
+	    my $xi_prop = "_xi_$hkey";
+	    $content->{xi_hkey} = $hkey;
+	    $result = $self->run_in_session(
+	      "match ()-[r]->() where id(r)=\$id ".
+		"set r.__${idx}__key = \$xi_hkey ".
+		"set r += {`${xi_prop}`:\$value} return true", $content);
 	  }
 	  else {
 	    $result = $self->run_in_session("match ()-[r]->() where id(r)=\$id call db.index.explicit.addRelationship('$idx',r,\$key,\$value) yield success return success", $content);
