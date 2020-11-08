@@ -721,7 +721,7 @@ sub delete_index {
       $result = $self->run_in_session('call db.index.explicit.drop($idx)',{idx => $idx});
     }
   }
-  else { # FIXME
+  else {
     my $id = pop @other;
     my ($k, $v) = @other;
     if ($self->is_version_4) {
@@ -771,6 +771,9 @@ sub post_index {
   }
   _throw_unsafe_tok($_) for @$url_components;
   my ($ent, $idx, @other) = @$url_components;
+  if ($content && $content->{value}) {
+    $content->{value} += 0 if looks_like_number $content->{value};
+  }
   if (! defined $idx) { # create index
     REST::Neo4p::LocalException->throw("post_index create index requires 'name' key in \$content hash\n") unless defined $content->{name};
     if ($self->is_version_4) {

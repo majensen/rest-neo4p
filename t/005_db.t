@@ -4,7 +4,7 @@ use Test::More tests => 33;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
-use lib 't/lib';
+use lib qw'lib t/lib';
 use Neo4p::Connect;
 use strict;
 use warnings;
@@ -43,8 +43,9 @@ SKIP : {
   ok grep(/bubba/,@rtypes), 'found relationship type in type list';
   ok my $node_idx = REST::Neo4p::Index->new('node', 'node_idx'), 'new node index';
  # push @cleanup, $node_idx if $node_idx;
-  ok my $reln_idx = REST::Neo4p::Index->new('relationship', 'reln_idx'), 'new relationship index';
+  ok my $reln_idx = REST::Neo4p::Index->new('relationship', 'reln_idx', {type=>'bubba'}), 'new relationship index';
   push @cleanup, $reln_idx if $reln_idx;
+
   ok my @idxs = REST::Neo4p->get_indexes('node'), 'get node indexes';
   is $idxs[0]->type, 'node', 'got a node index';
   ok @idxs = REST::Neo4p->get_indexes('relationship'), 'get relationship indexes';
@@ -70,6 +71,7 @@ SKIP : {
   is $$N, $$n1, 'got node 1 back';
   is $$R, $$r12, 'got relationship 12 back';
   is $$I, $$node_idx, 'got node index back';
+    $DB::single=1;
   is ${($I->find_entries('node' => 1))[-1]}, $$n1, 'resurrected index works';
   
   ok $R->remove, 'remove relationship';
