@@ -14,7 +14,7 @@ no warnings qw(once);
 my @cleanup;
 use_ok('REST::Neo4p');
 
-# $SIG{__DIE__} = sub { if (ref $_[0]) { $_[0]->rethrow } else { print $_[0] }};
+ $SIG{__DIE__} = sub { if (ref $_[0]) { $_[0]->rethrow } else { print $_[0] }};
 my $build;
 my ($user,$pass) = @ENV{qw/REST_NEO4P_TEST_USER REST_NEO4P_TEST_PASS/};
 
@@ -31,11 +31,11 @@ my $num_live_tests = 1;
 my $not_connected = connect($TEST_SERVER,$user,$pass);
 diag "Test server unavailable (".$not_connected->message.") : tests skipped" if $not_connected;
 
-ok my $q = REST::Neo4p::Query->new('START n=node({node_id}) RETURN n',
+ok my $q = REST::Neo4p::Query->new('MATCH (n) WHERE id(n) = $node_id RETURN n',
 				   { node_id => 1 }), 'create query object';
 isa_ok $q, 'REST::Neo4p::Query';
 $q->{RaiseError} = 1;
-is $q->query, 'START n=node({node_id}) RETURN n','query accessor';
+is $q->query, 'MATCH (n) WHERE id(n) = $node_id RETURN n','query accessor';
 is_deeply $q->params, { node_id => 1}, 'params accessor';
 
 
@@ -59,7 +59,7 @@ SKIP : {
   ok my $r8 = $n4->relate_to($n5, 'parent_of');
 
   push @cleanup, ($r1,$r2,$r3,$r4,$r5,$r6,$r7,$r8);
-  ok my $q = REST::Neo4p::Query->new("START n=node($$n1) MATCH (n)-->(x) RETURN x.name, x"), 'new node query';
+  ok my $q = REST::Neo4p::Query->new("MATCH (n)-->(x) WHERE id(n) = $$n1 RETURN x.name, x"), 'new node query';
  $q->{RaiseError} = 1;
 
   ok $q->execute, 'execute query';
@@ -68,7 +68,7 @@ SKIP : {
     isa_ok($row->[1], 'REST::Neo4p::Node');
   }
   
-  ok $q = REST::Neo4p::Query->new("START n=node($$n4) MATCH (n)-[r]-(x) WHERE type(r) = 'pal_of' RETURN r, x.name"), 'new relationship query';
+  ok $q = REST::Neo4p::Query->new("MATCH (n)-[r]-(x) WHERE id(n) = $$n4 and type(r) = 'pal_of' RETURN r, x.name"), 'new relationship query';
   is $q->execute, 1, 'execute and return 1 row';
   while (my $row = $q->fetchrow_arrayref) {
     isa_ok($row->[0], 'REST::Neo4p::Relationship');
@@ -76,7 +76,7 @@ SKIP : {
   }
 
   diag("rt80343");
-  ok $q=REST::Neo4p::Query->new("START n=node($$n3) MATCH (p)-[r:parent_of]->(n) RETURN p.name"), 'parent_of Pebbles query';
+  ok $q=REST::Neo4p::Query->new("MATCH (p)-[r:parent_of]->(n) WHERE id(n) = $$n3 RETURN p.name"), 'parent_of Pebbles query';
   #  is $q->execute, 2, 'execute and return 2 rows';
   ok $q->execute, 'execute';
   my @parents;
@@ -84,7 +84,7 @@ SKIP : {
   is_deeply( [sort @parents], [qw(Fred Wilma)], 'got Fred and Wilma');
   
 
-  ok $q = REST::Neo4p::Query->new("START n=node($$n5), m=node($$n3) MATCH path = (n)-[:child_of]->()-[:pal_of]->()-[:parent_of]->(m)  RETURN path");
+  ok $q = REST::Neo4p::Query->new("MATCH path = (n)-[:child_of]->()-[:pal_of]->()-[:parent_of]->(m) WHERE id(n)=$$n5 AND id(m)=$$n3 RETURN path");
 #  is $q->execute, 1, 'execute and return 1 path';
   ok $q->execute, 'execute';
 
@@ -97,13 +97,13 @@ SKIP : {
 
   # test responses as simple structs
 
-  ok $q = REST::Neo4p::Query->new("START n=node($$n1) MATCH (n)-[:married_to]->(x) RETURN x.name, x"), 'node query';
+  ok $q = REST::Neo4p::Query->new("MATCH (n)-[:married_to]->(x) WHERE id(n) = $$n1 RETURN x.name, x"), 'node query';
   $q->{ResponseAsObjects} = 0;
   ok $q->execute, 'execute (node)';
   my $ret = $q->fetch;
   is $$n2, $ret->[1]->{_node}, "right node";
   is_deeply $n2->as_simple, $ret->[1], 'got wilma (simple)';
-  ok $q = REST::Neo4p::Query->new("START n=node($$n4) MATCH (n)-[r]-(x) WHERE type(r) = 'pal_of' RETURN r, x.name"), 'relationship query';
+  ok $q = REST::Neo4p::Query->new("MATCH (n)-[r]-(x) WHERE id(n) = $$n4 AND type(r) = 'pal_of' RETURN r, x.name"), 'relationship query';
   $q->{ResponseAsObjects} = 0;
   ok $q->execute, 'execute (relationship)';
   $ret = $q->fetch;
@@ -111,7 +111,7 @@ SKIP : {
   is_deeply $r4->as_simple, $ret->[0], 'got pal_of (simple)';
   1;
 
-  ok $q = REST::Neo4p::Query->new("START n=node($$n5), m=node($$n3) MATCH path = (n)-[:child_of]->()-[:pal_of]->()-[:parent_of]->(m)  RETURN path"), 'path query';
+  ok $q = REST::Neo4p::Query->new("MATCH path = (n)-[:child_of]->()-[:pal_of]->()-[:parent_of]->(m) WHERE id(n)= $$n5 AND id(m) = $$n3 RETURN path"), 'path query';
   $q->{ResponseAsObjects} = 0;
   ok $q->execute, 'execute (path)';
   $ret  = $q->fetch;
