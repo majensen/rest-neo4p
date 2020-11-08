@@ -866,7 +866,7 @@ sub post_index {
 	    $content->{xi_hkey} = $hkey;
 	    $result = $self->run_in_session(
 	      "match (n) where id(n)=\$id set n:__${idx}__index ".
-		"set n.__${idx}__key = \$xi_hkey ".
+		"set n.__${idx}__keys = \$xi_hkey ".
 		"set n += { `${xi_prop}`:\$value } return true", $content);
 	  }
 	  else {
@@ -893,7 +893,7 @@ sub post_index {
 	    $content->{xi_hkey} = $hkey;
 	    $result = $self->run_in_session(
 	      "match ()-[r]->() where id(r)=\$id ".
-		"set r.__${idx}__key = \$xi_hkey ".
+		"set r.__${idx}__keys = \$xi_hkey ".
 		"set r += {`${xi_prop}`:\$value} return true", $content);
 	  }
 	  else {

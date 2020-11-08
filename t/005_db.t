@@ -71,7 +71,7 @@ SKIP : {
   is $$N, $$n1, 'got node 1 back';
   is $$R, $$r12, 'got relationship 12 back';
   is $$I, $$node_idx, 'got node index back';
-    $DB::single=1;
+
   is ${($I->find_entries('node' => 1))[-1]}, $$n1, 'resurrected index works';
   
   ok $R->remove, 'remove relationship';

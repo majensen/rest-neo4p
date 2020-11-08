@@ -2,7 +2,7 @@
 use Test::More tests => 24;
 use Module::Build;
 use lib '../lib';
-use lib 't/lib';
+use lib qw'lib t/lib';
 use Neo4p::Connect;
 use strict;
 use warnings;
@@ -40,6 +40,7 @@ SKIP : {
   ok my $n3 = $nidx->create_unique( name => 'A', { name => 'A', type => 'purine' } ), 'get a node from create_unique, same properties as first node created...';
   is $$n3, $$n1, "..and they are the same node in db";
   push @cleanup, $n3 unless ($$n3 == $$n1);
+  $DB::single=1;
   ok my ($n4) = $nidx->find_entries(name => 'T'), 'second node was added to index by create_unique';
   is $$n4, $$n2, '..they are the same node';
   $n4 = $nidx->create_unique( name => 'T', { name => 'T', type => 'pyrimidine'}, 'fail');
