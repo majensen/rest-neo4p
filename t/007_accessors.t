@@ -3,8 +3,7 @@ use Test::More tests => 25;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
-use lib 'lib';
-use lib 't/lib';
+use lib qw'lib t/lib';
 use Neo4p::Connect;
 use strict;
 use warnings;
@@ -52,7 +51,7 @@ SKIP : {
   lives_and { ok $n3->set_blue(5) } 'blue setter called';
   lives_and { is $n3->blue, 5 } 'blue setter works';
   my $idx;
-  lives_ok {$idx = REST::Neo4p::Index->new('relationship','heydude')} 'index should be created np';
+  lives_ok {$idx = REST::Neo4p::Index->new('relationship','heydude', {type => 'dude'})} 'index should be created np';
   push @cleanup, $idx if $idx;
 
 }
