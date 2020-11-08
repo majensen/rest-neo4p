@@ -467,9 +467,9 @@ REST::Neo4p - Perl object bindings for a Neo4j database
   $new_neighbor = REST::Neo4p::Node->new({'name' => 'Donkey Hoty'});
   $my_reln = $my_node->relate_to($new_neighbor, 'neighbor');
 
-  $query = REST::Neo4p::Query->new("START n=node(".$my_node->id.")
-                                    MATCH p = (n)-[]->()
-                                    RETURN p");
+  $query = REST::Neo4p::Query->new("MATCH p = (n)-[]->()
+                                    WHERE id(n) = \$id
+                                    RETURN p", { id => $my_node->id });
   $query->execute;
   $path = $query->fetch->[0];
   @path_nodes = $path->nodes;

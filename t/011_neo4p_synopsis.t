@@ -48,9 +48,9 @@ SKIP : {
   is $my_reln->start_node->get_property('name'), 'Fred Rogers', 'got Mr. Rogers';
   is $my_reln->end_node->get_property('name'), 'Donkey Hoty', 'got Donkey Hoty';
   push @cleanup, $my_reln if $my_reln;
-  ok my $query = REST::Neo4p::Query->new("START n=node(".$my_node->id.")
-                                    MATCH p = (n)-[]->()
-                                    RETURN p");
+  ok my $query = REST::Neo4p::Query->new("MATCH p = (n)-[]->()
+                                    WHERE id(n) = \$id
+                                    RETURN p", {id => $my_node->id});
   ok $query->execute;
   my $path = $query->fetch->[0];
   my @path_nodes = $path->nodes;
