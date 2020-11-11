@@ -1,4 +1,3 @@
-
 use Test::More tests => 29;
 use Test::Exception;
 use Module::Build;
@@ -44,32 +43,34 @@ SKIP : {
   is $neo4p->q_endpoint, 'cypher', 'endpt starts out as cypher';
   ok $neo4p->begin_work, 'begin transaction';
   is $neo4p->q_endpoint, 'transaction', 'endpt now transaction';
-  my $idx_name = $t->nix->name;
+  my $lbl = $t->lbl;
   my $stmt1 =<<STMT1;
- START n = node:${idx_name}(name = 'I')
- MATCH (n)-[r:good]-(m)
- CREATE (n)-[s:bosom]->(m)
+ MATCH (n:$lbl)-[r:good]-(m:$lbl)
+ WHERE n.name = 'I'
+ WITH n,m
+ MERGE (n)-[:bosom]->(m)
 STMT1
   my $stmt2 =<<STMT2;
-  START n = node:${idx_name}(name = { name })
-  MATCH (n)-[:umm]-(m)
-  CREATE UNIQUE (m)-[:prettygood]->(u)
+  MATCH (n:$lbl)-[:umm]-(m:$lbl)
+  WITH n,m
+  MERGE (m)-[:prettygood]->(u)
+  SET u:$lbl
   RETURN u
 STMT2
   my $uuid = $t->uuid;
   my $stmt3=<<STMT3;
-  START m = node:${idx_name}("name:*")
-  MATCH (m),(u)
-  WHERE (m)-[:prettygood]->(u)
+  MATCH (m:$lbl)-[:prettygood]->(u:$lbl)
   SET u.name='Fred',u.uuid='$uuid'
   RETURN u, u.name
 STMT3
-  ok (($n) = $t->nix->find_entries(name => 'I'));
+  ok (($n) = $t->find_sample(name => 'I'));
   my @r = $n->get_relationships;
   is @r, 4, '4 relationships before execute';
   ok my $q = REST::Neo4p::Query->new($stmt1), 'statement 1';
   $q->{RaiseError} = 1;
+  $DB::single=1;
   ok defined $q->execute, 'execute statment 1';
+  @r = $n->get_relationships;
   is @r, 4, 'executed, but still only 4 relationships';
   ok $neo4p->commit, 'commit';
   ok !$neo4p->_transaction, 'transaction cleared';
@@ -77,11 +78,10 @@ STMT3
   @r = $n->get_relationships;
   is @r, 5, 'committed, now 5 relationships';
   $q = REST::Neo4p::Query->new($stmt2);
-  $DB::single=1;
   $q->{RaiseError} = 1;
   my $w = REST::Neo4p::Query->new($stmt3);
   $w->{RaiseError} = 1;
-  ($m) = $t->nix->find_entries(name => 'he');
+  ($m) = $t->find_sample(name => 'he');
   is scalar $m->get_relationships, 1, 'he has 1 relationship';
   ok $neo4p->begin_work, 'begin transaction';
   ok defined $q->execute(name => 'she'), 'exec stmt 2';
@@ -93,17 +93,14 @@ STMT3
   is scalar $m->get_relationships, 1, 'he has 1 relationship before rollback';
   ok $neo4p->begin_work, 'begin transaction';
   ok defined $q->execute(name => 'she'), 'exec stmt 2';
-    $DB::single=1;
   ok defined $w->execute, 'exec stmt 3';
   $w->{ResponseAsObjects} = undef;
   my $row = $w->fetch;
+  $DB::single=1;
   is_deeply $row, [ { _node => $row->[0]{_node}, name => 'Fred', uuid => $uuid }, 'Fred' ], 'check simple txn row return';
   ok $neo4p->commit, 'commit';
   is scalar($m->get_relationships), 2, 'now he has 2 relationships';
 
-
-  $_->remove for $n->get_relationships;
-  $_->remove for $m->get_relationships;
 }
 }
 

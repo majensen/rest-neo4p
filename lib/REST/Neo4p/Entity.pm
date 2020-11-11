@@ -388,6 +388,7 @@ sub _entity_by_id {
       }
     }
     # TODO: check this works for Neo4j::Driver case after new_from_json_response refactor
+    return unless defined $decoded_resp;
     $new = ref($decoded_resp) ? $class->new_from_json_response($decoded_resp) :
       $class->new_from_batch_response($decoded_resp);
   }

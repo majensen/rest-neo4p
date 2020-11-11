@@ -35,7 +35,7 @@ SKIP : {
   ok my $n2 = REST::Neo4p::Node->new( {name => 'lucy'} ), 'new node 2';
   push @cleanup, $n2 if $n2;
   ok my $q = REST::Neo4p::Query->new(<<Q), 'create query that returns an array';
-start n = node($$n1,$$n2) return collect(n.name)
+match (n) where id(n)=$$n1 or id(n)=$$n2 return collect(n.name)
 Q
   $q->{RaiseError} = 1;
   ok $q->execute, 'execute query';
@@ -43,7 +43,7 @@ Q
   lives_ok { $row = $q->fetch } 'fetch lives';
   is_deeply $row, [qw(ricky lucy)], 'query response correct';
   ok $q = REST::Neo4p::Query->new(<<Q2), 'create query that returns an array of objects';
-start n = node($$n1,$$n2) return collect(n)
+match (n) where id(n)=$$n1 or id(n)=$$n2 return collect(n)
 Q2
   $q->{RaiseError} = 1;
   $q->execute;

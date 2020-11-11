@@ -144,7 +144,9 @@ $result_processors{get_index} = sub {
   if (!$idx) {
     my $ret = {};
     while (my $rec = $_->fetch) {
-      if ($rec->get('type') =~ /$ent/i || $rec->get('entityType') =~ /$ent/i) {
+      my $props = $rec->data;
+      my $type = $props->{'entityType'} // $props->{'type'} // '';
+      if ($type =~ /$ent/i) {
 	my $name = $rec->get('name');
 	$ret->{$name} = (eval '$rec->get("config")' || {});
 	$ret->{$name}{ template } = "index/$ent/$name/\{key\}/\{value\}";

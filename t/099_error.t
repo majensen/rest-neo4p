@@ -63,7 +63,7 @@ SKIP : {
     throws_ok { $i->get_properties } 'REST::Neo4p::NotSuppException', 'not supported ok (3)';
     diag 'rt80207';
     ok !REST::Neo4p->get_node_by_id(2.5), 'get bad node id ok (returns false rt#80207)'; 
-    ok !REST::Neo4p->get_relationship_by_id(1.0), 'get bad relationship id ok';
+    ok !REST::Neo4p->get_relationship_by_id(1.1), 'get bad relationship id ok';
     ok $n1->remove, 'remove node';
     ok $i->remove, 'remove index';
 }

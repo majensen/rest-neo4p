@@ -58,7 +58,7 @@ SKIP : {
   # ->get_properties worked as well
   # ->as_simple worked as well (probably via the entity cache)
 
-  my $q2 = REST::Neo4p::Query->new("MATCH (n) WHERE id(n) = {id} RETURN n", $id_param);
+  my $q2 = REST::Neo4p::Query->new("MATCH (n) WHERE id(n) = \$id RETURN n", $id_param);
   $q2->{ResponseAsObjects} = 0;
   $q2->execute;
   eval { $row = $q2->fetch };
@@ -70,7 +70,7 @@ SKIP : {
   # Node::simple_from_json_response
   $q2->finish;
 
-  my $q3 = REST::Neo4p::Query->new("MATCH (n) WHERE id(n) = {id} RETURN n." . (join ", n.", @keys), $id_param);
+  my $q3 = REST::Neo4p::Query->new("MATCH (n) WHERE id(n) = \$id RETURN n." . (join ", n.", @keys), $id_param);
   $q3->execute;
   eval { $row = $q3->fetch };
   ok $row, 'fetch node properties';
@@ -86,7 +86,7 @@ SKIP : {
   ok $r1, 'create rel' and push @cleanup, $r1;
   $id_param = { id => 0 + $r1->id };
   
-  my $q5 = REST::Neo4p::Query->new("MATCH ()-[r]-() WHERE id(r) = {id} RETURN r." . (join ", r.", @keys), $id_param);
+  my $q5 = REST::Neo4p::Query->new("MATCH ()-[r]-() WHERE id(r) = \$id RETURN r." . (join ", r.", @keys), $id_param);
   $q5->execute;
   eval { $row = $q5->fetch };
   ok $row, 'fetch rel properties';

@@ -33,7 +33,7 @@ sub new {
 		    _addl_components => [$index_type],
 		    name => $name
 		   };
-  $properties->{type} = $config->{type};
+  $properties->{type} = delete $config->{rtype};
   $properties->{config} = $config if defined $config;
   return $class->SUPER::new($properties);
 }

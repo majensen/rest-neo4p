@@ -13,7 +13,7 @@ use strict;
 use warnings;
 
 our %result_processors;
-my $SAFE_TOK = qr{[^[!#\$&()*+,./:;<=>@\]^`{|}~\\]+}; # allows %?-_'"
+my $SAFE_TOK = qr{[^[!#\$&()*+,/:;<=>@\]^`{|}~\\]+}; # allows %?-_'".
 
 my @action_tokens = qw/node label labels relationship types index schema constraint cypher transaction/;
 
@@ -226,6 +226,7 @@ sub get_propertykeys {
 
 sub get_node {
   my $self = shift;
+  _throw_unsafe_tok($_) for @_;
   my ($id,@other) = @_;
   my $result;
   unless (defined $id) {
@@ -457,7 +458,7 @@ sub get_relationship {
 	$result = $self->run_in_session('call db.relationshipTypes()');
 	last;
       };
-      REST::Neo4p::LocalException->throw("get_relationship action '$id' is unknown\n");
+#      REST::Neo4p::LocalException->throw("get_relationship action '$id' is unknown\n");
     }
   }
   else {
@@ -810,7 +811,7 @@ sub post_index {
 	$result = $self->run_in_session("match $ptn where id(n)=\$id $lbl set n += { __${idx}__keys: case n['__${idx}__keys'] when null then \$xi_hkey else n['__${idx}__keys']+' '+\$xi_hkey end, $xi_prop:\$value } return 1", $content);
       }
       else {
-	$result = $self->run_in_session('match $ptn where id(n)=$id call db.index.explicit.$add($idx,n,$key,$value) yield success with n, success return case success when true then n else false end as result', $content);
+	$result = $self->run_in_session("match $ptn where id(n)=\$id call db.index.explicit.$add(\$idx,n,\$key,\$value) yield success with n, success return case success when true then n else false end as result", $content);
       }
     }
     elsif (defined $content->{properties} or
@@ -1059,7 +1060,10 @@ sub get_schema_index {
   }
   my ($maj, $min, $pat, $mile) = $self->neo4j_version;
   my $q;
-  if ($maj>=3 && $min>=5) { # patch
+  if ($maj > 3) {
+    $q = 'call db.indexes() yield labelsOrTypes as labels, properties where $lbl in labels return { label:$lbl, property_keys:properties }';
+  }
+  elsif ($maj==3 && $min>=5) { # patch
     $q = 'call db.indexes() yield tokenNames as labels, properties where $lbl in labels return { label:$lbl, property_keys:properties }';
   }
   else {

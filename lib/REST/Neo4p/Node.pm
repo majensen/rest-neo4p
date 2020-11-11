@@ -266,7 +266,7 @@ REST::Neo4p::Node objects represent Neo4j nodes.
 =item new()
 
  $node = REST::Neo4p::Node->new();
- $node_with_properties = Rest::Neo4p::Node( \%props );
+ $node_with_properties = REST::Neo4p::Node->new( \%props );
 
 Instantiates a new Node object and creates corresponding node in the database.
 

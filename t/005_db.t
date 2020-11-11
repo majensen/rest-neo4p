@@ -43,9 +43,9 @@ SKIP : {
   ok grep(/bubba/,@rtypes), 'found relationship type in type list';
   ok my $node_idx = REST::Neo4p::Index->new('node', 'node_idx'), 'new node index';
  # push @cleanup, $node_idx if $node_idx;
-  ok my $reln_idx = REST::Neo4p::Index->new('relationship', 'reln_idx', {type=>'bubba'}), 'new relationship index';
+  ok my $reln_idx = REST::Neo4p::Index->new('relationship', 'reln_idx', {rtype=>'bubba'}), 'new relationship index';
   push @cleanup, $reln_idx if $reln_idx;
-
+  $DB::single=1;
   ok my @idxs = REST::Neo4p->get_indexes('node'), 'get node indexes';
   is $idxs[0]->type, 'node', 'got a node index';
   ok @idxs = REST::Neo4p->get_indexes('relationship'), 'get relationship indexes';

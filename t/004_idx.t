@@ -65,7 +65,7 @@ SKIP : {
   ok $nt_comment->add_entry($C, 'comment' => 'Man, this is my fave nucleotide!'), 'funky value added';
   ok $nt_comment->add_entry($T, 'comment' => 'This one & A spell "at"'), 'funky value added';
 
-  ok my $nt_muts = REST::Neo4p::Index->new('relationship','nt_muts',{type=>'transition'}), 'create relationship index';
+  ok my $nt_muts = REST::Neo4p::Index->new('relationship','nt_muts',{rtype=>'transition'}), 'create relationship index';
   push @cleanup, $nt_muts if $nt_muts;
   ok $nt_muts->add_entry( $cleanup[@cleanup] =
 			 $A->relate_to($T,'transition'),

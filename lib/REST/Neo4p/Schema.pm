@@ -41,6 +41,9 @@ sub create_index {
     if (my $e = REST::Neo4p::ConflictException->caught) {
       1; # ignore, already present
     }
+    elsif ( $e = REST::Neo4p::IndexExistsException->caught ) {
+      1;
+    }
     elsif ($e = Exception::Class->caught()) {
       (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
     }
