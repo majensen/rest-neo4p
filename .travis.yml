@@ -24,7 +24,7 @@ before_install:
   - cpanm Test::Pod Test::CPAN::Changes
 
 install:
-  - sleep 20
+  - sleep 10
 
 script:
   - export REST_NEO4P_TEST_SERVER=http://localhost:7474
