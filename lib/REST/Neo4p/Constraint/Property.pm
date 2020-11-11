@@ -5,7 +5,8 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Constraint::Property::VERSION = '0.3030';
+  $REST::Neo4p::Constraint::Property::VERSION = '0.4000';
+  $REST::Neo4p::Constraint::Property::VERSION = '0.4000';
 }
 
 sub new_from_constraint_hash {
@@ -189,7 +190,8 @@ use base 'REST::Neo4p::Constraint::Property';
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Constraint::NodeProperty::VERSION='0.3030';
+  $REST::Neo4p::Constraint::NodeProperty::VERSION='0.4000';
+  $REST::Neo4p::Constraint::NodeProperty::VERSION='0.4000';
 }
 
 sub new {
@@ -216,7 +218,8 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Constraint::RelationshipProperty::VERSION='0.3030';
+  $REST::Neo4p::Constraint::RelationshipProperty::VERSION='0.4000';
+  $REST::Neo4p::Constraint::RelationshipProperty::VERSION='0.4000';
 }
 # relationship_type is added as a pseudoproperty
 

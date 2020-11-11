@@ -12,7 +12,8 @@ no warnings qw(once redefine);
 
 
 BEGIN {
-  $REST::Neo4p::Constrain::VERSION = '0.3030';
+  $REST::Neo4p::Constrain::VERSION = '0.4000';
+  $REST::Neo4p::Constrain::VERSION = '0.4000';
 }
 our @EXPORT = qw(create_constraint drop_constraint constrain relax);
 our @VALIDATE = qw(validate_properties validate_relationship validate_relationship_type);

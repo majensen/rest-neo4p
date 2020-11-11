@@ -5,7 +5,8 @@ use Carp qw(croak carp);
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Path::VERSION = '0.3030';
+  $REST::Neo4p::Path::VERSION = '0.4000';
+  $REST::Neo4p::Path::VERSION = '0.4000';
 }
 
 sub new {
