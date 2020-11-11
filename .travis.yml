@@ -27,6 +27,7 @@ install:
   - sleep 10
 
 script:
+  - export REST_NEO4P_BUILD_NONINTERACTIVE=1
   - export REST_NEO4P_TEST_SERVER=http://localhost:7474
   - export REST_NEO4P_TEST_USER=''
   - export REST_NEO4P_TEST_PASS=''
