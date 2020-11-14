@@ -101,7 +101,7 @@ sub new_from_json_response {
     }
   }
   unless (defined $tbl_entry) {
-    if ($decoded_resp->{template}) {     # another kludge for get_indexes
+    if ($is_json && $decoded_resp->{template}) {     # another kludge for get_indexes
       ($decoded_resp->{type}) = $decoded_resp->{template} =~ m|index/([a-z]+)/|;
       $type = $decoded_resp->{type};
     }
