@@ -304,6 +304,12 @@ sub __do_request {
   $self->{_location} = $resp->header('Location');
 }
 
+sub is_version_4 {
+  my ($maj,@rest) = shift->neo4j_version;
+  return $maj >= 4;
+}
+
+
 sub DESTROY {}
 
 =head1 NAME

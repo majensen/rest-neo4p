@@ -11,8 +11,12 @@ services:
   - docker
   
 env:
-  - NEO4J_VER=3.5
-  - NEO4J_VER=4.1
+  - |
+    NEO4J_VER=3.5 REST_NEO4P_AGENT_MODULE=Mojo::UserAgent
+  - |
+    NEO4J_VER=4.1 REST_NEO4P_AGENT_MODULE=Neo4j::Driver
+  - |
+    NEO4J_VER=3.5 REST_NEO4P_AGENT_MODULE=Neo4j::Driver
 
 before_install:
   # canned server
@@ -29,14 +33,12 @@ install:
   - yes | ./Build installdeps --cpan_client 'cpanm -n'
 
 script:
-  - |
-    for REST_NEO4P_AGENT_MODULE in Mojo::UserAgent Neo4j::Driver ;
-    do docker run -d -p 127.0.0.1:7474:7474 -p 127.0.0.1:7473:7473 -p 127.0.0.1:7687:7687 --env NEO4J_AUTH=none --name testneo neo4j:$NEO4J_VER ;
-    sleep 10 ;
-    ./Build test ;
-    docker kill testneo ;
-    docker rm testneo ;
-    done
+  - docker run -d -p 127.0.0.1:7474:7474 -p 127.0.0.1:7473:7473 -p 127.0.0.1:7687:7687 --env NEO4J_AUTH=none --name testneo neo4j:$NEO4J_VER ;
+  - sleep 10
+  - ./Build test
+  - docker kill testneo
+  - docker rm testneo
+
   
 
 

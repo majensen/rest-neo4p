@@ -298,11 +298,6 @@ sub neo4j_version {
   wantarray ? ($major,$minor,$patch,$milestone) : $v;
 }
 
-sub is_version_4 {
-  my ($maj,@rest) = shift->neo4j_version;
-  return $maj >= 4;
-}
-
 # $rq : [get|post|put|delete]
 # $action : {neo4j REST endpt action}
 # @args : depends on REST rq
