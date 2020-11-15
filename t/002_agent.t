@@ -3,6 +3,7 @@
 use Test::More;
 use Module::Build;
 use lib '../lib';
+use REST::Neo4p;
 use REST::Neo4p::Exceptions;
 use strict;
 use warnings;
@@ -12,14 +13,15 @@ my @agent_modules = qw/LWP::UserAgent
 		       HTTP::Thin/;
 
 my $build;
-my ($user,$pass);
+my ($user,$pass) = @ENV{qw/REST_NEO4P_TEST_USER REST_NEO4P_TEST_PASS/};
 eval {
     $build = Module::Build->current;
     $user = $build->notes('user');
     $pass = $build->notes('pass');
 };
 
-my $TEST_SERVER = $build ? $build->notes('test_server') : 'http://127.0.0.1:7474';
+my $TEST_SERVER = $build ? $build->notes('test_server') : $ENV{REST_NEO4P_TEST_SERVER} // 'http://127.0.0.1:7474';
+my ($maj, @others) = REST::Neo4p::get_neo4j_version($TEST_SERVER);
 
 use_ok('REST::Neo4p::Agent');
 
@@ -39,6 +41,7 @@ foreach my $mod (@agent_modules) {
     }
     SKIP : {
 	skip "Module $mod not available, skipping...", 14 unless $mod_available;
+	skip "This test requires Neo4j v3.x.x or lower", 14 unless $maj < 4;
 	isa_ok($ua, $mod);
 	isa_ok($ua, 'REST::Neo4p::Agent');
 	

@@ -8,7 +8,8 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Index::VERSION = '0.3030';
+  $REST::Neo4p::Index::VERSION = '0.4000';
+  $REST::Neo4p::Index::VERSION = '0.4000';
 }
 
 my $unsafe = "^A-Za-z0-9\-\._\ ~";
@@ -33,7 +34,13 @@ sub new {
 		    _addl_components => [$index_type],
 		    name => $name
 		   };
+  $properties->{type} = delete $config->{rtype};
   $properties->{config} = $config if defined $config;
+  my $idx;
+  eval {
+    $idx = $class->_entity_by_id($name,$index_type);
+  };
+  return $idx if $idx;
   return $class->SUPER::new($properties);
 }
 
@@ -424,7 +431,8 @@ L<REST::Neo4p>, L<REST::Neo4p::Relationship>, L<REST::Neo4p::Node>.
 
 =head1 LICENSE
 
-Copyright (c) 2012-2017 Mark A. Jensen. This program is free software; you
+Copyright (c) 2012-2020 Mark A. Jensen. This program is free software; you
+Copyright (c) 2012-2020 Mark A. Jensen. This program is free software; you
 can redistribute it and/or modify it under the same terms as Perl
 itself.
 

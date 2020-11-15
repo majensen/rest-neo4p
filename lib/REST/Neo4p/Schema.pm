@@ -7,7 +7,8 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::Schema::VERSION = '0.3030';
+  $REST::Neo4p::Schema::VERSION = '0.4000';
+  $REST::Neo4p::Schema::VERSION = '0.4000';
 }
 
 #require 'REST::Neo4p';
@@ -41,6 +42,9 @@ sub create_index {
     if (my $e = REST::Neo4p::ConflictException->caught) {
       1; # ignore, already present
     }
+    elsif ( $e = REST::Neo4p::IndexExistsException->caught ) {
+      1;
+    }
     elsif ($e = Exception::Class->caught()) {
       (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
     }
@@ -53,8 +57,9 @@ sub get_indexes {
   my $self = shift;
   my ($label) = @_;
   REST::Neo4p::LocalException->throw("Arg 1 must be a label\n") unless defined $label;
+  my $decoded_resp;
   eval {
-    $self->_agent->get_data(qw/schema index/, $label);
+    $decoded_resp = $self->_agent->get_data(qw/schema index/, $label);
   };
   if (my $e = REST::Neo4p::NotFoundException->caught) {
     return;
@@ -63,7 +68,8 @@ sub get_indexes {
     (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
   }
   my @ret;
-  foreach (@{$self->_agent->decoded_content}) {
+  # kludge for Neo4j::Driver
+  foreach (@{$self->_agent->decoded_content // $decoded_resp}) {
     push @ret, $_->{property_keys}[0];
   }
   return @ret;
@@ -122,8 +128,9 @@ sub get_constraints {
   my ($label, $c_type) = @_;
   $c_type ||= 'uniqueness';
   REST::Neo4p::LocalException->throw("Arg 1 must be a label\n") unless defined $label;
+  my $decoded_resp;
   eval {
-    $self->_agent->get_data(qw/schema constraint/, $label, $c_type);
+    $decoded_resp = $self->_agent->get_data(qw/schema constraint/, $label, $c_type);
   };
   if (my $e = REST::Neo4p::NotFoundException->caught) {
     return;
@@ -132,7 +139,8 @@ sub get_constraints {
     (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
   }
   my @ret;
-  foreach (@{$self->_agent->decoded_content}) {
+  # kludge for Neo4j::Driver
+  foreach (@{$self->_agent->decoded_content // $decoded_resp}) {
     push @ret, $_->{property_keys}[0];
   }
   return @ret;
@@ -253,7 +261,8 @@ L<REST::Neo4p>, L<REST::Neo4p::Index>, L<REST::Neo4p::Query>
 
 =head1 LICENSE
 
-Copyright (c) 2012-2017 Mark A. Jensen. This program is free software; you
+Copyright (c) 2012-2020 Mark A. Jensen. This program is free software; you
+Copyright (c) 2012-2020 Mark A. Jensen. This program is free software; you
 can redistribute it and/or modify it under the same terms as Perl
 itself.
 

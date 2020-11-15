@@ -4,7 +4,11 @@ package REST::Neo4p;
 use Carp qw(croak carp);
 use lib '../../lib';
 use JSON;
+use URI;
 use URI::Escape;
+use HTTP::Tiny;
+use Neo4j::Driver;
+use JSON::ize;
 use REST::Neo4p::Agent;
 use REST::Neo4p::Node;
 use REST::Neo4p::Index;
@@ -14,7 +18,8 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::VERSION = '0.3030';
+  $REST::Neo4p::VERSION = '0.4000';
+  $REST::Neo4p::VERSION = '0.4000';
 }
 
 our $CREATE_AUTO_ACCESSORS = 0;
@@ -35,8 +40,9 @@ sub set_handle {
 
 sub create_and_set_handle {
   my $class = shift;
+  my @args = @_;
   $HANDLE = @HANDLES;
-  $HANDLES[$HANDLE]->{_agent} = REST::Neo4p::Agent->new(agent_module => $AGENT_MODULE);
+  $HANDLES[$HANDLE]->{_agent} = REST::Neo4p::Agent->new(agent_module => $AGENT_MODULE, @args);
   $HANDLES[$HANDLE]->{_q_endpoint} = 'cypher';
   return $HANDLE;
 }
@@ -106,9 +112,10 @@ sub handle {
 
 sub agent {
   my $neo4p = shift;
+  my @args = @_;
   unless (defined $HANDLES[$HANDLE]->{_agent}) {
     eval {
-      $HANDLES[$HANDLE]->{_agent} = REST::Neo4p::Agent->new(agent_module => $AGENT_MODULE);
+      $HANDLES[$HANDLE]->{_agent} = REST::Neo4p::Agent->new(agent_module => $AGENT_MODULE, @args);
     };
     if (my $e = REST::Neo4p::Exception->caught()) {
       # TODO : handle different classes
@@ -125,12 +132,60 @@ sub agent {
 sub connect {
   my $neo4p = shift;
   my ($server_address, $user, $pass) = @_;
-  $HANDLES[$HANDLE]->{_user} = $user;
-  $HANDLES[$HANDLE]->{_pass} = $pass;
+  my $uri = URI->new($server_address);
+  my ($u, $p);
+  $uri->userinfo and ($u, $p) = split(/:/,$uri->userinfo);
+  $HANDLES[$HANDLE]->{_user} = $user // $u;
+  $HANDLES[$HANDLE]->{_pass} = $pass // $p;
   REST::Neo4p::LocalException->throw("Server address not set\n")  unless $server_address;
+  my ($major, $minor, $patch, $milestone);
+  eval {
+    ($major, $minor, $patch, $milestone) = get_neo4j_version($server_address);
+  };
+  if (my $e = Exception::Class->caught) {
+    REST::Neo4p::CommException->throw("On version pre-check: $e");
+  }
+  if ($major >= 4) {
+    unless ($AGENT_MODULE eq 'Neo4j::Driver') {
+      unless (eval "require Neo4j::Driver; 1") {
+	REST::Neo4j::Exception->throw("Neo4j version 4 or higher requires Neo4j::Driver as agent module, but Neo4j::Driver is not installed in your system");
+      }
+      warn "Neo4j version 4 or higher requires Neo4j::Driver as agent module; using this instead of $AGENT_MODULE";
+      $AGENT_MODULE = 'Neo4j::Driver';
+    }
+  }
   $neo4p->agent->credentials($server_address,'Neo4j',$user,$pass) if defined $user;
   my $connected = $neo4p->agent->connect($server_address);
   return $HANDLES[$HANDLE]->{_connected} = $connected;
+}
+
+sub get_neo4j_version {
+  my ($url) = @_;
+  my $version;
+  my $resp = HTTP::Tiny->new( default_headers => { 'Content-Type' => 'application/json'})
+    ->get($url);
+  if ($resp->{success}) {
+    my $content = J($resp->{content});
+    $version = $content->{neo4j_version};
+    unless (defined $version) {
+      $resp = HTTP::Tiny->new( default_headers => { 'Content-Type' => 'application/json'})
+	->get("$url/db/data/");
+      if ($resp->{success}) {
+	$content = J($resp->{content});
+	$version = $content->{neo4j_version};
+      }
+      else {
+	die "$resp->{status} $resp->{reason}";
+      }
+    }
+    die "Neo4j version not found (is $url a Neo4j endpoint?)" unless defined $version;
+  }
+  else {
+    die "$resp->{status} $resp->{reason}";
+  }
+  my ($major, $minor, $patch, $milestone) = 
+    $version =~ /^(?:([0-9]+)\.)(?:([0-9]+)\.)?([0-9]+)?(?:-M([0-9]+))?/;
+  return wantarray ? ($major, $minor, $patch, $milestone) : $version;
 }
 
 sub connected {
@@ -352,7 +407,6 @@ sub rollback {
   };
   if (my $e = REST::Neo4p::Exception->caught()) {
     # TODO : handle different classes
-    $DB::single=1;
     $e->rethrow;
   }
   elsif ($e = Exception::Class->caught()) {
@@ -414,9 +468,9 @@ REST::Neo4p - Perl object bindings for a Neo4j database
   $new_neighbor = REST::Neo4p::Node->new({'name' => 'Donkey Hoty'});
   $my_reln = $my_node->relate_to($new_neighbor, 'neighbor');
 
-  $query = REST::Neo4p::Query->new("START n=node(".$my_node->id.")
-                                    MATCH p = (n)-[]->()
-                                    RETURN p");
+  $query = REST::Neo4p::Query->new("MATCH p = (n)-[]->()
+                                    WHERE id(n) = \$id
+                                    RETURN p", { id => $my_node->id });
   $query->execute;
   $path = $query->fetch->[0];
   @path_nodes = $path->nodes;
@@ -510,7 +564,8 @@ constrain properties and the values of properties for those nodes, and
 then specify allowable relationships between kinds of nodes.
 
 Constraints can be enforced automatically, causing exceptions to be
-thrown when constraints are violated. Alternatively, you can use
+thrown
+ when constraints are violated. Alternatively, you can use
 validation functions to test properties and relationships, including
 those already present in the database.
 
@@ -668,7 +723,8 @@ L<REST::Neo4p::Schema>,L<REST::Neo4p::Constrain>, L<REST::Neo4p::Constraint>.
 
 =head1 LICENSE
 
-Copyright (c) 2012-2017 Mark A. Jensen. This program is free software; you
+Copyright (c) 2012-2020 Mark A. Jensen. This program is free software; you
+Copyright (c) 2012-2020 Mark A. Jensen. This program is free software; you
 can redistribute it and/or modify it under the same terms as Perl
 itself.
 
