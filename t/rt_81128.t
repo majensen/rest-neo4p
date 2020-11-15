@@ -41,7 +41,7 @@ Q
   ok $q->execute, 'execute query';
   my $row;
   lives_ok { $row = $q->fetch } 'fetch lives';
-  is_deeply $row, [qw(ricky lucy)], 'query response correct';
+  is_deeply [sort @$row], [qw(lucy ricky)], 'query response correct';
   ok $q = REST::Neo4p::Query->new(<<Q2), 'create query that returns an array of objects';
 match (n) where id(n)=$$n1 or id(n)=$$n2 return collect(n)
 Q2
@@ -49,7 +49,7 @@ Q2
   $q->execute;
   lives_ok { $row = $q->fetch } 'fetch lives';
   isa_ok($_,'REST::Neo4p::Node') for @$row;
-  is_deeply [sort map {$_->get_property('name')} @$row], [sort qw(ricky lucy)], 'response correct';
+  is_deeply [sort map {$_->get_property('name')} @$row], [qw(lucy ricky)], 'response correct';
 }
 
 END {
