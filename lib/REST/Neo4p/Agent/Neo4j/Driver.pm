@@ -289,14 +289,6 @@ sub maybe_throw_neo4p_error {
   }
 }
 
-sub neo4j_version {
-  my $self = shift;
-  my $v = my $a = $self->{_actions}{neo4j_version};
-  return unless defined $v;
-  my ($major, $minor, $patch, $milestone) =
-    $a =~ /^(?:([0-9]+)\.)(?:([0-9]+)\.)?([0-9]+)?(?:-M([0-9]+))?/;
-  wantarray ? ($major,$minor,$patch,$milestone) : $v;
-}
 
 # $rq : [get|post|put|delete]
 # $action : {neo4j REST endpt action}

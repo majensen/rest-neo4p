@@ -42,8 +42,11 @@ SKIP : {
   ok my @rtypes = REST::Neo4p->get_relationship_types, 'get relationship type list';
   ok grep(/bubba/,@rtypes), 'found relationship type in type list';
   ok my $node_idx = REST::Neo4p::Index->new('node', 'node_idx'), 'new node index';
- # push @cleanup, $node_idx if $node_idx;
-  ok my $reln_idx = REST::Neo4p::Index->new('relationship', 'reln_idx', {rtype=>'bubba'}), 'new relationship index';
+  # push @cleanup, $node_idx if $node_idx;
+  $DB::single=1;
+  ok my $reln_idx = REST::Neo4p::Index->new(
+      'relationship', 'reln_idx', 
+      REST::Neo4p->agent->is_version_4 ? {rtype=>'bubba'} : ()), 'new relationship index';
   push @cleanup, $reln_idx if $reln_idx;
   $DB::single=1;
   ok my @idxs = REST::Neo4p->get_indexes('node'), 'get node indexes';

@@ -4,7 +4,7 @@ use Test::More;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
-use lib 't/lib';
+use lib qw'lib t/lib';
 use Neo4p::Connect;
 use REST::Neo4p;
 use REST::Neo4p::Batch;
@@ -63,7 +63,7 @@ SKIP : {
   ok $rel, 'reln assigned inside batch';
   ok !$rel->is_batch, 'and not a batch relationship';
   is $rel->type, 'one2two', 'correct type';
-
+  $DB::single=1;
   ok  my $idx2 = REST::Neo4p::Index->new('node' => 'pals_of_bob'), "new index";
   my $name = 'fred';
   my $node2;
@@ -91,14 +91,16 @@ SKIP : {
 }
 
 END {
-  CLEANUP : {
-      my @nodes = $idx->find_entries('name:*') if $idx;
-      for my $n (@nodes) {
-	  ok ($_->remove, 'remove relationship') for $n->get_all_relationships;
-      }
-      ok($_->remove,'remove node') for @nodes;
-      ok ($idx->remove, 'remove index') if $idx;
-      ok ($idx2->remove, 'remove index') if $idx2;
+    CLEANUP : {
+	eval {
+	    my @nodes = $idx->find_entries('name:*') if $idx;
+	    for my $n (@nodes) {
+		$_->remove for $n->get_all_relationships;
+	    }
+	    $_->remove for @nodes;
+	    $idx->remove if $idx;
+	    $idx2->remove if $idx2;
+	};
   }
   done_testing;
 }

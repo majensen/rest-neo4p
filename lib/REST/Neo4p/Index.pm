@@ -36,6 +36,11 @@ sub new {
 		   };
   $properties->{type} = delete $config->{rtype};
   $properties->{config} = $config if defined $config;
+  my $idx;
+  eval {
+    $idx = $class->_entity_by_id($name,$index_type);
+  };
+  return $idx if $idx;
   return $class->SUPER::new($properties);
 }
 

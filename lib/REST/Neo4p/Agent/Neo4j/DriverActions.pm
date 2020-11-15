@@ -146,8 +146,6 @@ sub _throw_unsafe_tok {
   return;
 }
 
-# TODO: cypher
-
 sub post_cypher {
   my $self = shift;
   my ($ary, $qry, $addl_headers) = @_;

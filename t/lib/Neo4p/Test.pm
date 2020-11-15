@@ -82,7 +82,7 @@ sub delete_sample {
   my $self = shift;
   die "No connection"  unless REST::Neo4p->connected;
   my $lbl = $self->lbl;
-  my $q = REST::Neo4p::Query->new("match (n:'$lbl') where n.uuid = \$uuid detach delete n",{uuid => self->uuid});
+  my $q = REST::Neo4p::Query->new("match (n:$lbl) where n.uuid = \$uuid detach delete n",{uuid => $self->uuid});
   $q->execute();
   return 1;
 }

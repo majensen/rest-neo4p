@@ -228,7 +228,12 @@ sub simple_from_json_response {
       # node id
       ($ret->{_node}) = $decoded_resp->{self} =~ m{.*/([0-9]+)$};
       # node properties
-      $ret->{$_} = $decoded_resp->{data}->{$_} for keys %{$decoded_resp->{data}};
+      if ($decoded_resp->{data}) {
+	$ret->{$_} = $decoded_resp->{data}->{$_} for keys %{$decoded_resp->{data}};
+      }
+      else { # use top-level keys except self
+	$ret->{$_} = $decoded_resp->{$_} for grep !/^self$/, keys %{$decoded_resp};
+      }
       last;
     };
     /Driver/ && do {

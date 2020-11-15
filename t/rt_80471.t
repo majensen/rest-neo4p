@@ -45,7 +45,7 @@ diag "No local connection to Neo4j; tests skipped" if $not_connected;
 SKIP : {
   skip 'no local connection to neo4j', $num_live_tests if $not_connected;
   my $AGENT = REST::Neo4p->agent;
-  skip 'Agent is Neo4j::Driver', $num_live_tests if (ref($AGENT) eq 'Neo4j::Driver');
+  skip 'Agent is Neo4j::Driver', $num_live_tests if (ref($AGENT) =~ /Neo4j::Driver/);
   ok $AGENT->{_actions}{node} =~ s/:[0-9]+/:8474/, 'change post port to 8474 (should refuse connection)';
   $REST::Neo4p::AGENT::RETRY_WAIT=1; # speed it up for test
   throws_ok { $AGENT->get_node(1) } 'REST::Neo4p::CommException';

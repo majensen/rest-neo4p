@@ -233,7 +233,6 @@ sub _parse_response {
   my $jsonr = JSON::XS->new->utf8;
   my ($buf,$res,$str,$rowstr,$obj);
   my $row_count;
-  use experimental 'smartmatch';
   $self->tmpf->read($buf, $BUFSIZE);
   $jsonr->incr_parse($buf);
   eval { # capture j_parse errors
@@ -328,7 +327,7 @@ sub _parse_response {
 	    if ($row_str) {
 	      $row = drop($row_str);
 	      if (ref $row && ref $row->[1]) {
-		$ret =  $self->_process_row($row->[1]->{row});
+		$ret =  $self->_process_row($row->[1]->{row}, $row->[1]->{meta});
 	      }
 	      elsif (!defined $row) {
 		$item = drop($res_str);
@@ -425,22 +424,26 @@ sub _parse_response {
   }
 }
 sub _response_entity {
-  my ($resp) = @_;
-  use experimental qw/smartmatch/;
+  my ($resp,$meta) = @_;
   if ( ref($resp) eq '' ) { #handle arrays of barewords
     return 'bareword';
   }
+  elsif ($meta) {
+    my $type = $meta->{type};
+    $type =~ s/^(.)/\U$1\E/;
+    return $type;
+  }
   elsif (defined $resp->{self}) {
-    given ($resp->{self}) {
-      when (m|data/node|) {
+    for ($resp->{self}) {
+      m|data/node| && do {
 	return 'Node';
-      }
-      when (m|data/relationship|) {
+      };
+      m|data/relationship| && do {
 	return 'Relationship';
-      }
-      default {
+      };
+      do {
 	REST::Neo4p::QueryResponseException->throw(message => "Can't identify object type by JSON response\n");
-      }
+      };
     }
   }
   elsif (defined $resp->{start} && defined $resp->{end}
@@ -454,18 +457,29 @@ sub _response_entity {
 
 sub _process_row {
   my $self = shift;
-  my ($row) = @_;
-  use experimental qw/smartmatch/;
+  my ($row,$meta) = @_;
   my @ret;
   foreach my $elt (@$row) {
-    given ($elt) {
-       when (!ref) { #bareword
-	push @ret, $elt;
-      }
-      when (ref =~ /HASH/) {
+    my $info;
+    if ($meta) {
+      $info = shift @$meta;
+    }
+    for ($elt) {
+       !ref && do { #bareword
+	 push @ret, $elt;
+	 last;
+       };
+      (ref =~ /HASH/) && do {
 	my $entity_type;
 	eval {
-	  $entity_type = _response_entity($elt);
+	  if ($info && $info->{type}) {
+	    $elt->{self} = "$$info{type}/$$info{id}";
+	    $entity_type = $info->{type};
+	    $entity_type =~ s/^(.)/\U$1\E/;
+	  }
+	  else {
+	    $entity_type = _response_entity($elt);
+	  }
 	};
 	my $e;
 	if ($e = Exception::Class->caught()) {
@@ -474,14 +488,22 @@ sub _process_row {
 	my $entity_class = 'REST::Neo4p::'.$entity_type;
 	push @ret, $self->{ResponseAsObjects} ?
 	  $entity_class->new_from_json_response($elt) :
-	    $entity_class->simple_from_json_response($elt);
-      }
-      when (ref =~ /ARRAY/) {
+	  $entity_class->simple_from_json_response($elt);
+	last;
+      };
+      (ref =~ /ARRAY/) && do {
 	my $array;
 	for my $ary_elt (@$elt) {
 	  my $entity_type;
 	  eval {
-	    $entity_type = _response_entity($ary_elt);
+	    if ($info && $info->{type}) {
+	      $elt->{self} = "$$info{type}/$$info{id}";
+	      $entity_type = $info->{type};
+	      $entity_type =~ s/^(.)/\U$1\E/;
+	    }
+	    else {
+	      $entity_type = _response_entity($ary_elt);
+	    }
 	  };
 	  my $e;
 	  if ($e = Exception::Class->caught()) {
@@ -497,17 +519,19 @@ sub _process_row {
 		$entity_class->simple_from_json_response($ary_elt) ;
 	  }
 	}
-	# guess whether to flatten response:
-	# if more than one row element, don't flatten, 
-	# return an array reference in the response
-	push @ret, @$row > 1 ? $array : @$array;
-      }
-      default {
+	push @ret, $array;
+	last;
+      };
+      do {
 	REST::Neo4p::QueryResponseException->throw("Can't parse query response (row doesn't make sense)\n");
-      }
+	last;
+      };
     }
   }
-  return \@ret;
+  # guess whether to flatten response:
+  # if more than one row element, don't flatten, 
+  # return an array reference in the response
+  return (@ret == 1 and ref($ret[0]) eq 'ARRAY') ? $ret[0] : \@ret;
 }
 
 sub finish {

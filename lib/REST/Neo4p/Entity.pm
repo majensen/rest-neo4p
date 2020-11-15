@@ -40,9 +40,11 @@ sub new {
   };
   if (my $e = REST::Neo4p::Exception->caught()) {
     # TODO : handle cases
+    $DB::single=1;
     $e->rethrow;
   }
   elsif ($e = Exception::Class->caught()) {
+    $DB::single=1;
     (ref $e && $e->can("rethrow")) ? $e->rethrow : die $e;
   }
   # TODO: examine following line in Neo4j::Driver context

@@ -228,7 +228,7 @@ sub __do_request {
       }
       $url.='?'.join('&',@params) if @params;
       if ($self->batch_mode) {
-	$url = ($url_components[0] =~ /{[0-9]+}/) ? $url_components[0] : $url; # index batch object kludge
+	$url = (@url_components && ($url_components[0] =~ /{[0-9]+}/)) ? $url_components[0] : $url; # index batch object kludge
 
 	@_ = ($self, 
 	      $url,
@@ -302,6 +302,15 @@ sub __do_request {
     }
   }
   $self->{_location} = $resp->header('Location');
+}
+
+sub neo4j_version {
+  my $self = shift;
+  my $v = my $a = $self->{_actions}{neo4j_version};
+  return unless defined $v;
+  my ($major, $minor, $patch, $milestone) =
+    $a =~ /^(?:([0-9]+)\.)(?:([0-9]+)\.)?([0-9]+)?(?:-M([0-9]+))?/;
+  wantarray ? ($major,$minor,$patch,$milestone) : $v;
 }
 
 sub is_version_4 {

@@ -38,7 +38,7 @@ SKIP : {
   REST::Neo4p->create_and_set_handle(cypher_filter => 'params');
   connect($TEST_SERVER, $user, $pass);
   ok my $t = Neo4p::Test->new, 'test graph object';
-  $DB::single=1;
+
   ok $t->create_sample, 'create sample graph';
   is $neo4p->q_endpoint, 'cypher', 'endpt starts out as cypher';
   ok $neo4p->begin_work, 'begin transaction';
@@ -68,7 +68,6 @@ STMT3
   is @r, 4, '4 relationships before execute';
   ok my $q = REST::Neo4p::Query->new($stmt1), 'statement 1';
   $q->{RaiseError} = 1;
-  $DB::single=1;
   ok defined $q->execute, 'execute statment 1';
   @r = $n->get_relationships;
   is @r, 4, 'executed, but still only 4 relationships';
@@ -96,11 +95,9 @@ STMT3
   ok defined $w->execute, 'exec stmt 3';
   $w->{ResponseAsObjects} = undef;
   my $row = $w->fetch;
-  $DB::single=1;
   is_deeply $row, [ { _node => $row->[0]{_node}, name => 'Fred', uuid => $uuid }, 'Fred' ], 'check simple txn row return';
   ok $neo4p->commit, 'commit';
   is scalar($m->get_relationships), 2, 'now he has 2 relationships';
-
 }
 }
 

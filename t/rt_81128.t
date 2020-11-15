@@ -49,7 +49,7 @@ Q2
   $q->execute;
   lives_ok { $row = $q->fetch } 'fetch lives';
   isa_ok($_,'REST::Neo4p::Node') for @$row;
-  is_deeply [map {$_->get_property('name')} @$row], [qw(ricky lucy)], 'response correct';
+  is_deeply [sort map {$_->get_property('name')} @$row], [sort qw(ricky lucy)], 'response correct';
 }
 
 END {
