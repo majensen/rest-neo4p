@@ -100,7 +100,6 @@ sub connect {
 # _add_to_batch_queue
 # takes a request and converts to a Neo4j REST batch-friendly
 # hash
-# VERY internal and experimental
 # $url : rest endpoint that would be called ordinarily
 # $rq : [get|delete|post|put]
 # $content : hashref of rq content (post and put)
@@ -622,7 +621,8 @@ has default value of 1024.
 
 =head1 LICENSE
 
-Copyright (c) 2012-2017 Mark A. Jensen. This program is free software; you
+Copyright (c) 2012-2020 Mark A. Jensen. This program is free software; you
+Copyright (c) 2012-2020 Mark A. Jensen. This program is free software; you
 can redistribute it and/or modify it under the same terms as Perl
 itself.
 
