@@ -7,7 +7,6 @@ use strict;
 use warnings;
 BEGIN {
   $REST::Neo4p::Relationship::VERSION = '0.4000';
-  $REST::Neo4p::Relationship::VERSION = '0.4000';
 }
 
 sub new {
@@ -183,7 +182,6 @@ L<REST::Neo4p>, L<REST::Neo4p::Node>, L<REST::Neo4p::Index>.
 
 =head1 LICENSE
 
-Copyright (c) 2012-2020 Mark A. Jensen. This program is free software; you
 Copyright (c) 2012-2020 Mark A. Jensen. This program is free software; you
 can redistribute it and/or modify it under the same terms as Perl
 itself.

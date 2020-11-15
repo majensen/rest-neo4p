@@ -7,7 +7,6 @@ use strict;
 use warnings;
 BEGIN {
   $REST::Neo4p::Agent::LWP::UserAgent::VERSION = '0.4000';
-  $REST::Neo4p::Agent::LWP::UserAgent::VERSION = '0.4000';
 }
 sub new {
   my ($class,@args) = @_;

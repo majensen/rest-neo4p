@@ -17,7 +17,6 @@ use warnings;
 my $WARN_ON_ERROR;
 
 BEGIN {
-  $REST::Neo4p::Agent::Neo4j::Driver::VERSION = '0.4000';
 }
 
 sub new {
