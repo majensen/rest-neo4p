@@ -111,7 +111,14 @@ my $build =  $class->new
 	resources => {
 	  bugtracker => 'http://rt.cpan.org/Public/Dist/Display.html?Name=REST-Neo4p',
 	  repository  => 'http://github.com/majensen/rest-neo4p.git',
-         }
+	},
+	x_contributors => [
+	  'Mark A. Jensen <majensen@cpan.org>',
+	  'Arne Johannessen <ajnn@cpan.org>',
+	  'Keith Broughton <@keithbro>',
+	  'Christiaan Kras <@Htbaa>',
+	  'denixx'
+	 ]
        },
       perl => 5.010
      );
