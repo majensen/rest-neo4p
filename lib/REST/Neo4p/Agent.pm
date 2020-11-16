@@ -442,7 +442,7 @@ Returns the Neo4j server admin url.
 
 =item relationship_index()
 
-=item extensions_info
+=item extensions_info()
 
 =item relationship_types()
 
@@ -464,8 +464,9 @@ methods to make requests directly.
 =item neo4j_version()
 
  $version = $agent->neo4j_version;
+ ($major, $minor, $patch, $milestone) = $agent->neo4j_version;
 
-Returns the version string of the connected Neo4j server.
+Returns the version string/components of the connected Neo4j server.
 
 =item available_actions()
 
@@ -505,7 +506,7 @@ present, is a hashref containing additional request headers.
  # create a new node with given properties
  $agent->post_node({ name => 'Wanda' });
  # do a cypher query and save content to file
- $agent->post_cypher([], { query => 'START n=node(*) RETURN n', params=>{}},
+ $agent->post_cypher([], { query => 'MATCH (n) RETURN n', params=>{}},
                      { ':content_file' => $my_file_name });
 
 Makes a POST request to the REST endpoint mapped to {action}. The first
@@ -553,6 +554,10 @@ Adds C<X-Stream: true> to the default headers.
 =back
 
 =head1 Batch Mode
+
+B<Neo4j version 4.0+>: I<Batch mode is a Neo4j REST API feature that bit
+the big one along with that API. The Neo4j::Driver agent will complain
+if you use these methods.>
 
 When the agent is in batch mode, the usual request calls are not
 executed immediately, but added to a queue. The L</execute_batch()>

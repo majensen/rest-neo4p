@@ -1,8 +1,65 @@
 use Module::Build;
 use strict;
 use warnings;
+my $class = Module::Build->subclass(
+  class => 'My::Builder',
+  code => q{
+ use File::Find;
+ my $have_p2m = eval "require Pod::Markdown; 1";
+ sub ACTION_author_tasks {
+   my $self = shift;
+   my ($action, $subaction) = @ARGV;
+   if ($subaction && ($subaction eq 'readme')) {
+     unless ($have_p2m) {
+       print "Don't have Pod::Markdown\n";
+       return;
+     }
+     # write POD as <Module>.md in relevant lib/ subdirs
+     find (
+       sub {
+	 return unless $_ =~ /^(.*)\.pm$/;
+	 my ($name) = $1;
+	 die unless defined $name;
+	 my $mdstr = '';
+	 my $p2m = Pod::Markdown->new();
+	 $p2m->local_module_url_prefix('github::');
+	 $p2m->local_module_re(qr/^REST::Neo4p/);
+	 $p2m->output_string(\$mdstr);
+	 $p2m->parse_file($_);
+ 	 $mdstr =~ s/%3A%3A/::/g;
+	 $mdstr =~ s{(\][(]github::[^)]*[)])}
+		    {
+		      $_ = $1;
+		      s|github::|/lib/|;
+		      s|::|/|g;
+		      s|[)]$|.md)|;
+		      $_
+		    }eg;
+	 if (length $mdstr > 1) {
+	   open my $mdf, '>', "$name.md" or die $!;
+	   print $mdf $mdstr;
+	   close $mdf;
+	 }
+       },
+       File::Spec->catdir($self->base_dir,'lib')
+      );
+     
+   }
+   else {
+     print STDERR "Valid author tasks are:\n\treadme\n";
+     exit 1;
+   }
+   # use the dist-version-from .pm's .md as README.md
+   if ($self->dist_version_from) {
+     my $mdf = $self->dist_version_from;
+     $mdf =~ s/\.pm/\.md/;
+     $self->copy_if_modified( from => $mdf, to => 'README.md' );
+   }
+ }
 
-my $build =  Module::Build->new
+});
+
+my $build =  $class->new
     ( dist_name     => 'REST-Neo4p',
       dist_abstract => 'Perl bindings for a Neo4j graph database',
       dist_version_from => 'lib/REST/Neo4p.pm',
@@ -72,3 +129,4 @@ else {
   $build->notes( agent_mod => $build->prompt("Agent module:", $ENV{REST_NEO4P_AGENT_MODULE} // "LWP::UserAgent") );
 }
 $build->create_build_script;
+

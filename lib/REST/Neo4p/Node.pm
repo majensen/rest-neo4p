@@ -347,9 +347,9 @@ Get node as a simple hashref.
 
 =back
 
-=head2 METHODS - Neo4j Version 2.0
+=head2 METHODS - Neo4j Version 2.0+
 
-These methods are supported by v2.0 of the Neo4j server.
+These methods are supported by v2.0+ of the Neo4j server.
 
 =over
 

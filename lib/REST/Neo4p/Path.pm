@@ -140,8 +140,7 @@ REST::Neo4p::Path - Container for Neo4j path elements
 REST::Neo4p::Path provides a simple container for Neo4j paths as returned
 by Cypher queries. Nodes and relationships are stored in path order.
 
-Currently, creating de novo instances of this class is really the job
-of L<REST::Neo4p::Query>.
+Creating de novo instances of this class is really the job of L<REST::Neo4p::Query>.
 
 =head1 METHODS
 

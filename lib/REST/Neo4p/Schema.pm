@@ -184,18 +184,11 @@ REST::Neo4p::Schema - Label-based indexes and constraints
 
 =head1 DESCRIPTION
 
-L<Neo4j|http://neo4j.org> v2.0 provides a way to schematize the graph
+L<Neo4j|http://neo4j.org> v2.0+ provides a way to schematize the graph
 on the basis of node labels, associated indexes, and property
 uniqueness constraints. C<REST::Neo4p::Schema> allows access to this
 system via the Neo4j REST API. Use a C<Schema> object to create, list,
 and drop indexes and constraints.
-
-Note that as of v2.0.0, the Neo4j server can only create indexes on
-single properties within a label, and only uniqueness constraints on
-single properties. v2.0.1 is required for this module, which is
-dependent on a bug fix in that release.
-
-
 
 =head1 METHODS
 
@@ -230,6 +223,11 @@ Remove indexes on given property or properties for a given label.
 
 Create uniqueness constraints on a given property or properties for a
 given label.
+
+I<Note>: For some inexplicable reason, this one schema feature went behind
+the paywall in Neo4j version 4.0. Unless you are using the Enterprise
+Edition, this method will throw the dreaded
+L<REST::Neo4p::Neo4jTightwadException>.
 
 =item get_constraints()
 

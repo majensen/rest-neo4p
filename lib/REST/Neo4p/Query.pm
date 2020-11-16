@@ -550,7 +550,7 @@ REST::Neo4p::Query - Execute Neo4j Cypher queries
 =head1 SYNOPSIS
 
  REST::Neo4p->connect('http:/127.0.0.1:7474');
- $query = REST::Neo4p::Query->new('START n=node(0) RETURN n');
+ $query = REST::Neo4p::Query->new('MATCH (n) WHERE n.name = "Boris" RETURN n');
  $query->execute;
  $node = $query->fetch->[0];
  $node->relate_to($other_node, 'link');
@@ -575,15 +575,21 @@ destruction, whichever comes first.
 
 C<REST::Neo4p::Query> understands Cypher L<query
 parameters|http://docs.neo4j.org/chunked/stable/cypher-parameters.html>. These
-are represented in Cypher as simple tokens surrounded by curly braces.
+are represented in Cypher, unfortunately, as dollar-prefixed tokens.
 
- MATCH (n) WHERE n.first_name = {name} RETURN n
+ MATCH (n) WHERE n.first_name = $name RETURN n
 
-Here, C<{name}> is the named parameter. A single query object can be executed
-multiple times with different parameter values:
+Here, C<$name> is the named parameter. 
+
+Don't forget to escape the dollar sign if you're also doing string interpolation:
+
+ $prop = "n.name";
+ $qry = "MATCH (n) WHERE $prop = \$name RETURN n";
+ 
+A single query object can be executed multiple times with different parameter values:
 
  my $q = REST::Neo4p::Query->new(
-           'MATCH (n) WHERE n.first_name = {name} RETURN n'
+           'MATCH (n) WHERE n.first_name = $name RETURN n'
          );
  foreach (@names) {
    $q->execute(name => $_);
@@ -604,9 +610,8 @@ This is very highly recommended over creating multiple query objects like so:
 
 As with any database engine, a large amount of overhead is saved by
 planning a parameterized query once. In addition, the REST side of the
-Neo4j server currently (Feb 2014) will balk at handling 1000s of
-individual queries in a row. Parameterizing queries gets around this
-issue.
+Neo4j server will balk at handling 1000s of individual queries in a row.
+Parameterizing queries gets around this issue.
 
 =head2 Paths
 
@@ -616,16 +621,7 @@ Relationships.
 
 =head2 Transactions
 
-See L<REST::Neo4p/Transaction Support (Neo4j Server Version 2 only)>.
-
-NOTE: Rows returned from the Neo4j transaction endpoint are not
-completely specified database objects (see
-L<Neo4j docs|http://docs.neo4j.org/chunked/stable/rest-api-transactional.html>). Fetches
-on transactional queries will return an array of simple Perl
-structures (hashes and arrays) that correspond to the row as returned
-in JSON by the server, rather than as REST::Neo4p objects. This is
-regardless of the setting of the
-L<ResponseAsObjects|REST::Neo4p::Query/ResponseAsObjects> attribute.
+See L<REST::Neo4p/Transaction Support (Neo4j Version 2.0+)>.
 
 =head1 METHODS
 
@@ -633,7 +629,7 @@ L<ResponseAsObjects|REST::Neo4p::Query/ResponseAsObjects> attribute.
 
 =item new()
 
- $stmt = 'START n=node({node_id}) RETURN n';
+ $stmt = 'MATCH (n) WHERE id(n) = $node_id RETURN n';
  $query = REST::Neo4p::Query->new($stmt,{node_id => 1});
 
 Create a new query object. First argument is the Cypher query
@@ -651,7 +647,7 @@ Execute the query on the server. Not supported in batch mode.
 
 =item fetchrow_arrayref()
 
- $query = REST::Neo4p::Query->new('START n=node(0) RETURN n, n.name');
+ $query = REST::Neo4p::Query->new('MATCH (n) RETURN n, n.name LIMIT 10');
  $query->execute;
  while ($row = $query->fetch) { 
    print 'It works!' if ($row->[0]->get_property('name') == $row->[1]);

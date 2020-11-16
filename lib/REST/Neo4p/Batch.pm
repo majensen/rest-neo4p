@@ -23,6 +23,9 @@ our $BUFSIZE = 50000;
 sub batch (&@) {
   my ($coderef,$action) = @_;
   my $agent = REST::Neo4p->agent;
+  if ($agent->is_version_4) {
+    REST::Neo4p::NotSuppException->throw("Batch mode not supported on Neo4j server v4.0+");
+  }
   my @errors;
   REST::Neo4p::CommException->throw("Not connected\n") unless REST::Neo4p->connected;
   warn 'Agent already in batch_mode on batch() call' if ($agent->batch_mode);
@@ -142,6 +145,9 @@ REST::Neo4p::Batch - Mixin for batch processing
 
 REST::Neo4p::Batch adds some syntactic sugar allowing ordinary
 REST::Neo4p code to be processed through the Neo4j REST batch API.
+
+Batch mode is not supported in Neo4j version 4.0+. The methods in this
+module will barf.
 
 =head1 batch {} ($action)
 

@@ -475,7 +475,7 @@ REST::Neo4p - Perl object bindings for a Neo4j database
   @path_nodes = $path->nodes;
   @path_rels = $path->relationships;
 
-Batch processing (see L<REST::Neo4p::Batch> for more)
+Batch processing (see L<REST::Neo4p::Batch> for more) - not available for Neo4j v4.0+
 
  #!perl
  # loader...
@@ -502,6 +502,13 @@ work exclusively with Perl objects, and
 
 (2) to exploit the API's self-discovery mechanisms, avoiding as much
 as possible internal hard-coding of URLs.
+
+B<Neo4j version 4.0+>: The REST API and the "cypher endpoint" are no
+longer found in Neo4j servers after version 3.5. Never fear: the
+C<Neo4j::Driver> user agent, based on AJNN's L<Neo4j::Driver>,
+emulates both of these deprecated endpoints for REST::Neo4p. The goal
+is that REST::Neo4p will plug and play with version 4.0+. Be sure to
+report any bugs.
 
 Neo4j entities are represented by corresponding classes:
 
@@ -586,6 +593,7 @@ C<$REST::Neo4p::AGENT_MODULE> to one of the following
  LWP::UserAgent
  Mojo::UserAgent
  HTTP::Thin
+ Neo4j::Driver
 
 The L<REST::Neo4p::Agent> created will be a subclass of the selected
 backend agent. It can be accessed with L</agent()>.
@@ -593,6 +601,10 @@ backend agent. It can be accessed with L</agent()>.
 The initial value of C<$REST::Neo4p::AGENT_MODULE> will be the value
 of the environment variable C<REST_NEO4P_AGENT_MODULE> or
 C<LWP::UserAgent> by default.
+
+If your Neo4j database is version 4.0 or greater, C<Neo4j::Driver>
+will be used automatically and a warning will ensue if this overrides
+a different choice.
 
 =head1 CLASS METHODS
 
@@ -612,9 +624,10 @@ Returns the underlying L<REST::Neo4p::Agent> object.
 
 =item neo4j_version()
 
- $version = REST::Neo4p->neo4j_version;
+ $version_string = REST::Neo4p->neo4j_version;
+ ($major, $minor, $patch, $milestone) = REST::Neo4p->neo4j_version;
 
-Returns the server's neo4j version number, or undef if not connected.
+Returns the server's neo4j version string/components, or undef if not connected.
 
 =item get_node_by_id()
 
@@ -647,7 +660,7 @@ Returns false if index C<$name> does not exist in database.
 
 =back
 
-=head2 Label Support (Neo4j Server Version 2 only) 
+=head2 Label Support (Neo4j version 2.0+)
 
 =over
 
@@ -664,7 +677,7 @@ Returns false if no nodes with given label in database.
 
 =back
 
-=head2 Transaction Support (Neo4j Server Version 2 only)
+=head2 Transaction Support (Neo4j version 2.0+)
 
 Initiate, commit, or rollback L<queries|REST::Neo4p::Query> in transactions.
 
@@ -677,10 +690,10 @@ Initiate, commit, or rollback L<queries|REST::Neo4p::Query> in transactions.
 =item rollback()
  
  $q = REST::Neo4p::Query->new(
-   'start n=node(0) match n-[r:pal]->m create r'
+   'match (n)-[r:pal]->(m) where id(n)=0 create r'
  );
  $r = REST::Neo4p::Query->new(
-    'start n=node(0) match n-[r:pal]->u create unique u'
+    'match (n)-[r:pal]->(u) where id(n)=0 merge u'
  );
  REST::Neo4p->begin_work;
  $q->execute;

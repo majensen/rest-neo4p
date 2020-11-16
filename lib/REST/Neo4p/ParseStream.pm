@@ -253,6 +253,7 @@ REST::Neo4p::ParseStream - Parse Neo4j REST responses on the fly
 =head1 SYNOPSIS
 
  Not for human consumption.
+ This module is ignored by the Neo4j::Driver-based agent.
 
 =head1 DESCRIPTION
 
