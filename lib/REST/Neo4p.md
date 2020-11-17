@@ -22,7 +22,9 @@ REST::Neo4p - Perl object bindings for a Neo4j database
      @path_nodes = $path->nodes;
      @path_rels = $path->relationships;
 
-Batch processing (see [REST::Neo4p::Batch](/lib/REST/Neo4p/Batch.md) for more) - not available for Neo4j v4.0+
+Batch processing (see [REST::Neo4p::Batch](/lib/REST/Neo4p/Batch.md) for more)
+
+_Not available for Neo4j v4.0+_
 
     #!perl
     # loader...
@@ -114,9 +116,9 @@ This is a mixin that is not _use_d automatically by REST::Neo4p. For
 details and examples, see [REST::Neo4p::Constrain](/lib/REST/Neo4p/Constrain.md) and
 [REST::Neo4p::Constraint](/lib/REST/Neo4p/Constraint.md).
 
-## Server-side constraints (Neo4j server version 2.0.1+ only)
+## Server-side constraints (Neo4j server version 2.0.1+)
 
-Neo4j ["schema" constraints"](http://docs.neo4j.org/chunked/stable/cypher-schema.html)
+Neo4j ["schema" constraints](http://docs.neo4j.org/chunked/stable/cypher-schema.html)
 based on labels can be manipulated via REST using
 [REST::Neo4p::Schema](/lib/REST/Neo4p/Schema.md).
 
