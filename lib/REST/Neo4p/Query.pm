@@ -11,7 +11,9 @@ use Carp qw(croak carp);
 use strict;
 use warnings;
 no warnings qw(once);
+
 BEGIN {
+  $REST::Neo4p::Query::VERSION = '0.4000';
 }
 
 our $BUFSIZE = 50000;
