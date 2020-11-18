@@ -77,12 +77,12 @@ my $build =  $class->new
 	'Tie::IxHash' => 0,
 	'experimental' => 0,
 	'MIME::Base64' => 0,
-	perl => 5.010001
+	perl => 5.010001,
+	'Neo4j::Driver' => '0.16',
        },
       recommends => {
 	'Mojo::UserAgent' => 0,
 	'HTTP::Thin' => 0,
-	'Neo4j::Driver' => '0.16',
        },
       configure_requires => {
 	'Module::Build' => 0

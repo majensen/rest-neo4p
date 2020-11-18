@@ -1,4 +1,3 @@
-#$Id$
 use v5.10;
 package REST::Neo4p;
 use Carp qw(croak carp);
@@ -7,7 +6,6 @@ use JSON;
 use URI;
 use URI::Escape;
 use HTTP::Tiny;
-use Neo4j::Driver;
 use JSON::ize;
 use REST::Neo4p::Agent;
 use REST::Neo4p::Node;
