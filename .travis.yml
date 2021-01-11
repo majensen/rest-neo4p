@@ -14,7 +14,7 @@ env:
   - |
     NEO4J_VER=3.5 REST_NEO4P_AGENT_MODULE=Mojo::UserAgent
   - |
-    NEO4J_VER=4.1 REST_NEO4P_AGENT_MODULE=Neo4j::Driver
+    NEO4J_VER=4.2 REST_NEO4P_AGENT_MODULE=Neo4j::Driver
   - |
     NEO4J_VER=3.5 REST_NEO4P_AGENT_MODULE=Neo4j::Driver
 
