@@ -20,7 +20,7 @@ env:
 
 before_install:
   # canned server
-  - docker pull neo4j:$NEO4J_VER
+  - docker pull $DOCKERH/testneo/testneo:$NEO4J_VER
   # perl pkgs
   - cpanm Test::Pod Test::CPAN::Changes
 
@@ -33,7 +33,7 @@ install:
   - yes | ./Build installdeps --cpan_client 'cpanm -n'
 
 script:
-  - docker run -d -p 127.0.0.1:7474:7474 -p 127.0.0.1:7473:7473 -p 127.0.0.1:7687:7687 --env NEO4J_AUTH=none --name testneo neo4j:$NEO4J_VER ;
+  - docker run -d -p 127.0.0.1:7474:7474 -p 127.0.0.1:7473:7473 -p 127.0.0.1:7687:7687 --env NEO4J_AUTH=none --name testneo $DOCKERH/testneo/testneo:$NEO4J_VER ;
   - sleep 10
   - ./Build test
   - docker kill testneo
