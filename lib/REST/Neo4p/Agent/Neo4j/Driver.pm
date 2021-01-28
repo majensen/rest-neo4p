@@ -2,7 +2,7 @@ package REST::Neo4p::Agent::Neo4j::Driver;
 use v5.10;
 use lib '../../../../../lib'; # testing
 use base qw/REST::Neo4p::Agent/;
-use Neo4j::Driver;
+use Neo4j::Driver 0.1803;
 use JSON::ize;
 use REST::Neo4p::Agent::Neo4j::DriverActions;
 use REST::Neo4p::Exceptions;
@@ -202,7 +202,7 @@ sub session {
   }
   my $session = $self->driver->session( $self->database ? (database => $self->database) : () );
   if ($self->server_uri->scheme =~ /^http/) {
-    if (my $client = $session->{transport}{client}) {
+    if (my $client = $session->{net}{http_agent}{client}) {
       $client->setTimeout($self->timeout);
       $client->setCa($self->tls_ca);
       if ($self->{_ssl_opts}) {
