@@ -1,3 +1,5 @@
+![test](https://github.com/majense/rest-neo4p/workflows/test-rest-neo4p/badge.svg)
+
 # NAME
 
 REST::Neo4p - Perl object bindings for a Neo4j database

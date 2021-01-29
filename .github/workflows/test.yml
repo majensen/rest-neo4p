@@ -2,7 +2,7 @@ name: test-rest-neo4p
 on:
   push:
     branches:
-      - ci-actions
+      - master
   pull_request:
     branches:
       - master
