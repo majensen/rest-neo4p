@@ -31,5 +31,15 @@ jobs:
           perl ./Build.PL
           echo y$'\n'y | ./Build installdeps --cpan_client 'cpanm -n' 
           ./Build
+      - name: start_neo
+        env:
+          DOCKERH: ${{ secrets.DOCKERH }}
+        run: |
+          docker pull $DOCKERH/testneo/testneo:$NEO4J_VER
+          docker run -d -p 127.0.0.1:7474:7474 -p 127.0.0.1:7473:7473 -p 127.0.0.1:7687:7687 --env NEO4J_AUTH=none --name testneo $DOCKERH/testneo/testneo:$NEO4J_VER
+          sleep 10
+      - name: test_neo4p
+        run: |
+          ./Build test
           
     
