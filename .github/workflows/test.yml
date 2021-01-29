@@ -12,9 +12,18 @@ jobs:
     defaults:
       run:
         shell: bash
+    strategy:
+      matrix:
+        include:
+          - neo_ver: 3.5
+            agent_mod: "Mojo::UserAgent"
+          - neo_ver: 3.5
+            agent_mod: "Neo4j::Driver"
+          - neo_ver: 4.2
+            agent_mod: "Neo4j::Driver"
     env:
-      NEO4J_VER: 3.5
-      REST_NEO4P_AGENT_MODULE: "Neo4j::Driver"
+      NEO4J_VER: ${{ matrix.neo_ver }}
+      REST_NEO4P_AGENT_MODULE: ${{ matrix.agent_mod }}
     steps:
       - uses: actions/checkout@v2
       - name: install perl things
