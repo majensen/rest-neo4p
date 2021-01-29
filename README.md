@@ -1,4 +1,4 @@
-![test](https://github.com/majense/rest-neo4p/workflows/test-rest-neo4p/badge.svg)
+![test](https://github.com/majensen/rest-neo4p/workflows/test-rest-neo4p/badge.svg)
 
 # NAME
 
