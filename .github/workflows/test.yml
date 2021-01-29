@@ -1,0 +1,35 @@
+name: test-rest-neo4p
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+jobs:
+  do:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    env:
+      NEO4J_VER: 3.5
+      REST_NEO4P_AGENT_MODULE: "Neo4j::Driver"
+    steps:
+      - uses: actions/checkout@v2
+      - name: install perl things
+        run: |
+          sudo apt-get install -y cpanminus
+          cpanm Module::Build
+      - name: build
+        env:
+          REST_NEO4P_BUILD_NONINTERACTIVE: 1
+          REST_NEO4P_TEST_SERVER: http://localhost:7474
+          REST_NEO4P_TEST_USER: ''
+          REST_NEO4P_TEST_PASS: ''
+        run: |
+          perl ./Build.PL
+          yes | ./Build installdeps --cpan_client 'cpanm -n'
+          ./Build
+          
+    
