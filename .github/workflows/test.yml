@@ -29,7 +29,7 @@ jobs:
           REST_NEO4P_TEST_PASS: ''
         run: |
           perl ./Build.PL
-          yes | ./Build installdeps --cpan_client 'cpanm -n'
+          echo y$'\n'y | ./Build installdeps --cpan_client 'cpanm -n' 
           ./Build
           
     
