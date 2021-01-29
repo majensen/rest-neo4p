@@ -28,7 +28,7 @@ jobs:
           docker pull $DOCKERH/testneo/testneo:$NEO4J_VER 
           docker run -d -p 127.0.0.1:7474:7474 -p 127.0.0.1:7473:7473 -p 127.0.0.1:7687:7687 --env NEO4J_AUTH=none --name testneo $DOCKERH/testneo/testneo:$NEO4J_VER 
           sleep 10 
-      - name: build_and_test
+      - name: build
         env:
           REST_NEO4P_BUILD_NONINTERACTIVE: 1
           REST_NEO4P_TEST_SERVER: http://localhost:7474
@@ -36,8 +36,12 @@ jobs:
           REST_NEO4P_TEST_PASS: ''
         run: |
           perl ./Build.PL
-          echo y$'\n'y | ./Build installdeps --cpan_client 'cpanm -n' 
+          echo y$'\n'y | ./Build installdeps --cpan_client 'cpanm --sudo -n' 
+          ./Build
+      - name: test
+        run: |
           ./Build test
+          
 
           
     
