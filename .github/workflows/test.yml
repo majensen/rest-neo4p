@@ -20,7 +20,7 @@ jobs:
       - name: install perl things
         run: |
           sudo apt-get install -y cpanminus
-          cpanm Module::Build
+          cpanm --sudo Module::Build
       - name: start_neo 
         env: 
           DOCKERH: ${{ secrets.DOCKERH }}
