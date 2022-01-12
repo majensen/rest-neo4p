@@ -13,7 +13,7 @@ use warnings;
 no warnings qw(once);
 
 BEGIN {
-  $REST::Neo4p::Query::VERSION = '0.4001';
+  $REST::Neo4p::Query::VERSION = '0.4003';
 }
 
 our $BUFSIZE = 50000;
@@ -166,7 +166,7 @@ sub _wrap_statement_result {
   my $self = shift;
   my $result = REST::Neo4p->agent->last_result;
   my $errors = REST::Neo4p->agent->last_errors;
-  $self->{NAME} = $result->keys;
+  $self->{NAME} = [$result->keys];
   my $n = $self->{NUM_OF_FIELDS} = scalar @{$self->{NAME}};
   $self->{_iterator} = sub {
     my @row;
