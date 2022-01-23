@@ -81,6 +81,6 @@ and drop indexes and constraints.
 
 # LICENSE
 
-Copyright (c) 2012-2020 Mark A. Jensen. This program is free software; you
+Copyright (c) 2012-2022 Mark A. Jensen. This program is free software; you
 can redistribute it and/or modify it under the same terms as Perl
 itself.
