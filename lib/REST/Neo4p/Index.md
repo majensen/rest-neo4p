@@ -37,6 +37,8 @@ functionality, the agent based on [Neo4j::Driver](https://metacpan.org/pod/Neo4j
 indexes under the hood to emulate explicit indexes. This agent is used
 automatically with Neo4j version 4.0 servers.
 
+Note that this index emulation currently doesn't work with Neo4j 5.
+
 # METHODS
 
 - new()

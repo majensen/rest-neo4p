@@ -1,5 +1,5 @@
 #$Id$
-use Test::More tests => 2;
+use Test::More;
 use Test::Exception;
 use Module::Build;
 use lib qw|../lib lib|;
@@ -20,13 +20,15 @@ eval {
     $pass = $build->notes('pass');
 };
 my $TEST_SERVER = $build ? $build->notes('test_server') : $ENV{REST_NEO4P_TEST_SERVER} // 'http://127.0.0.1:7474';
-my $num_live_tests = 2;
 
 my $not_connected = connect($TEST_SERVER,$user,$pass);
 diag "Test server unavailable (".$not_connected->message.") : tests skipped" if $not_connected;
 
-SKIP : {
-  skip 'no local connection to neo4j', $num_live_tests if $not_connected;
+plan skip_all => neo4j_index_unavailable() if neo4j_index_unavailable();
+plan skip_all => 'no local connection to neo4j' if $not_connected;
+plan tests => 2;
+
+{
   $index = REST::Neo4p::Index->new('node', $test_index); 
   lives_ok {
     $n = $index->create_unique(bar => "0", {bar => "0"})
