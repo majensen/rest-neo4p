@@ -3,7 +3,6 @@ package REST::Neo4p::Node;
 use base 'REST::Neo4p::Entity';
 use REST::Neo4p::Relationship;
 use REST::Neo4p::Exceptions;
-use JSON;
 use Carp qw(croak carp);
 use strict;
 use warnings;

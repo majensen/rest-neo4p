@@ -2,7 +2,7 @@
 use v5.10.1;
 package REST::Neo4p::Batch;
 use REST::Neo4p::Exceptions;
-use JSON::XS;
+use JSON::MaybeXS ();
 use REST::Neo4p::ParseStream;
 use HOP::Stream qw/drop head/;
 require REST::Neo4p;
@@ -33,7 +33,7 @@ sub batch (&@) {
   $agent->batch_mode(1);
   $coderef->();
   my $tmpfh = $agent->execute_batch_chunk;
-  my $jsonr = JSON::XS->new->utf8;
+  my $jsonr = JSON::MaybeXS->new->utf8;
   my $buf;
   $tmpfh->read($buf, $BUFSIZE);
   $jsonr->incr_parse($buf);

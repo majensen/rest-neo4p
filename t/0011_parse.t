@@ -4,7 +4,7 @@ use File::Spec;
 #use Devel::Leak;
 use lib '../lib';
 use REST::Neo4p::ParseStream;
-use JSON::XS;
+use JSON::MaybeXS ();
 use HOP::Stream qw/head tail drop/;
 use experimental;
 use strict;
@@ -13,7 +13,7 @@ use warnings;
 
 my $TESTDIR = (-d 't' ? 't' : '.');
 my $CHUNK = 10000;
-my $j = JSON::XS->new;
+my $j = JSON::MaybeXS->new;
 
 open my $f, File::Spec->catfile($TESTDIR,'samples','qry-response.txt') or die $!;
 open my $g, File::Spec->catfile($TESTDIR, 'samples', 'batch-response.txt') or die $!;
@@ -64,7 +64,7 @@ is $j->incr_text,'', "All text consumed";
  undef $res;
  undef $str;
 
-$j = JSON::XS->new();
+$j = JSON::MaybeXS->new();
 read ($f, $buf,$CHUNK) or die $!;
 $j->incr_parse($buf);
 ok $res = j_parse($j), "parsing qry response";
@@ -108,7 +108,7 @@ is $j->incr_text,'', 'all text consumed';
 
 
 
-$j = JSON::XS->new();
+$j = JSON::MaybeXS->new();
 read($k, $buf,$CHUNK) or die $!;
 $j->incr_parse($buf);
 ok $res = j_parse($j), "parsing txn response";
@@ -169,7 +169,7 @@ while (my $item = drop($ar)) {
 }
 
 open $k, File::Spec->catfile($TESTDIR, 'samples','null-txn-response.txt');
-$j = JSON::XS->new();
+$j = JSON::MaybeXS->new();
 read($k, $buf,$CHUNK) or die $!;
 $j->incr_parse($buf);
 ok $res = j_parse($j), "parsing null txn response";

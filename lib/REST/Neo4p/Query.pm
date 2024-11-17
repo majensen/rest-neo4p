@@ -2,7 +2,7 @@ use v5.10;
 package REST::Neo4p::Query;
 use REST::Neo4p::Path;
 use REST::Neo4p::Exceptions;
-use JSON::XS;
+use JSON::MaybeXS ();
 use REST::Neo4p::ParseStream;
 use HOP::Stream qw/drop/;
 use Scalar::Util qw(blessed);
@@ -234,7 +234,7 @@ sub _wrap_statement_result {
 
 sub _parse_response {
   my $self = shift;
-  my $jsonr = JSON::XS->new->utf8;
+  my $jsonr = JSON::MaybeXS->new->utf8;
   my ($buf,$res,$str,$rowstr,$obj);
   my $row_count;
   $self->tmpf->read($buf, $BUFSIZE);

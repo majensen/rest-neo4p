@@ -3,7 +3,7 @@ package REST::Neo4p::Constraint;
 use base 'Exporter';
 use REST::Neo4p;
 use REST::Neo4p::Exceptions;
-use JSON;
+use JSON::MaybeXS qw(decode_json);
 use Data::Dumper;
 
 use Scalar::Util qw(looks_like_number);
@@ -19,7 +19,7 @@ our %EXPORT_TAGS = (
   all => [@EXPORT,@EXPORT_OK]
 );
 
-our $jobj = JSON->new->utf8;
+our $jobj = JSON::MaybeXS->new->utf8;
 $jobj->allow_blessed(1);
 $jobj->convert_blessed(1);
 my $regex_to_json = sub {

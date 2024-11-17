@@ -1,7 +1,7 @@
 use v5.10;
 package REST::Neo4p::Agent;
 use REST::Neo4p::Exceptions;
-use JSON;
+use JSON::MaybeXS ();
 use File::Temp;
 use Carp qw(croak carp);
 use strict;
@@ -15,7 +15,7 @@ BEGIN {
 
 our $AUTOLOAD;
 our $JOB_CHUNK = 1024;
-our $JSON = JSON->new()->allow_nonref(1)->utf8;
+our $JSON = JSON::MaybeXS->new()->allow_nonref(1)->utf8;
 our $RQ_RETRIES = 3;
 our $RETRY_WAIT = 5;
 sub new {
