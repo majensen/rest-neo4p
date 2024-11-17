@@ -8,7 +8,7 @@ use lib 'lib';
 use lib 't/lib';
 use REST::Neo4p;
 use Neo4p::Test;
-use Neo4p::Connect;
+use Neo4p::Connect ':cypher_params_v2';
 use strict;
 use warnings;
 no warnings qw(once);

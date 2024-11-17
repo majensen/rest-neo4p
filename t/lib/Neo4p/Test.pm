@@ -69,7 +69,7 @@ sub find_sample {
   my ($k,$v) = @_;
   $v+=0 if looks_like_number $v;
   my $lbl = $self->lbl;
-  my $q = REST::Neo4p::Query->new("MATCH (n:$lbl) where n.$k = \$value return n");
+  my $q = REST::Neo4p::Query->new("MATCH (n:$lbl) where n.$k = {value} return n");
   $q->execute({value => $v});
   my @ret;
   while (my $r = $q->fetch) {
@@ -82,7 +82,7 @@ sub delete_sample {
   my $self = shift;
   die "No connection"  unless REST::Neo4p->connected;
   my $lbl = $self->lbl;
-  my $q = REST::Neo4p::Query->new("match (n:$lbl) where n.uuid = \$uuid detach delete n",{uuid => $self->uuid});
+  my $q = REST::Neo4p::Query->new("match (n:$lbl) where n.uuid = {uuid} detach delete n",{uuid => $self->uuid});
   $q->execute();
   return 1;
 }

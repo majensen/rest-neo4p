@@ -6,7 +6,7 @@ use Module::Build;
 use lib '../lib';
 use lib 'lib';
 use lib 't/lib';
-use Neo4p::Connect;
+use Neo4p::Connect ':cypher_params_v2';
 use strict;
 use warnings;
 no warnings qw(once);
@@ -49,7 +49,7 @@ plan tests => 13 + 4;
   is $my_reln->end_node->get_property('name'), 'Donkey Hoty', 'got Donkey Hoty';
   push @cleanup, $my_reln if $my_reln;
   ok my $query = REST::Neo4p::Query->new("MATCH p = (n)-[]->()
-                                    WHERE id(n) = \$id
+                                    WHERE id(n) = {id}
                                     RETURN p", {id => $my_node->id});
   ok $query->execute;
   my $path = $query->fetch->[0];

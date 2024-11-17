@@ -6,7 +6,7 @@ use lib 'lib';
 use lib 't/lib';
 use REST::Neo4p;
 use Neo4p::Test;
-use Neo4p::Connect;
+use Neo4p::Connect ':cypher_params_v2';
 use strict;
 use warnings;
 no warnings qw(once);
@@ -35,8 +35,6 @@ my $neo4p = 'REST::Neo4p';
 my ($n, $m);
 SKIP : {
   skip 'no local connection to neo4j', $num_live_tests if $not_connected;
-  REST::Neo4p->create_and_set_handle(cypher_filter => 'params');
-  connect($TEST_SERVER, $user, $pass);
   ok my $t = Neo4p::Test->new, 'test graph object';
 
   ok $t->create_sample, 'create sample graph';
