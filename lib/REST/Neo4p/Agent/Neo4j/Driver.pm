@@ -229,6 +229,7 @@ sub run_in_session {
   $params = {} unless defined $params;
   try {
     $self->{_last_result} = $self->session->run($qry, $params);
+	$self->{_last_result}->has_next;  # Make sure the query has executed and any errors have been thrown
   } catch {
     $self->{_last_errors} = $_;
   };
@@ -243,6 +244,7 @@ sub run_in_transaction {
   $params = {} unless defined $params;
   try {
     $self->{_last_result} = $tx->run($qry, $params);
+	$self->{_last_result}->has_next;  # Make sure the query has executed and any errors have been thrown
   } catch {
     $self->{_last_errors} = $_;
   };
