@@ -28,6 +28,7 @@ sub j_parse {
   elsif ($j->incr_text =~ s/^\s*{\s*//) {
     # object
     my $type;
+    no if $^V ge v5.37, warnings => 'deprecated::smartmatch';
     use experimental 'smartmatch';
     given ($j->incr_text) {
       when (/^\s*"commit"/i) {
@@ -122,7 +123,6 @@ sub j_parse_object {
     my $done;
     unless ($current eq 'PENDING') {
       my $m;
-      use experimental 'smartmatch';
       eval {
 	$j->incr_text =~ m/^(?:(\s*"([^"]+)"\s*:\s*)|(\s*}\s*))/; # look ahead
 	$m = $2||$3;
@@ -148,6 +148,7 @@ sub j_parse_object {
       }
       $key = $m;
     }
+    no if $^V ge v5.37, warnings => 'deprecated::smartmatch';
     use experimental 'smartmatch';
     given ($key) {
       when ('columns') {

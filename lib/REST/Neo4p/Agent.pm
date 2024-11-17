@@ -208,6 +208,7 @@ sub AUTOLOAD {
 sub __do_request {
   my $self = shift;
   my ($rq, $action, @args) = @_;
+  no if $^V ge v5.37, warnings => 'deprecated::smartmatch';
   use experimental qw/smartmatch/;
   $self->{_errmsg} = $self->{_location} = $self->{_raw_response} = $self->{_decoded_content} = undef;
   my $resp;

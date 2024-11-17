@@ -41,6 +41,7 @@ sub batch (&@) {
   die "j_parse: expecting BATCH stream" unless ($res->[0] eq 'BATCH');
   my $str = $res->[1]->();
   while (my $obj = drop($str)) {
+    no if $^V ge v5.37, warnings => 'deprecated::smartmatch';
     use experimental qw/smartmatch/;
     $obj = $obj->[1];
     given ($obj) {

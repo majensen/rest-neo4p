@@ -39,6 +39,7 @@ isa_ok($str, 'HOP::Stream');
 my ($ct,$newct);
 
 while (my $obj = drop($str)) {
+  no if $^V ge v5.37, warnings => 'deprecated::smartmatch';
   use experimental 'smartmatch';
   is $obj->[0],'ARELT', "is array elt";
   given ($obj->[1]) {
@@ -83,6 +84,7 @@ isa_ok($ar,'HOP::Stream');
 ok $obj = drop($str), 'get paused stream entry';
 is_deeply $obj, [qw/data DATA_STREAM/], 'paused for data stream';
 while (my $obj = drop($ar)) {
+  no if $^V ge v5.37, warnings => 'deprecated::smartmatch';
   use experimental 'smartmatch';
   is $obj->[0],'ARELT', "is array elt";
   given ($obj->[1]) {
@@ -134,6 +136,7 @@ while ($r_obj = drop($r_str)) {
   my $ar = $r_obj->[1]->();
   isa_ok($ar,'HOP::Stream');
   while (my $row = drop($ar)) {
+    no if $^V ge v5.37, warnings => 'deprecated::smartmatch';
     use experimental 'smartmatch';
     is $row->[0],'ARELT', "is array elt";
     given ($row->[1]) {

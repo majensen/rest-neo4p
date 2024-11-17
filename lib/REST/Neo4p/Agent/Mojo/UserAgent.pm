@@ -89,6 +89,7 @@ sub post { shift->_do('POST',@_) }
 sub _do {
   my $self = shift;
   my ($rq, $url, @args) = @_;
+  no if $^V ge v5.37, warnings => 'deprecated::smartmatch';
   use experimental qw/smartmatch/;
   my ($tx, $content, $content_file);
   # neo4j wants to redirect .../data to .../data/

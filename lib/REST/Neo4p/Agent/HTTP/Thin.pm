@@ -56,6 +56,7 @@ sub post { shift->_do('POST',@_) }
 sub _do {
   my $self = shift;
   my ($rq, $url, @args) = @_;
+  no if $^V ge v5.37, warnings => 'deprecated::smartmatch';
   use experimental qw/smartmatch/;
 #  if (length($self->{_user}) && length($self->{_pwd})) {
 #    $url =~ s|(https?://)|${1}$$self{_user}:$$self{_pwd}@|;

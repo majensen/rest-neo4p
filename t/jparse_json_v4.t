@@ -17,7 +17,6 @@ my $jsonr = JSON::MaybeXS->new->utf8;
 my ($ERR,$res,$str,$rowstr,$obj);
 my $ITER;
 my $row_count;
-use experimental 'smartmatch';
 
 $jsonr->incr_parse($j);
 eval { # capture j_parse errors
