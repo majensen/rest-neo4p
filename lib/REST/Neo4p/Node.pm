@@ -236,7 +236,7 @@ sub simple_from_json_response {
       last;
     };
     $_->isa('Neo4j::Types::Node') && do {  # via Neo4j::Driver
-      $ret->{_node} = $decoded_resp->id;
+      $ret->{_node} = do { no warnings 'deprecated'; $decoded_resp->id };
       $ret->{$_} = $decoded_resp->properties->{$_} for keys %{$decoded_resp->properties};
       last;
     };

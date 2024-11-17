@@ -69,7 +69,8 @@ sub new_from_driver_obj {
     my $r = shift @relns;
     my ($node, $relationship);
     eval {
-      $node = REST::Neo4p::Node->_entity_by_id($n->id);
+      my $id = do { no warnings 'deprecated'; $n->id };
+      $node = REST::Neo4p::Node->_entity_by_id($id);
     };
     if (my $e = REST::Neo4p::Exception->caught()) {
       # TODO : handle different classes
@@ -80,6 +81,7 @@ sub new_from_driver_obj {
     }
     push @{$obj->{_nodes}}, $node;
     eval {
+      no warnings 'deprecated';  # id() in Neo4j 5
       $relationship =  REST::Neo4p::Relationship->_entity_by_id($r->id) if defined $r;
     };
     if (my $e = REST::Neo4p::Exception->caught()) {

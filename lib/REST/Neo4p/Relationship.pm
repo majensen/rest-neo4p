@@ -63,11 +63,11 @@ sub simple_from_json_response {
       last;
     };
     $_->isa('Neo4j::Types::Relationship') && do {  # via Neo4j::Driver
-      $ret->{_relationship} = $decoded_resp->id;
+      $ret->{_relationship} = do { no warnings 'deprecated'; $decoded_resp->id };
       $ret->{_type} = $decoded_resp->type;
       $ret->{$_} = $decoded_resp->properties->{$_} for keys %{$decoded_resp->properties};
-      $ret->{_start} = $decoded_resp->start_id;
-      $ret->{_end} = $decoded_resp->end_id;
+      $ret->{_start} = do { no warnings 'deprecated'; $decoded_resp->start_id };
+      $ret->{_end} = do { no warnings 'deprecated'; $decoded_resp->end_id };
       last;
     };
     do {

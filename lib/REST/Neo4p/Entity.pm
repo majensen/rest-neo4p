@@ -83,6 +83,7 @@ sub new_from_json_response {
     ($obj) = $self_url =~ /([a-z0-9_]+)\/?$/i;
   }
   else { # Driver
+    no warnings 'deprecated';  # id() in Neo4j 5
     $obj = $decoded_resp->id;
     $self_url = "$entity_type/$obj";
   }
@@ -97,8 +98,8 @@ sub new_from_json_response {
   }
   else { # Driver
     if ($decoded_resp->can('start_id')) {
-      $start_id = $decoded_resp->start_id;
-      $end_id = $decoded_resp->end_id;
+      $start_id = do { no warnings 'deprecated'; $decoded_resp->start_id };
+      $end_id = do { no warnings 'deprecated'; $decoded_resp->end_id };
       $type = $decoded_resp->type;
     }
   }

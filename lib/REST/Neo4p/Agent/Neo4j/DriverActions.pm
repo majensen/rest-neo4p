@@ -858,7 +858,8 @@ sub post_index {
       for ($ent) {
 	/^node$/ && do {
 	  $result = $self->run_in_session("create (n) $set_clause return n");
-	  $content->{id} = 0+$result->fetch->get(0)->id;
+	  my $node = $result->fetch->get(0);
+	  $content->{id} = do { no warnings 'deprecated'; 0 + $node->id };
 	  if ($self->is_version_4) {
 	    my $hkey = encode_base64url($content->{key},'');
 	    my $xi_prop = "_xi_$hkey";
@@ -885,7 +886,8 @@ sub post_index {
 	  $content->{start} = 0+$start;
 	  $content->{end} = 0+$end;
 	  $result = $self->run_in_session("match (s), (t) where id(s)=\$start and id(t)=\$end create (s)-[n:$type]->(t) $set_clause return n", $content);
-	  $content->{id} = 0+$result->fetch->get(0)->id;
+	  my $relationship = $result->fetch->get(0);
+	  $content->{id} = do { no warnings 'deprecated'; 0 + $relationship->id };
 	  if ($self->is_version_4) {
 	    my $hkey = encode_base64url($content->{key},'');
 	    my $xi_prop = "_xi_$hkey";

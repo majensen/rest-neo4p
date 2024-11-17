@@ -2,6 +2,7 @@ package
   REST::Neo4p::Agent::Neo4j::Driver;
 
 use REST::Neo4p::Exceptions;
+use strict;
 
 our %result_processors;
 
@@ -18,8 +19,9 @@ $result_processors{get_node} = sub {
     my @r = $_->list;
     REST::Neo4p::NotFoundException->throw unless @r;
     $r = $r[0]->get(0);
-    return { metadata => { id => $r->id, labels => [$r->labels] },
-	     self => 'node/'.$r->id,
+    my $id = do { no warnings 'deprecated'; $r->id };
+    return { metadata => { id => $id, labels => [$r->labels] },
+	     self => 'node/'.$id,
 	     data => $r->properties };
   }
   else {
@@ -33,12 +35,13 @@ $result_processors{get_node} = sub {
       my $ret = [];
       while (my $rec = $_->fetch) {
 	$r = $rec->get(0);
+	my $id = do { no warnings 'deprecated'; $r->id };
 	push @$ret, {
-	  metadata => { id => $r->id, type => $r->type },
-	  self => 'relationship/'.$r->id,
+	  metadata => { id => $id, type => $r->type },
+	  self => 'relationship/'.$id,
 	  data => $r->properties,
-	  start => 'node/'.$r->start_id,
-	  end => 'node/'.$r->end_id,
+	  start => 'node/' . do { no warnings 'deprecated'; $r->start_id },
+	  end => 'node/' . do { no warnings 'deprecated'; $r->end_id },
 	  type => $r->type
 	 }
       }
@@ -58,9 +61,10 @@ $result_processors{post_node} = sub {
     my @r = $_->list;
     REST::Neo4p::NotFoundException->throw unless @r;
     $r = $r[0]->get(0);
+    my $id = do { no warnings 'deprecated'; $r->id };
     return {
-      metadata => { id => $r->id, labels => [] },
-      self => 'node/'.$r->id,
+      metadata => { id => $id, labels => [] },
+      self => 'node/'.$id,
       data => {}
      };
   }
@@ -73,12 +77,13 @@ $result_processors{post_node} = sub {
       my @r = $_->list;
       REST::Neo4p::NotFoundException->throw unless @r;
       $r = $r[0]->get(0);
+      my $id = do { no warnings 'deprecated'; $r->id };
       return {
-	  metadata => { id => $r-id, type => $r->type },
-	  self => 'relationship/'.$r->id,
+	  metadata => { id => $id, type => $r->type },
+	  self => 'relationship/'.$id,
 	  data => $r->properties,
-	  start => 'node/'.$r->start_id,
-	  end => 'node/'.$r->end_id,
+	  start => 'node/' . do { no warnings 'deprecated'; $r->start_id },
+	  end => 'node/' . do { no warnings 'deprecated'; $r->end_id },
 	  type => $r->type
 	 };
     };
@@ -95,12 +100,13 @@ $result_processors{get_relationship} = sub {
       my @r = $_->list;
       REST::Neo4p::NotFoundException->throw() unless @r;
       my $r = $r[0]->get(0);
+      my $id = do { no warnings 'deprecated'; $r->id };
       return {
-	  metadata => { id => $r->id, type => $r->type },
-	  self => 'relationship/'.$r->id,
+	  metadata => { id => $id, type => $r->type },
+	  self => 'relationship/'.$id,
 	  data => $r->properties,
-	  start => 'node/'.$r->start_id,
-	  end => 'node/'.$r->end_id,
+	  start => 'node/' . do { no warnings 'deprecated'; $r->start_id },
+	  end => 'node/' . do { no warnings 'deprecated'; $r->end_id },
 	  type => $r->type
 	 };
     };
@@ -109,7 +115,7 @@ $result_processors{get_relationship} = sub {
     ($other[0] eq 'properties') && do {
       my @r = $_->list;
       REST::Neo4p::NotFoundException->throw unless @r;
-      $r = $r[0]->get(0);
+      my $r = $r[0]->get(0);
       return $r;
     };
     return;
@@ -132,8 +138,9 @@ $result_processors{get_label} = sub {
   my $ret = [];
   while (my $rec = $_->fetch) {
     my $r = $rec->get(0);
-    push @$ret, { metadata => { id => $r->id, labels => [$r->labels] },
-		  self => 'node/'.$r->id,
+    my $id = do { no warnings 'deprecated'; $r->id };
+    push @$ret, { metadata => { id => $id, labels => [$r->labels] },
+		  self => 'node/'.$id,
 		  data => $r->properties };
   }
   return $ret;
@@ -159,8 +166,9 @@ $result_processors{get_index} = sub {
     while (my $rec = $_->fetch) {
       my $r = $rec->get(0);
       my @labels = (ref($r) =~ /Node/ ? (labels => [$r->labels]) : ());
-      push @$ret, { metadata => { id => $r->id, @labels },
-		    self => 'node/'.$r->id,
+      my $id = do { no warnings 'deprecated'; $r->id };
+      push @$ret, { metadata => { id => $id, @labels },
+		    self => 'node/'.$id,
 		    data => $r->properties };
     }
     REST::Neo4p::NotFoundException->throw unless @$ret;
@@ -181,14 +189,14 @@ $result_processors{post_index} = sub {
   else {
     my $n = $_->fetch->get(0);
     return unless ref $n;
-    my $id = $n->id;
+    my $id = do { no warnings 'deprecated'; $n->id };
     return {
       metadata => { id => $id },
       self => "$ent/$id",
       ($n->properties ? (data => $n->properties) : ()),
-      ($n->can(start_id) ? (
-	start_id => $n->start_id,
-	end_id => $n->end_id,
+      ($n->can('start_id') ? (
+	start_id => do { no warnings 'deprecated'; $n->start_id },
+	end_id => do { no warnings 'deprecated'; $n->end_id },
 	type => $n->type
        ) : ()),
       indexed => "index/$ent/$idx/$$content{key}/$$content{value}/$id"
