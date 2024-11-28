@@ -2,7 +2,7 @@ package REST::Neo4p::Agent::Neo4j::Driver;
 use v5.10;
 use lib '../../../../../lib'; # testing
 use base qw/REST::Neo4p::Agent/;
-use Neo4j::Driver 0.1803;
+use Neo4j::Driver 0.26;
 use JSON::ize;
 use REST::Neo4p::Agent::Neo4j::DriverActions;
 use REST::Neo4p::Exceptions;
@@ -176,7 +176,7 @@ sub connect {
   for (my $i = $REST::Neo4p::Agent::RQ_RETRIES; $i>0; $i--) {
     my $f;
     try {
-      my $version = $drv->session->server->version;
+      my $version = $drv->session->server->agent;
       $version =~ s|^\S+/||;  # server version strings look like "Neo4j/3.2.1"
       $self->{_actions}{neo4j_version} = $version or
         die "Can't find neo4j_version from server";

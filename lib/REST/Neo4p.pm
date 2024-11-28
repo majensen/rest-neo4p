@@ -7,7 +7,7 @@ use URI;
 use URI::Escape;
 use HTTP::Tiny;
 use JSON::ize;
-use Neo4j::Driver 0.1801;
+use Neo4j::Driver 0.26;
 use REST::Neo4p::Agent;
 use REST::Neo4p::Node;
 use REST::Neo4p::Index;
@@ -164,7 +164,7 @@ sub get_neo4j_version {
   my ($url, $user, $pass) = @_;
   my $driver = Neo4j::Driver->new($url);
   $driver->basic_auth($user, $pass) if $user || $pass;
-  my $version = $driver->session->server->version;
+  my $version = $driver->session->server->agent;
   my ($major, $minor, $patch, $milestone) = 
     $version =~ /^Neo4j\/(?:([0-9]+)\.)(?:([0-9]+)\.)?([0-9]+)?(?:-M([0-9]+))?/;
   return wantarray ? ($major, $minor, $patch, $milestone) : $version;
