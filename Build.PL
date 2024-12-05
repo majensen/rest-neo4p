@@ -78,7 +78,7 @@ my $build =  $class->new
 	'experimental' => 0,
 	'MIME::Base64' => 0,
 	perl => 5.010001,
-	'Neo4j::Driver' => '0.19',
+	'Neo4j::Driver' => '0.21',  # Neo4j::Types
        },
       recommends => {
 	'Mojo::UserAgent' => 0,
