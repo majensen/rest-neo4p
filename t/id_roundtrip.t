@@ -25,6 +25,7 @@ diag "Test server unavailable (".$not_connected->message.") : tests skipped" if 
 
 SKIP : {
   skip 'no local connection to neo4j', 34 if $not_connected;
+  skip 'MATCH query requires Neo4j 2 or later', 34 unless REST::Neo4p->_check_version(2,0,0,0);
 
   my $n1 = REST::Neo4p::Node->new();
   ok $n1, 'new node' and push @cleanup, $n1;

@@ -30,6 +30,7 @@ diag "Test server unavailable (".$not_connected->message.") : tests skipped" if 
 
 plan skip_all => neo4j_index_unavailable() if neo4j_index_unavailable();
 plan skip_all => 'no local connection to neo4j' if $not_connected;
+plan skip_all => 'MATCH query requires Neo4j 2 or later' unless REST::Neo4p->_check_version(2,0,0,0);
 plan tests => 13 + 4;
 
 {

@@ -41,6 +41,7 @@ is_deeply $q->params, { node_id => 1}, 'params accessor';
 
 SKIP : {
   skip 'no local connection to neo4j', $num_live_tests if $not_connected;
+  skip 'MATCH query requires Neo4j 2 or later', $num_live_tests unless REST::Neo4p->_check_version(2,0,0,0);
 
   ok my $n1 = REST::Neo4p::Node->new({name => 'Fred', role => 'husband'}), 'Fred';
   ok my $n2 = REST::Neo4p::Node->new({name => 'Wilma', role => 'wife'}), 'Wilma';

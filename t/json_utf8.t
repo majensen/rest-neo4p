@@ -34,6 +34,7 @@ sub to_hex ($) {
 
 SKIP : {
   skip 'no local connection to neo4j', 37 if $not_connected;
+  skip 'MATCH query requires Neo4j 2 or later', 37 unless REST::Neo4p->_check_version(2,0,0,0);
 
   my %props = (
     singlebyte => "\N{U+0025}",  # '%' PERCENT SIGN = 0x25
