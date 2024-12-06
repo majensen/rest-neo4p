@@ -71,6 +71,7 @@ my $build =  $class->new
 	'JSON::ize' => 0.202,
 	'HOP::Stream' => 0,
 	'URI::Escape' => 3.3,
+	'HTTP::Tiny' => 0,
 	'LWP::UserAgent' => 6.04,
 	'LWP::Protocol::https' => 6.06,
 	'Exception::Class' => 1.3,
@@ -95,7 +96,6 @@ my $build =  $class->new
 	'Test::NoWarnings' => 0,
 	'Mock::Quick' => 0,
 	'List::MoreUtils' => 0,
-	'Mojo::Exception' => 0,
 	'Neo4j::Driver' => '0.26',  # cypher_params v2
 	experimental => 0,
 	'IPC::Run' => 0,
@@ -104,6 +104,7 @@ my $build =  $class->new
        },
       build_recommends => {
 	 'Test::Pod' => 1.0,
+	#'Mojo::Exception' => 0,
 	 'Mojo::UserAgent' => 0,
 	 'HTTP::Thin' => 0,
 	},
