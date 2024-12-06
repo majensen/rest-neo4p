@@ -27,17 +27,17 @@ my $not_connected = connect($TEST_SERVER,$user,$pass);
 diag "Test server unavailable (".$not_connected->message.") : tests skipped" if $not_connected;
 
 sub skip_diag {
-    diag 'skip' . ( defined $_[0] ? " $_[0]" : '' ) unless $ENV{'HARNESS_IS_VERBOSE'};
+    diag 'skip' . ( defined $_[0] ? " $_[0]" : '' ), $_[1] unless $ENV{'HARNESS_IS_VERBOSE'};
     skip @_;
 }
 
 SKIP : {
-    skip 'no connection to neo4j' if $not_connected;
+    skip 'no connection to neo4j', 8 if $not_connected;
 
     ok my $n0 = REST::Neo4p::Node->new, 'create node 0';
 
     # neo4j stop ; rm -rf /path/to/graph.db ; neo4j start
-    skip_diag '"relationship 0" test: only works on virgin database' unless $n0->id == 0;
+    skip_diag '"relationship 0" test: only works on virgin database', 7 unless $n0->id == 0;
 
     ok my $n1 = REST::Neo4p::Node->new, 'create node 1';
     ok my $r0 = REST::Neo4p::Relationship->new( $n0 => $n1, 'zero' ), 'create reln 0';
