@@ -32,6 +32,7 @@ diag "Test server unavailable (".$not_connected->message.") : tests skipped" if 
 
 SKIP : {
     skip 'no connection to neo4j',$num_live_tests if $not_connected;
+    diag 'Connected: '.ref(REST::Neo4p->agent);
     pass 'Connected';
     REST::Neo4p->agent->timeout(0.1);
     my $agent2 = REST::Neo4p->agent;

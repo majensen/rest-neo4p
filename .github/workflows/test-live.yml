@@ -1,0 +1,292 @@
+name: Live Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - "**"
+
+jobs:
+  test-job:
+    runs-on: ubuntu-latest
+    name: "Neo4j ${{ matrix.neo4j }} / ${{ matrix.agent }} / Perl ${{ matrix.perl }}"
+    strategy:
+      matrix:
+        include:
+
+          - agent: Bolt
+            neo4j: "5"
+            perl: "5.28"
+          - agent: Bolt
+            neo4j: "4.4"
+            perl: "5.34"
+          - agent: Bolt
+            neo4j: "3.5"
+            perl: "5.38"
+
+          - agent: Driver
+            neo4j: "5"
+            perl: "5.36"
+          - agent: Driver
+            neo4j: "4.4"
+            perl: "5.40"
+          - agent: Driver
+            neo4j: "3.5"
+            perl: "5.30"
+
+          - agent: LWP
+            neo4j: "3.5"
+            perl: "5.20"
+          - agent: Mojo
+            neo4j: "3.5"
+            perl: "5.26"
+          - agent: Thin
+            neo4j: "3.5"
+            perl: "5.16"
+
+          - agent: default
+            neo4j: "2.3"
+            perl: "5.10"
+          - agent: default
+            neo4j: "1.9"
+            perl: "5.32"
+
+      fail-fast: false
+    env:
+      REST_NEO4P_TEST_USER: neo4j
+      REST_NEO4P_TEST_PASS: xkcd_792
+      AUTOMATED_TESTING: 1
+      NONINTERACTIVE_TESTING: 1
+      PERL_MM_USE_DEFAULT: 1
+    steps:
+      - name: git checkout
+        uses: actions/checkout@v4
+
+      - name: Install Neo4j
+        uses: johannessen/actions-install-neo4j@v1
+        with:
+          neo4j-version: ${{ matrix.neo4j }}
+          password: ${{ env.REST_NEO4P_TEST_PASS }}
+
+      - name: Install Perl
+        uses: shogo82148/actions-setup-perl@v1
+        with:
+          perl-version: ${{ matrix.perl }}
+          enable-modules-cache: false
+
+      - name: Prepare environment
+        run: |
+          NEO4J_URL="http://127.0.0.1:7474"
+          if [ "${{ matrix.agent }}" = "Bolt" ] ; then
+            NEO4J_URL="bolt://127.0.0.1:7687"
+            echo "REST_NEO4P_AGENT_MODULE=Neo4j::Driver" >> "$GITHUB_ENV"
+          elif [ "${{ matrix.agent }}" = "Driver" ] ; then
+            echo "REST_NEO4P_AGENT_MODULE=Neo4j::Driver" >> "$GITHUB_ENV"
+          elif [ "${{ matrix.agent }}" = "LWP" ] ; then
+            echo "REST_NEO4P_AGENT_MODULE=LWP::UserAgent" >> "$GITHUB_ENV"
+          elif [ "${{ matrix.agent }}" = "Mojo" ] ; then
+            echo "REST_NEO4P_AGENT_MODULE=Mojo::UserAgent" >> "$GITHUB_ENV"
+          elif [ "${{ matrix.agent }}" = "Thin" ] ; then
+            echo "REST_NEO4P_AGENT_MODULE=HTTP::Thin" >> "$GITHUB_ENV"
+          elif [ "${{ matrix.agent }}" = "default" ] ; then
+            true
+          else
+            echo "::ERROR:: matrix.agent '${{ matrix.agent }}' unimplemented"
+            false
+          fi
+          echo "REST_NEO4P_TEST_SERVER=$NEO4J_URL" >> "$GITHUB_ENV"
+
+          # Version checks:
+          # - Perls earlier than v5.20 may need Neo4j::Driver 0.x
+          # - old Neo4p can't use Bolt through Neo4j::Driver 1.02+
+          # - old Neo4p test suite (with a live connection) fails with Neo4j::Driver 1.00+
+          # - old Neo4p test suite (with a live connection) fails with Neo4j 5+
+          # - old Neo4p test suite (with a live connection) fails with Neo4j 1/2
+          # - old Neo4p test suite (with a live connection) fails with Bolt 4+
+
+          DRIVER_INSTALL=Neo4j::Driver
+          if curl 'https://fastapi.metacpan.org/v1/download_url/Neo4j::Driver?dev=1' -Sso Neo4j-Driver.json
+          then
+            perl -MJSON::PP -E 'say "Latest driver version: ", decode_json(do { local $/; <> })->{release}' Neo4j-Driver.json
+            DRIVER_VERSION=$(perl -MJSON::PP -e 'print decode_json(do { local $/; <> })->{version}' Neo4j-Driver.json)
+            DRIVER_INSTALL=$(perl -MJSON::PP -e 'print decode_json(do { local $/; <> })->{download_url}' Neo4j-Driver.json)
+            rm -f Neo4j-Driver.json
+          fi
+
+          OLD_NEO4P=$(grep 'Neo4j::Driver' Build.PL | grep -v '0.19' >> /dev/null && printf "" || printf "1")
+          OLD_PERL=$(perl -Mversion -e 'print version->parse("v${{ matrix.perl }}") lt v5.20')
+          OLD_NEO4J=$(perl -Mversion -e 'print version->parse("v${{ matrix.neo4j }}") lt v3.5')
+          NEW_NEO4J=$(perl -Mversion -e 'print version->parse("v${{ matrix.neo4j }}") ge v5')
+          NEO4J_V35=$(perl -Mversion -e 'print version->parse("v${{ matrix.neo4j }}") eq v3.5')
+
+          if [[ -n "$OLD_PERL" || -n "$OLD_NEO4P" ]]
+          then
+            DRIVER_VERSION=0.52
+            DRIVER_INSTALL=https://cpan.metacpan.org/authors/id/A/AJ/AJNN/Neo4j-Driver-0.52.tar.gz
+            echo "Will try to pin Neo4j::Driver at version $DRIVER_VERSION"
+            echo "  Reason: old perl '$OLD_PERL' OR old Neo4p '$OLD_NEO4P'"
+          fi
+          echo "DRIVER_VERSION=$DRIVER_VERSION" >> "$GITHUB_ENV"
+          echo "DRIVER_INSTALL=$DRIVER_INSTALL" >> "$GITHUB_ENV"
+
+          # A better way to handle the "old Perl" check might be to just try
+          # installing the latest driver version, and if that fails tell cpanm
+          # to install @0.52. However, for some reason that doesn't actually
+          # seem to work as of cpanm 1.7048.
+
+          echo "OLD_PERL=$OLD_PERL" >> "$GITHUB_ENV"
+          echo "OLD_NEO4P=$OLD_NEO4P" >> "$GITHUB_ENV"
+
+          if [[ -n "$OLD_NEO4P" && -n "$OLD_NEO4J" ]]
+          then
+            echo "Will skip test suite"
+            echo "  Reason: old Neo4p has several bugs in the test suite"
+            echo "SKIP_TESTS=true" >> "$GITHUB_ENV"
+          fi
+
+          if [[ -n "$OLD_NEO4P" && -n "$NEW_NEO4J" ]]
+          then
+            echo "Will skip test suite"
+            echo "  Reason: old Neo4p tests indexes, which were changed in Neo4j 5 (GH #34)"
+            echo "SKIP_TESTS=true" >> "$GITHUB_ENV"
+          fi
+
+          if [[ -n "$OLD_NEO4P" && -z "$NEO4J_V35" && "${{ matrix.agent }}" = "Bolt" ]]
+          then
+            echo "Will skip test suite"
+            echo "  Reason: old Neo4p doesn't detect some errors with Bolt 4+ (GH #28)"
+            echo "SKIP_TESTS=true" >> "$GITHUB_ENV"
+          fi
+
+          ANCIENT_PERL=$(perl -Mversion -e 'print version->parse("v${{ matrix.perl }}") lt v5.12')
+          if [[ -n "$ANCIENT_PERL" ]]
+          then
+            echo "Will skip test suite"
+            echo "  Reason: extremely old Perl, unsupported by t/jparse_json_v4.t in old Neo4p"
+            echo "SKIP_TESTS=true" >> "$GITHUB_ENV"
+          fi
+
+          cat "$GITHUB_ENV"
+
+      - name: Install HTTP::Thin
+        if: ${{ matrix.agent == 'Thin' }}
+        run: |
+          cpanm -nq --skip-satisfied --installdeps HTTP::Thin
+          cpanm HTTP::Thin
+
+      - name: Install libwww-perl
+        if: ${{ matrix.agent == 'LWP' || matrix.agent == 'default' }}
+        run: |
+          if [[ -n "$OLD_PERL" ]]
+          then
+            # The most recent libwww-perl has prereqs that no longer install
+            # cleanly on Perl v5.10.
+            cpanm -nq <<END
+              https://cpan.metacpan.org/authors/id/P/PM/PMQS/Compress-Raw-Zlib-2.049.tar.gz
+              https://cpan.metacpan.org/authors/id/P/PM/PMQS/Compress-Raw-Bzip2-2.049.tar.gz
+              https://cpan.metacpan.org/authors/id/P/PM/PMQS/IO-Compress-2.049.tar.gz
+              https://cpan.metacpan.org/authors/id/P/PE/PETDANCE/HTML-Tagset-3.20.tar.gz
+              https://cpan.metacpan.org/authors/id/G/GA/GAAS/HTML-Parser-3.69.tar.gz
+              https://cpan.metacpan.org/authors/id/G/GA/GAAS/Encode-Locale-1.03.tar.gz
+              https://cpan.metacpan.org/authors/id/G/GA/GAAS/URI-1.53.tar.gz
+              https://cpan.metacpan.org/authors/id/G/GA/GAAS/WWW-RobotRules-6.02.tar.gz
+              https://cpan.metacpan.org/authors/id/G/GA/GAAS/LWP-MediaTypes-6.02.tar.gz
+              https://cpan.metacpan.org/authors/id/G/GA/GAAS/HTTP-Date-6.02.tar.gz
+              https://cpan.metacpan.org/authors/id/G/GA/GAAS/HTTP-Message-6.02.tar.gz
+              https://cpan.metacpan.org/authors/id/G/GA/GAAS/HTTP-Negotiate-6.01.tar.gz
+              https://cpan.metacpan.org/authors/id/G/GA/GAAS/HTTP-Cookies-6.01.tar.gz
+              https://cpan.metacpan.org/authors/id/G/GA/GAAS/HTTP-Daemon-6.01.tar.gz
+              https://cpan.metacpan.org/authors/id/G/GA/GAAS/Net-HTTP-6.06.tar.gz
+              https://cpan.metacpan.org/authors/id/G/GA/GAAS/File-Listing-6.04.tar.gz
+              https://cpan.metacpan.org/authors/id/M/MS/MSCHILLI/libwww-perl-6.06.tar.gz
+              https://cpan.metacpan.org/authors/id/M/MS/MSCHILLI/LWP-Protocol-https-6.06.tar.gz
+          END
+          else
+            cpanm -nq --skip-satisfied --installdeps LWP::UserAgent
+            cpanm LWP::UserAgent
+          fi
+
+      - name: Install Mojolicious
+        if: ${{ matrix.agent == 'Mojo' }}
+        run: |
+          if [[ -n "$OLD_PERL" ]] ; then
+            # Mojo 8+ requires Perl v5.16.
+            cpanm -nq --skip-satisfied <<END
+              https://cpan.metacpan.org/authors/id/P/PE/PEVANS/IO-Socket-IP-0.41.tar.gz
+              https://cpan.metacpan.org/authors/id/S/SR/SRI/Mojolicious-7.94.tar.gz
+              https://cpan.metacpan.org/authors/id/B/BI/BINGOS/ExtUtils-MakeMaker-6.78.tar.gz
+          END
+          else
+            cpanm -nq --skip-satisfied --installdeps Mojo::UserAgent
+            cpanm Mojo::UserAgent
+          fi
+
+      - name: Install Neo4j::Bolt
+        if: ${{ matrix.agent == 'Bolt' }}
+        run: |
+          cpanm -nq --skip-satisfied --installdeps Neo4j::Client
+          cpanm Neo4j::Client
+          cpanm -nq --skip-satisfied --installdeps Neo4j::Bolt
+          cpanm Neo4j::Bolt
+
+      - name: Install Neo4j::Driver ${{ env.DRIVER_VERSION }}
+        run: |
+          cpanm -nq --skip-satisfied --installdeps $DRIVER_INSTALL
+          cpanm $DRIVER_INSTALL
+
+          # If this loopback fails, whatever's wrong is not a Neo4p issue.
+          perl -MNeo4j::Driver -e 'print Neo4j::Driver->new( q{${{ env.REST_NEO4P_TEST_SERVER }}} )->basic_auth( q{${{ env.REST_NEO4P_TEST_USER }}}, q{${{ env.REST_NEO4P_TEST_PASS }}} )->session->run( q{RETURN "Connected to Neo4j\n"} )->single->get' || echo "Error: Neo4j connection failed"
+
+      - name: Install other prerequisites
+        run: |
+          if [[ -n "$OLD_PERL" ]] ; then
+            # HTTP::Tiny is only in core from v5.14, but old Neo4p versions
+            # fail to declare it as a prereq.
+            # Old Neo4p declares a dependency on Mojo, which now needs v5.16.
+            cpanm -nq --skip-satisfied <<END
+              https://cpan.metacpan.org/authors/id/D/DA/DAGOLDEN/HTTP-Tiny-0.012.tar.gz
+              https://cpan.metacpan.org/authors/id/P/PE/PEVANS/IO-Socket-IP-0.41.tar.gz
+              https://cpan.metacpan.org/authors/id/S/SR/SRI/Mojolicious-7.94.tar.gz
+          END
+          fi
+
+          cpanm -nq --skip-satisfied --installdeps .
+
+      - name: Version info
+        run: |
+          curl -s http://localhost:7474/ -u "neo4j:$REST_NEO4P_TEST_PASS" | grep neo4j_version || true
+          curl -s http://localhost:7474/db/data/ -u "neo4j:$REST_NEO4P_TEST_PASS" | grep neo4j_version || true
+          ls | grep --max-count=1 neo4j-community || true
+          basename "$(cat neo4j-javahome)"
+          perl -v | head -n 2
+          perl -MNeo4j::Driver -e 'printf "Neo4j::Driver %s\n", Neo4j::Driver->VERSION'
+
+      - name: Build
+        run: |
+          perl Build.PL
+          ./Build
+
+      - name: Test
+        if: ${{ ! env.SKIP_TESTS }}
+        run: |
+          prove -lb
+
+      - name: Loopback
+        if: ${{ ! startsWith(matrix.neo4j, '1') }}
+        run: |
+          perl -Ilib -Iblib -MREST::Neo4p -MREST::Neo4p::Query -e 'REST::Neo4p->connect( q{${{ env.REST_NEO4P_TEST_SERVER }}}, q{${{ env.REST_NEO4P_TEST_USER }}}, q{${{ env.REST_NEO4P_TEST_PASS }}} ); $query = REST::Neo4p::Query->new( q{RETURN "Connected to Neo4j\n"} ); $query->execute; print $query->fetch->[0]'
+        # In case of a major connection failure, all tests will be skipped
+        # and the test suite will pass anyway. But this testing environment
+        # is supposed to detect such failures. So, in addition to the test
+        # suite, we run a simple loopback test to verify the connection.
+        # (Except on Neo4j 1, which would need a different query syntax.)
+
+      - name: Archive cpanm logs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ format('cpanm-logs-{0}', join(matrix.*, '-')) }}
+          path: /home/runner/.cpanm/work/*/build.log
