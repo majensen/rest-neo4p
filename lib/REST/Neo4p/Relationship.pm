@@ -49,8 +49,8 @@ sub simple_from_json_response {
   my $class = shift;
   my ($decoded_resp) = @_;
   my $ret;
-  for (ref $decoded_resp) {
-    /HASH/ && do {
+  for ($decoded_resp) {
+    ref eq 'HASH' && do {
       # reln id
       ($ret->{_relationship}) = $decoded_resp->{self} =~ m{.*/([0-9]+)$};
       # reln type
@@ -62,12 +62,12 @@ sub simple_from_json_response {
       ($ret->{_end}) = $decoded_resp->{end} =~ m{.*/([0-9]+)$};
       last;
     };
-    /Driver/ && do {
-      $ret->{_relationship} = $decoded_resp->id;
+    $_->isa('Neo4j::Types::Relationship') && do {  # via Neo4j::Driver
+      $ret->{_relationship} = do { no warnings 'deprecated'; $decoded_resp->id };
       $ret->{_type} = $decoded_resp->type;
       $ret->{$_} = $decoded_resp->properties->{$_} for keys %{$decoded_resp->properties};
-      $ret->{_start} = $decoded_resp->start_id;
-      $ret->{_end} = $decoded_resp->end_id;
+      $ret->{_start} = do { no warnings 'deprecated'; $decoded_resp->start_id };
+      $ret->{_end} = do { no warnings 'deprecated'; $decoded_resp->end_id };
       last;
     };
     do {

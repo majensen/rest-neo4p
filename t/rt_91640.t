@@ -8,7 +8,7 @@ use lib 'lib';
 use lib 't/lib';
 use REST::Neo4p;
 use Neo4p::Test;
-use Neo4p::Connect;
+use Neo4p::Connect ':cypher_params_v2';
 use strict;
 use warnings;
 no warnings qw(once);
@@ -29,8 +29,8 @@ my $not_connected = connect($TEST_SERVER,$user,$pass);
 diag "Test server unavailable (".$not_connected->message.") : tests skipped" if $not_connected;
 
 
-#SKIP : {
-#  skip "Neo4j server version >= 2.0.0-M02 required, skipping...", $num_live_tests unless  REST::Neo4p->_check_version(2,0,0,2);
+SKIP : {
+  skip "Neo4j server version >= 2.0.0-M02 required, skipping...", $num_live_tests unless REST::Neo4p->_check_version(2,0,0,2);
 
 my $neo4p = 'REST::Neo4p';
 my ($n, $m, $t);
@@ -80,9 +80,9 @@ STMT1
   is $$r[0]->get_property('utf8'), 'Сохранить', 'cyrillic property value retrieved correctly';
 
 }
-#}
 
   END {
     
     eval { $t && $t->delete_sample; };
   }
+}

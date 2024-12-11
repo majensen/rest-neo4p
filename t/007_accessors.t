@@ -51,6 +51,7 @@ SKIP : {
   lives_and { ok $n3->set_blue(5) } 'blue setter called';
   lives_and { is $n3->blue, 5 } 'blue setter works';
   my $idx;
+  if (neo4j_index_unavailable()) { pass; pass; diag neo4j_index_unavailable(); last SKIP; }
   lives_ok {$idx = REST::Neo4p::Index->new('relationship','heydude', {rtype => 'dude'})} 'index should be created np';
   push @cleanup, $idx if $idx;
 

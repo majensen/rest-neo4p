@@ -4,7 +4,7 @@ use Test::Exception;
 use Module::Build;
 use lib qw|../lib lib|;
 use lib 't/lib';
-use Neo4p::Connect;
+use Neo4p::Connect ':cypher_params_v2';
 use strict;
 use warnings;
 my @cleanup;
@@ -25,10 +25,11 @@ diag "Test server unavailable (".$not_connected->message.") : tests skipped" if 
 
 SKIP : {
   skip 'no local connection to neo4j', 34 if $not_connected;
+  skip 'MATCH query requires Neo4j 2 or later', 34 unless REST::Neo4p->_check_version(2,0,0,0);
 
   my $n1 = REST::Neo4p::Node->new();
   ok $n1, 'new node' and push @cleanup, $n1;
-  my $q = REST::Neo4p::Query->new('MATCH (n) WHERE id(n) = $id RETURN n');
+  my $q = REST::Neo4p::Query->new('MATCH (n) WHERE id(n) = {id} RETURN n');
   $q->{RaiseError} = 1;
   my $row;
 
@@ -40,7 +41,7 @@ SKIP : {
   # 
   # Example code:
   # 
-  #  my $q = REST::Neo4p::Query->new('MATCH (n) WHERE id(n) = $id RETURN n');
+  #  my $q = REST::Neo4p::Query->new('MATCH (n) WHERE id(n) = {id} RETURN n');
   #  my $id = REST::Neo4p::Node->new()->id();
   #  $q->execute( id => $id );
   #  $q->fetch;
@@ -72,7 +73,7 @@ SKIP : {
   ok $n2, '2nd node' and push @cleanup, $n2;
   my $r = REST::Neo4p::Relationship->new( $n1 => $n2, 'TEST' );
   ok $r, 'new rel' and push @cleanup, $r;
-  $q = REST::Neo4p::Query->new('MATCH ()-[r]->() WHERE id(r) = $id RETURN r');
+  $q = REST::Neo4p::Query->new('MATCH ()-[r]->() WHERE id(r) = {id} RETURN r');
   $q->{RaiseError} = 1;
 
   eval {

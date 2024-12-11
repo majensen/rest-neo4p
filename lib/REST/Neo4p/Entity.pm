@@ -4,6 +4,7 @@ package REST::Neo4p::Entity;
 use REST::Neo4p::Exceptions;
 use Carp qw(croak carp);
 use JSON;
+use Scalar::Util qw(blessed);
 use URI::Escape;
 use strict;
 use warnings;
@@ -65,7 +66,7 @@ sub new_from_json_response {
   unless (defined $decoded_resp) {
     REST::Neo4p::LocalException->throw("new_from_json_response() called with undef argument\n");
   }
-  my $is_json = !(ref($decoded_resp) =~ /Neo4j::Driver/);
+  my $is_json = ! blessed $decoded_resp;  # blessed via Neo4j::Driver
   unless ($ENTITY_TABLE->{$entity_type}{_actions} || !$is_json) {
     # capture the url suffix patterns for the entity actions:
     for (keys %$decoded_resp) {
@@ -82,6 +83,7 @@ sub new_from_json_response {
     ($obj) = $self_url =~ /([a-z0-9_]+)\/?$/i;
   }
   else { # Driver
+    no warnings 'deprecated';  # id() in Neo4j 5
     $obj = $decoded_resp->id;
     $self_url = "$entity_type/$obj";
   }
@@ -96,8 +98,8 @@ sub new_from_json_response {
   }
   else { # Driver
     if ($decoded_resp->can('start_id')) {
-      $start_id = $decoded_resp->start_id;
-      $end_id = $decoded_resp->end_id;
+      $start_id = do { no warnings 'deprecated'; $decoded_resp->start_id };
+      $end_id = do { no warnings 'deprecated'; $decoded_resp->end_id };
       $type = $decoded_resp->type;
     }
   }

@@ -78,7 +78,7 @@ my $build =  $class->new
 	'experimental' => 0,
 	'MIME::Base64' => 0,
 	perl => 5.010001,
-	'Neo4j::Driver' => '0.19',
+	'Neo4j::Driver' => '0.26',  # ServerInfo->agent
        },
       recommends => {
 	'Mojo::UserAgent' => 0,
@@ -96,6 +96,7 @@ my $build =  $class->new
 	'Mock::Quick' => 0,
 	'List::MoreUtils' => 0,
 	'Mojo::Exception' => 0,
+	'Neo4j::Driver' => '0.26',  # cypher_params v2
 	experimental => 0,
 	'IPC::Run' => 0,
 	'IO::Pty' => 0,
@@ -105,7 +106,6 @@ my $build =  $class->new
 	 'Test::Pod' => 1.0,
 	 'Mojo::UserAgent' => 0,
 	 'HTTP::Thin' => 0,
-	 'Neo4j::Driver' => '0.19',
 	},
       meta_merge => {
 	resources => {

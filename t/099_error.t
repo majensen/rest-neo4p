@@ -1,5 +1,5 @@
 #$Id$
-use Test::More qw(no_plan);
+use Test::More 0.88;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
@@ -21,7 +21,7 @@ eval {
 };
 
 my $TEST_SERVER = $build ? $build->notes('test_server') : $ENV{REST_NEO4P_TEST_SERVER} // 'http://127.0.0.1:7474';
-my $num_live_tests = 1;
+my $num_live_tests = 18;
 
 throws_ok { REST::Neo4p->get_indexes('relationship') } 'REST::Neo4p::CommException', 'not connected ok';
 like $@->message, qr/not connected/i, 'not connected ok (2)';
@@ -57,6 +57,7 @@ SKIP : {
     lives_ok { $q->err } 'LocalException->code works';
     $q->{_error} = REST::Neo4p::TxException->new();
     lives_ok { $q->err } 'TxException->code works';
+    if (neo4j_index_unavailable()) { diag neo4j_index_unavailable(); last SKIP; }
     ok my $i = REST::Neo4p::Index->new('node','zzyxx'), 'create index';
     throws_ok { $i->get_property('foo') } 'REST::Neo4p::NotSuppException', 'not supported ok';
     throws_ok { $i->set_property(foo => 'bar') } 'REST::Neo4p::NotSuppException', 'not supported ok (2)';
@@ -67,3 +68,5 @@ SKIP : {
     ok $n1->remove, 'remove node';
     ok $i->remove, 'remove index';
 }
+
+done_testing;

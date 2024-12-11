@@ -2,6 +2,7 @@
 package REST::Neo4p::Path;
 use REST::Neo4p::Exceptions;
 use Carp qw(croak carp);
+use Scalar::Util qw(blessed);
 use strict;
 use warnings;
 BEGIN {
@@ -16,7 +17,7 @@ sub new {
 sub new_from_json_response {
   my $class = shift;
   my ($decoded_resp) = @_;
-  return $class->new_from_driver_obj(@_) if (ref($decoded_resp) =~ /Neo4j::Driver/);
+  return $class->new_from_driver_obj(@_) if blessed $decoded_resp;
   REST::Neo4p::LocalException->throw("Arg does not describe a Neo4j path response\n") unless $decoded_resp->{start} && $decoded_resp->{end} && $decoded_resp->{relationships} && $decoded_resp->{nodes};
   my $obj = bless {}, $class;
   $obj->{_length} = $decoded_resp->{length};
@@ -68,7 +69,8 @@ sub new_from_driver_obj {
     my $r = shift @relns;
     my ($node, $relationship);
     eval {
-      $node = REST::Neo4p::Node->_entity_by_id($n->id);
+      my $id = do { no warnings 'deprecated'; $n->id };
+      $node = REST::Neo4p::Node->_entity_by_id($id);
     };
     if (my $e = REST::Neo4p::Exception->caught()) {
       # TODO : handle different classes
@@ -79,6 +81,7 @@ sub new_from_driver_obj {
     }
     push @{$obj->{_nodes}}, $node;
     eval {
+      no warnings 'deprecated';  # id() in Neo4j 5
       $relationship =  REST::Neo4p::Relationship->_entity_by_id($r->id) if defined $r;
     };
     if (my $e = REST::Neo4p::Exception->caught()) {

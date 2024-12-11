@@ -222,8 +222,8 @@ sub simple_from_json_response {
   my $class = shift;
   my ($decoded_resp) = @_;
   my $ret;
-  for (ref $decoded_resp) {
-    /HASH/ && do {
+  for ($decoded_resp) {
+    ref eq 'HASH' && do {
       # node id
       ($ret->{_node}) = $decoded_resp->{self} =~ m{.*/([0-9]+)$};
       # node properties
@@ -235,8 +235,8 @@ sub simple_from_json_response {
       }
       last;
     };
-    /Driver/ && do {
-      $ret->{_node} = $decoded_resp->id;
+    $_->isa('Neo4j::Types::Node') && do {  # via Neo4j::Driver
+      $ret->{_node} = do { no warnings 'deprecated'; $decoded_resp->id };
       $ret->{$_} = $decoded_resp->properties->{$_} for keys %{$decoded_resp->properties};
       last;
     };

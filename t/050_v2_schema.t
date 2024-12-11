@@ -1,5 +1,5 @@
 #$Id#
-use Test::More tests => 29;
+use Test::More;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
@@ -23,17 +23,17 @@ eval {
     $pass = $build->notes('pass');
 };
 my $TEST_SERVER = $build ? $build->notes('test_server') : $ENV{REST_NEO4P_TEST_SERVER} // 'http://127.0.0.1:7474';
-my $num_live_tests = 29;
 
 my $not_connected = connect($TEST_SERVER,$user,$pass);
 diag "Test server unavailable (".$not_connected->message.") : tests skipped" if $not_connected;
 
-SKIP : {
-  skip 'no local connection to neo4j', $num_live_tests if $not_connected;
-  my $version = REST::Neo4p->neo4j_version;
-  my $VERSION_OK = REST::Neo4p->_check_version(2,0,1);
-  SKIP : {
-    skip "Server version $version < 2.0.1", $num_live_tests unless $VERSION_OK;
+plan skip_all => neo4j_index_unavailable() if neo4j_index_unavailable();
+plan skip_all => 'no local connection to neo4j' if $not_connected;
+plan skip_all => sprintf 'Server version %s < 2.0.1', scalar REST::Neo4p->neo4j_version
+  unless REST::Neo4p->_check_version(2,0,1);
+plan tests => 29;
+
+{
     ok my $schema = REST::Neo4p::Schema->new, 'new Schema object';
     isa_ok $schema, 'REST::Neo4p::Schema';
     is $schema->_handle, REST::Neo4p->handle, 'handle correct';
@@ -78,8 +78,6 @@ SKIP : {
     ok $n2->set_property({name=>"Fred"}), 'constraint lifted, can set label';
     is $n2->get_property('name'), 'Fred', 'property now set';
     1;
-  }
-
 }
 
 END {

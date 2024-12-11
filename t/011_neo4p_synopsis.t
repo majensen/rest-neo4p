@@ -1,17 +1,17 @@
 #-*-perl-*-
 #$Id$
-use Test::More qw(no_plan);
+use Test::More 0.88;
 use Test::Exception;
 use Module::Build;
 use lib '../lib';
 use lib 'lib';
 use lib 't/lib';
-use Neo4p::Connect;
+use Neo4p::Connect ':cypher_params_v2';
 use strict;
 use warnings;
 no warnings qw(once);
 my @cleanup;
-use_ok('REST::Neo4p');
+use REST::Neo4p;
 
 my $build;
 my ($user,$pass) = @ENV{qw/REST_NEO4P_TEST_USER REST_NEO4P_TEST_PASS/};
@@ -24,15 +24,16 @@ eval {
 };
 
 my $TEST_SERVER = $build ? $build->notes('test_server') : $ENV{REST_NEO4P_TEST_SERVER} // 'http://127.0.0.1:7474';
-my $num_live_tests = 13;
 
 my $not_connected = connect($TEST_SERVER,$user,$pass);
 diag "Test server unavailable (".$not_connected->message.") : tests skipped" if $not_connected;
 
+plan skip_all => neo4j_index_unavailable() if neo4j_index_unavailable();
+plan skip_all => 'no local connection to neo4j' if $not_connected;
+plan skip_all => 'MATCH query requires Neo4j 2 or later' unless REST::Neo4p->_check_version(2,0,0,0);
+plan tests => 13 + 4;
 
-SKIP : {
-  skip 'no local connection to neo4j', $num_live_tests if $not_connected;
-
+{
   ok my $i = REST::Neo4p::Index->new('node', 'my_node_index');
   push @cleanup, $i if $i;
   my $f;
@@ -49,7 +50,7 @@ SKIP : {
   is $my_reln->end_node->get_property('name'), 'Donkey Hoty', 'got Donkey Hoty';
   push @cleanup, $my_reln if $my_reln;
   ok my $query = REST::Neo4p::Query->new("MATCH p = (n)-[]->()
-                                    WHERE id(n) = \$id
+                                    WHERE id(n) = {id}
                                     RETURN p", {id => $my_node->id});
   ok $query->execute;
   my $path = $query->fetch->[0];

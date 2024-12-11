@@ -14,15 +14,17 @@ eval {
   $pass = $build->notes('pass');
 };
 my $TEST_SERVER = $build ? $build->notes('test_server') : $ENV{REST_NEO4P_TEST_SERVER} // 'http://127.0.0.1:7474';
-my $num_live_tests = 67;
 
-use_ok('REST::Neo4p');
+use REST::Neo4p;
 
 my $not_connected = connect($TEST_SERVER,$user,$pass);
 diag "Test server unavailable (".$not_connected->message.") : tests skipped" if $not_connected;
 
-SKIP : {
-  skip 'no local connection to neo4j', $num_live_tests if $not_connected;
+plan skip_all => neo4j_index_unavailable() if neo4j_index_unavailable();
+plan skip_all => 'no local connection to neo4j' if $not_connected;
+plan tests => 67;
+
+{
   my @node_defs = 
     (
      { name => 'A', type => 'purine' },

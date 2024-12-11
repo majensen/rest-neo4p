@@ -5,6 +5,7 @@ use REST::Neo4p::Exceptions;
 use JSON::XS;
 use REST::Neo4p::ParseStream;
 use HOP::Stream qw/drop/;
+use Scalar::Util qw(blessed);
 use Tie::IxHash;
 use File::Temp qw(:seekable);
 use Carp qw(croak carp);
@@ -177,22 +178,24 @@ sub _wrap_statement_result {
       for (my $i=0;$i<$n;$i++) {
 	my $elt = $rec->get($i);
 	my $cvt = sub {
-	  return $_[0] unless ref($_[0]) =~ /Driver/;
-	  my ($type) = ref($_[0]) =~ /::([^:]+)$/;
-	  my $cls = "REST::Neo4p::$type";
+	  return $_[0] unless blessed $_[0];
+	  my $cls = $_[0]->isa('Neo4j::Types::Node')         ? 'REST::Neo4p::Node'
+	          : $_[0]->isa('Neo4j::Types::Relationship') ? 'REST::Neo4p::Relationship'
+	          : $_[0]->isa('Neo4j::Types::Path')         ? 'REST::Neo4p::Path'
+	          : undef or return $_[0];  # spatial/temporal values
 	  return $as_object ? $cls->new_from_json_response($_[0]) :
 	    $cls->simple_from_json_response($_[0]);
 	  };
-	for (ref($elt)) {
-	  /Driver/ && do {
+	for ($elt) {
+	  blessed $_ && do {  # Neo4j::Types::*, via Neo4j::Driver
 	    $elt = $cvt->($elt);
 	  };
-	  /HASH/ && do {
+	  ref eq 'HASH' && do {
 	    for (keys %$elt) {
 	      $elt->{$_} = $cvt->($elt->{$_})
 	    }
 	  };
-	  /ARRAY/ && do {
+	  ref eq 'ARRAY' && do {
 	    for (@$elt) {
 	      $_ = $cvt->($_);
 	    }

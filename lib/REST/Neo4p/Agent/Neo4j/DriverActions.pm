@@ -616,6 +616,8 @@ sub get_index {
     $result = $self->is_version_4 ?
       $self->run_in_session('call db.indexes() yield name, type, entityType where type = "FULLTEXT" and entityType = $ent return entityType, name, type',{ent => uc $ent}) :
       $self->run_in_session('call db.index.explicit.list()');
+      # Neo4j 4.3+ syntax:
+      # $self->run_in_session('show indexes yield name, type, entityType where type = "FULLTEXT" and entityType = $ent return entityType, name, type',{ent => uc $ent}) :
   }
   else {
     # find things
@@ -697,6 +699,8 @@ sub delete_index {
       }
       else {
 	$result = $tx->run("match ()-[r]->() where exists(r.__${idx}__keys) return distinct r.__${idx}__keys");
+	# Neo4j 4.3+ syntax:
+	# $result = $tx->run("match ()-[r]->() where r.`__${idx}__keys` is not null return distinct r.`__${idx}__keys`");
       }
       my (%k,%remove);
       for my $k ($result->list()) {
@@ -712,9 +716,13 @@ sub delete_index {
       else { #relationship
 	$tx->run("match ()-[r]->() where exists(r.__${idx}__keys) set r += \$rm remove r.__${idx}__keys",
 		 { rm => \%remove });
+	# Neo4j 4.3+ syntax:
+	# $tx->run("match ()-[r]->() where r.`__${idx}__keys` is not null set r += \$rm remove r.`__${idx}__keys`",
       }
       $tx->commit;
       $result = $self->run_in_session('call db.index.fulltext.drop($idx)', {idx => $idx});
+      # Neo4j 4.3+ syntax:
+      # $result = $self->run_in_session(sprintf 'DROP INDEX `%s`', $idx);
     }
     else {
       $result = $self->run_in_session('call db.index.explicit.drop($idx)',{idx => $idx});
@@ -785,6 +793,14 @@ sub post_index {
 	token => $content->{type} // "__$$content{name}__index",
 	prop => "__$$content{name}__keys"
        });
+      # Neo4j 4.3+ syntax:
+      # my $token = $content->{type} // "__$$content{name}__index";
+      # my $ent_pattern = ($ent eq 'node') ? "(x:`$token`)" : "()-[x:`$token`]-()";
+      # $result = $self->run_in_session(
+      #   sprintf "CREATE FULLTEXT INDEX `%s` FOR %s ON EACH [x.`%s`] OPTIONS {indexConfig: {`fulltext.analyzer`:'whitespace'}}",
+      #   $content->{name}, $ent_pattern, "__$$content{name}__keys"
+      # )->consume;
+      # $result = $self->run_in_session("RETURN 1");
     }
     else {
       my $for = ($ent eq 'node') ? 'forNodes' : 'forRelationships';
@@ -858,7 +874,8 @@ sub post_index {
       for ($ent) {
 	/^node$/ && do {
 	  $result = $self->run_in_session("create (n) $set_clause return n");
-	  $content->{id} = 0+$result->fetch->get(0)->id;
+	  my $node = $result->fetch->get(0);
+	  $content->{id} = do { no warnings 'deprecated'; 0 + $node->id };
 	  if ($self->is_version_4) {
 	    my $hkey = encode_base64url($content->{key},'');
 	    my $xi_prop = "_xi_$hkey";
@@ -885,7 +902,8 @@ sub post_index {
 	  $content->{start} = 0+$start;
 	  $content->{end} = 0+$end;
 	  $result = $self->run_in_session("match (s), (t) where id(s)=\$start and id(t)=\$end create (s)-[n:$type]->(t) $set_clause return n", $content);
-	  $content->{id} = 0+$result->fetch->get(0)->id;
+	  my $relationship = $result->fetch->get(0);
+	  $content->{id} = do { no warnings 'deprecated'; 0 + $relationship->id };
 	  if ($self->is_version_4) {
 	    my $hkey = encode_base64url($content->{key},'');
 	    my $xi_prop = "_xi_$hkey";
@@ -945,6 +963,8 @@ sub get_schema_constraint {
   my @constraints;
   my $result;
   $result = $self->run_in_session('call db.constraints()');
+  # Neo4j 4.3+ syntax:
+  # $result = $self->run_in_session($self->is_version_4 ? 'SHOW CONSTRAINTS' : 'call db.constraints()');
   if ($result) {
     while (my $rec = $result->fetch) {
       my ($node_label,$reln_type,$x_prop, $u_prop) =
@@ -1060,6 +1080,8 @@ sub get_schema_index {
   my $q;
   if ($maj > 3) {
     $q = 'call db.indexes() yield labelsOrTypes as labels, properties where $lbl in labels return { label:$lbl, property_keys:properties }';
+    # Neo4j 4.3+ syntax:
+    # $q = 'show indexes yield labelsOrTypes as labels, properties where $lbl in labels return { label:$lbl, property_keys:properties }';
   }
   elsif ($maj==3 && $min>=5) { # patch
     $q = 'call db.indexes() yield tokenNames as labels, properties where $lbl in labels return { label:$lbl, property_keys:properties }';

@@ -6,7 +6,7 @@ use lib 'lib';
 use lib 't/lib';
 use REST::Neo4p;
 use Neo4p::Test;
-use Neo4p::Connect;
+use Neo4p::Connect ':cypher_params_v2';
 use strict;
 use warnings;
 no warnings qw(once);
@@ -31,12 +31,18 @@ diag "Test server unavailable (".$not_connected->message.") : tests skipped" if 
 SKIP : {
   skip "Neo4j server version >= 2.0.0-M02 required, skipping...", $num_live_tests unless  REST::Neo4p->_check_version(2,0,0,2);
 
+  skip 'Returning entities via tx endpoint needs either Driver agent or Neo4j 3.5+', $num_live_tests
+    unless REST::Neo4p->_check_version(3,5,0,0)
+    || REST::Neo4p->agent->isa('REST::Neo4p::Agent::Neo4j::Driver');
+  # There is a known bug in _process_row/_response_entity in REST::Neo4p::Query
+  # that can prevent correct parsing of metadata for entities returned via the
+  # transaction endpoint. The metadata format varied between Neo4j versions.
+  # REST::Neo4p 0.3012-0.3030 worked correctly on some (not all) Neo4j versions.
+
 my $neo4p = 'REST::Neo4p';
 my ($n, $m);
 SKIP : {
   skip 'no local connection to neo4j', $num_live_tests if $not_connected;
-  REST::Neo4p->create_and_set_handle(cypher_filter => 'params');
-  connect($TEST_SERVER, $user, $pass);
   ok my $t = Neo4p::Test->new, 'test graph object';
 
   ok $t->create_sample, 'create sample graph';

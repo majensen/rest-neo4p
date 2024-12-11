@@ -359,6 +359,8 @@ functionality, the agent based on L<Neo4j::Driver> uses fulltext
 indexes under the hood to emulate explicit indexes. This agent is used
 automatically with Neo4j version 4.0 servers.
 
+Note that this index emulation currently doesn't work with S<Neo4j 5.>
+
 =head1 METHODS
 
 =over
