@@ -1,11 +1,12 @@
 name: test-rest-neo4p
 on:
+  workflow_dispatch:
   push:
     branches:
-      - master
+    #  - master
   pull_request:
     branches:
-      - master
+    #  - master
 jobs:
   do:
     runs-on: ubuntu-latest
