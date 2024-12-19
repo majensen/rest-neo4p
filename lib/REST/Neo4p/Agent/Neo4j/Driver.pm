@@ -13,7 +13,7 @@ use HTTP::Response;
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Agent::Neo4j::Driver::VERSION = '0.4010';
+  $REST::Neo4p::Agent::Neo4j::Driver::VERSION = '0.4011';
 }
 my $WARN_ON_ERROR;
 

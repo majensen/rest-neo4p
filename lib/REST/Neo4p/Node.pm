@@ -7,7 +7,7 @@ use Carp qw(croak carp);
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Node::VERSION = '0.4010';
+  $REST::Neo4p::Node::VERSION = '0.4011';
 }
 
 # creation, deletion and property manipulation are delegated
