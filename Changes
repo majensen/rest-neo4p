@@ -1,4 +1,17 @@
 Revision history for Perl module REST::Neo4p
+
+0.4010 NOT RELEASED
+    - Fix an issue that prevented the use of the Bolt protocol
+      with REST::Neo4p via Neo4j::Driver 1.02 or newer
+    - Fix an issue that prevented the detection of server errors (GH #28)
+    - Avoid deprecation warnings for id() on Neo4j 5 (GH #34)
+        - You may find REST::Neo4p to work best on Neo4j 3.5. On older and
+          newer versions (Neo4j 1.x through 5.x), it should work as well, but
+          certain features may be unavailable. Note that REST::Neo4p currently
+          depends on legacy numeric IDs for nodes and relationships, which may
+          not be reliably available on future Neo4j versions.
+    - Fix test suite failing during live runs on some Neo4j versions
+
 0.4003 2022-01-22
     - Arne fix / Neo4j::Driver usage
 0.4001 2021-01-10
