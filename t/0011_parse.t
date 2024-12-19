@@ -4,7 +4,7 @@ use File::Spec;
 #use Devel::Leak;
 use lib '../lib';
 use REST::Neo4p::ParseStream;
-use JSON::XS;
+use JSON::MaybeXS ();
 use HOP::Stream qw/head tail drop/;
 use experimental;
 use strict;
@@ -13,7 +13,7 @@ use warnings;
 
 my $TESTDIR = (-d 't' ? 't' : '.');
 my $CHUNK = 10000;
-my $j = JSON::XS->new;
+my $j = JSON::MaybeXS->new;
 
 open my $f, File::Spec->catfile($TESTDIR,'samples','qry-response.txt') or die $!;
 open my $g, File::Spec->catfile($TESTDIR, 'samples', 'batch-response.txt') or die $!;
@@ -39,6 +39,7 @@ isa_ok($str, 'HOP::Stream');
 my ($ct,$newct);
 
 while (my $obj = drop($str)) {
+  no if $^V ge v5.37, warnings => 'deprecated::smartmatch';
   use experimental 'smartmatch';
   is $obj->[0],'ARELT', "is array elt";
   given ($obj->[1]) {
@@ -64,7 +65,7 @@ is $j->incr_text,'', "All text consumed";
  undef $res;
  undef $str;
 
-$j = JSON::XS->new();
+$j = JSON::MaybeXS->new();
 read ($f, $buf,$CHUNK) or die $!;
 $j->incr_parse($buf);
 ok $res = j_parse($j), "parsing qry response";
@@ -83,6 +84,7 @@ isa_ok($ar,'HOP::Stream');
 ok $obj = drop($str), 'get paused stream entry';
 is_deeply $obj, [qw/data DATA_STREAM/], 'paused for data stream';
 while (my $obj = drop($ar)) {
+  no if $^V ge v5.37, warnings => 'deprecated::smartmatch';
   use experimental 'smartmatch';
   is $obj->[0],'ARELT', "is array elt";
   given ($obj->[1]) {
@@ -108,7 +110,7 @@ is $j->incr_text,'', 'all text consumed';
 
 
 
-$j = JSON::XS->new();
+$j = JSON::MaybeXS->new();
 read($k, $buf,$CHUNK) or die $!;
 $j->incr_parse($buf);
 ok $res = j_parse($j), "parsing txn response";
@@ -134,6 +136,7 @@ while ($r_obj = drop($r_str)) {
   my $ar = $r_obj->[1]->();
   isa_ok($ar,'HOP::Stream');
   while (my $row = drop($ar)) {
+    no if $^V ge v5.37, warnings => 'deprecated::smartmatch';
     use experimental 'smartmatch';
     is $row->[0],'ARELT', "is array elt";
     given ($row->[1]) {
@@ -169,7 +172,7 @@ while (my $item = drop($ar)) {
 }
 
 open $k, File::Spec->catfile($TESTDIR, 'samples','null-txn-response.txt');
-$j = JSON::XS->new();
+$j = JSON::MaybeXS->new();
 read($k, $buf,$CHUNK) or die $!;
 $j->incr_parse($buf);
 ok $res = j_parse($j), "parsing null txn response";

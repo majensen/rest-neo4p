@@ -7,7 +7,7 @@ use lib qw{t ../lib};
 use Data::Dumper;
 use REST::Neo4p;
 use ErrJ;
-use JSON;
+use JSON::MaybeXS qw/encode_json/;
 use strict;
 use warnings;
 no warnings qw/once/;

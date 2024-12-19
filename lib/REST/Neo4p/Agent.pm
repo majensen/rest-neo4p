@@ -1,7 +1,7 @@
 use v5.10;
 package REST::Neo4p::Agent;
 use REST::Neo4p::Exceptions;
-use JSON;
+use JSON::MaybeXS ();
 use File::Temp;
 use Carp qw(croak carp);
 use strict;
@@ -10,12 +10,12 @@ use warnings;
 our @ISA;
 our $VERSION;
 BEGIN {
-  $REST::Neo4p::Agent::VERSION = '0.4010';
+  $REST::Neo4p::Agent::VERSION = '0.4011';
 }
 
 our $AUTOLOAD;
 our $JOB_CHUNK = 1024;
-our $JSON = JSON->new()->allow_nonref(1)->utf8;
+our $JSON = JSON::MaybeXS->new()->allow_nonref(1)->utf8;
 our $RQ_RETRIES = 3;
 our $RETRY_WAIT = 5;
 sub new {
@@ -208,6 +208,7 @@ sub AUTOLOAD {
 sub __do_request {
   my $self = shift;
   my ($rq, $action, @args) = @_;
+  no if $^V ge v5.37, warnings => 'deprecated::smartmatch';
   use experimental qw/smartmatch/;
   $self->{_errmsg} = $self->{_location} = $self->{_raw_response} = $self->{_decoded_content} = undef;
   my $resp;

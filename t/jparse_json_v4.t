@@ -6,18 +6,17 @@ use Test::Exception;
 use REST::Neo4p::Exceptions;
 use REST::Neo4p::ParseStream;
 use HOP::Stream qw/drop/;
-use JSON;
+use JSON::MaybeXS ();
 use ErrJ;
 use strict;
 
 my $j = $ErrJ::txn_short_resp;
 # $j = $ErrJ::txn_baddata_resp;
 
-my $jsonr = JSON->new->utf8;
+my $jsonr = JSON::MaybeXS->new->utf8;
 my ($ERR,$res,$str,$rowstr,$obj);
 my $ITER;
 my $row_count;
-use experimental 'smartmatch';
 
 $jsonr->incr_parse($j);
 eval { # capture j_parse errors

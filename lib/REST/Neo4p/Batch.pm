@@ -2,7 +2,7 @@
 use v5.10.1;
 package REST::Neo4p::Batch;
 use REST::Neo4p::Exceptions;
-use JSON::XS;
+use JSON::MaybeXS ();
 use REST::Neo4p::ParseStream;
 use HOP::Stream qw/drop head/;
 require REST::Neo4p;
@@ -13,7 +13,7 @@ use warnings;
 no warnings qw(once);
 
 BEGIN {
-  $REST::Neo4p::Batch::VERSION = '0.4010';
+  $REST::Neo4p::Batch::VERSION = '0.4011';
 }
 
 our @EXPORT = qw(batch);
@@ -33,7 +33,7 @@ sub batch (&@) {
   $agent->batch_mode(1);
   $coderef->();
   my $tmpfh = $agent->execute_batch_chunk;
-  my $jsonr = JSON::XS->new->utf8;
+  my $jsonr = JSON::MaybeXS->new->utf8;
   my $buf;
   $tmpfh->read($buf, $BUFSIZE);
   $jsonr->incr_parse($buf);
@@ -41,6 +41,7 @@ sub batch (&@) {
   die "j_parse: expecting BATCH stream" unless ($res->[0] eq 'BATCH');
   my $str = $res->[1]->();
   while (my $obj = drop($str)) {
+    no if $^V ge v5.37, warnings => 'deprecated::smartmatch';
     use experimental qw/smartmatch/;
     $obj = $obj->[1];
     given ($obj) {

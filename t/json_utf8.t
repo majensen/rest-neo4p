@@ -9,7 +9,7 @@ use warnings;
 my @cleanup;
 use_ok('REST::Neo4p');
 
-use 5.012;
+use if $^V ge v5.12, feature => 'unicode_strings';
 use utf8;
 use Data::Dumper;
 

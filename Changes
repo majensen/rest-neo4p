@@ -1,5 +1,10 @@
 Revision history for Perl module REST::Neo4p
 
+0.4011 DEVELOPMENT
+    - Drop dependencies on JSON, JSON::XS, JSON::ize
+    - Avoid deprecation warnings for smartmatch on Perl v5.38 and v5.40
+    - Fix test suite failing on old Perl versions
+
 0.4010 NOT RELEASED
     - Fix an issue that prevented the use of the Bolt protocol
       with REST::Neo4p via Neo4j::Driver 1.02 or newer

@@ -3,7 +3,6 @@ use v5.10;
 package REST::Neo4p::Entity;
 use REST::Neo4p::Exceptions;
 use Carp qw(croak carp);
-use JSON;
 use Scalar::Util qw(blessed);
 use URI::Escape;
 use strict;
@@ -11,7 +10,7 @@ use warnings;
 
 # base class for nodes, relationships, indexes...
 BEGIN {
-  $REST::Neo4p::Entity::VERSION = '0.4010';
+  $REST::Neo4p::Entity::VERSION = '0.4011';
 }
 
 our $ENTITY_TABLE = {};
@@ -465,7 +464,7 @@ use strict;
 use warnings;
 no warnings qw/once/;
 BEGIN {
-  $REST::Neo4p::Simple::VERSION = '0.4010';
+  $REST::Neo4p::Simple::VERSION = '0.4011';
 }
 
 sub new { $_[1] }

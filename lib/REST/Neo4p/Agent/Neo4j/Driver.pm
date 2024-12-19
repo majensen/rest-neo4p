@@ -3,7 +3,6 @@ use v5.10;
 use lib '../../../../../lib'; # testing
 use base qw/REST::Neo4p::Agent/;
 use Neo4j::Driver 0.26;
-use JSON::ize;
 use REST::Neo4p::Agent::Neo4j::DriverActions;
 use REST::Neo4p::Exceptions;
 use Try::Tiny;
@@ -14,7 +13,7 @@ use HTTP::Response;
 use strict;
 use warnings;
 BEGIN {
-  $REST::Neo4p::Agent::Neo4j::Driver::VERSION = '0.4010';
+  $REST::Neo4p::Agent::Neo4j::Driver::VERSION = '0.4011';
 }
 my $WARN_ON_ERROR;
 

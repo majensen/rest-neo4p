@@ -2,11 +2,10 @@ use v5.10;
 package REST::Neo4p;
 use Carp qw(croak carp);
 use lib '../../lib';
-use JSON;
+use JSON::MaybeXS ();
 use URI;
 use URI::Escape;
 use HTTP::Tiny;
-use JSON::ize;
 use Neo4j::Driver 0.26;
 use REST::Neo4p::Agent;
 use REST::Neo4p::Node;
@@ -17,7 +16,7 @@ use strict;
 use warnings;
 
 BEGIN {
-  $REST::Neo4p::VERSION = '0.4010';
+  $REST::Neo4p::VERSION = '0.4011';
 }
 
 our $CREATE_AUTO_ACCESSORS = 0;
@@ -25,7 +24,7 @@ our @HANDLES;
 our $HANDLE = 0;
 our $AGENT_MODULE = $ENV{REST_NEO4P_AGENT_MODULE} || 'LWP::UserAgent';
 
-my $json = JSON->new->allow_nonref(1)->utf8;
+my $json = JSON::MaybeXS->new->allow_nonref(1)->utf8;
 
 $HANDLES[0]->{_q_endpoint} = 'cypher';
 
